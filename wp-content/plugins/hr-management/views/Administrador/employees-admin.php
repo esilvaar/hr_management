@@ -301,7 +301,15 @@ $documents = [];
 
 // Listas configurables para poblar selects (pueden extenderse mediante filtros)
 $hrm_departamentos = apply_filters( 'hrm_departamentos', array( 'Soporte', 'Desarrollo', 'Administracion', 'Ventas', 'Gerencia', 'Sistemas' ) );
-$hrm_puestos = apply_filters( 'hrm_puestos', array( 'Técnico', 'Analista', 'Gerente', 'Administrativo', 'Practicante' ) );
+$hrm_puestos = apply_filters( 'hrm_puestos', array(
+    'Gerente',
+    'Ingeniero en Sistemas',
+    'Ingeniero de Soporte',
+    'Administrativo(a) Contable',
+    'Asistente Comercial',
+    'Desarrollador de Software',
+    'Diseñador Gráfico'
+) );
 $hrm_tipos_documento = apply_filters( 'hrm_tipos_documento', array( 'Contrato', 'Liquidaciones', 'Licencia', 'Induccion' ) );
 $hrm_tipos_contrato = apply_filters( 'hrm_tipos_contrato', array( 'Indefinido', 'Plazo Fijo', 'Por Proyecto' ) );
 
@@ -369,7 +377,9 @@ if ( $tab !== 'list' ) {
                 <?php hrm_get_template_part( 'employees-create', '', compact( 'hrm_departamentos', 'hrm_puestos', 'hrm_tipos_contrato', 'message_success', 'message_error' ) ); ?>
 
             <?php elseif ( ( $tab === 'profile' || $tab === 'upload' ) && ! $id ) : ?>
-                
+                <div class="d-flex align-items-center justify-content-center" style="min-height: 400px;">
+                    <h2 style="font-size: 24px; color: #856404; text-align: center; max-width: 500px;"><strong>⚠️ Atención:</strong> Por favor selecciona un usuario para continuar.</h2>
+                </div>
             <?php endif; ?>
 
             </div>

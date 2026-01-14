@@ -359,8 +359,11 @@ function hrm_calcular_total_anos_trabajados( $anos_acreditados_anteriores, $anos
 }
 
 /**
- * Actualiza los años en la empresa y total de años trabajados de un empleado
+ * Actualiza los años en la empresa, total de años trabajados y días de vacaciones anuales
  * Se llama automáticamente cuando se actualiza un empleado
+ * 
+ * ACTIVACIÓN: También actualiza dias_vacaciones_anuales según la antigüedad
+ * (Ley Chilena: 15 días base + progresivos según años totales)
  * 
  * @param int $id_empleado ID del empleado
  * @return bool True si se actualizó correctamente
@@ -389,20 +392,154 @@ function hrm_actualizar_anos_empleado( $id_empleado ) {
     $anos_acreditados = (float) $empleado->anos_acreditados_anteriores ?: 0;
     $total_anos = hrm_calcular_total_anos_trabajados( $anos_acreditados, $anos_en_empresa );
     
+    // ACTIVACIÓN: Calcular días de vacaciones según antigüedad (Ley Chilena)
+    $dias_vacaciones = hrm_calcular_dias_segun_antiguedad( $id_empleado );
+    
     // Actualizar en la base de datos
     $result = $wpdb->update(
         $table,
         array(
             'anos_en_la_empresa' => $anos_en_empresa,
-            'anos_totales_trabajados' => $total_anos
+            'anos_totales_trabajados' => $total_anos,
+            'dias_vacaciones_anuales' => $dias_vacaciones  // Guardar días calculados según antigüedad
         ),
         array( 'id_empleado' => $id_empleado ),
-        array( '%f', '%f' ),
+        array( '%f', '%f', '%d' ),
         array( '%d' )
     );
     
     if ( $result !== false ) {
-        error_log( "HRM: Años actualizados para empleado {$id_empleado}: {$anos_en_empresa} años en empresa, {$total_anos} años totales" );
+        error_log( "HRM: Empleado {$id_empleado} actualizado - Años: {$anos_en_empresa} empresa / {$total_anos} totales - Días vacaciones: {$dias_vacaciones}" );
+        return true;
+    }
+    
+    return false;
+}
+
+/**
+ * Inicializa los días disponibles cuando se crea un empleado nuevo
+ * 
+ * Al crear: dias_disponibles = dias_anuales (no ha usado nada aún)
+ * 
+ * @param int $id_empleado ID del empleado
+ * @return bool True si se inicializó correctamente
+ */
+function hrm_inicializar_dias_disponibles_empleado( $id_empleado ) {
+    global $wpdb;
+    
+    $table = $wpdb->prefix . 'rrhh_empleados';
+    
+    // Obtener los días anuales recién calculados
+    $empleado = $wpdb->get_row(
+        $wpdb->prepare(
+            "SELECT dias_vacaciones_anuales FROM {$table} WHERE id_empleado = %d",
+            $id_empleado
+        )
+    );
+    
+    if ( ! $empleado ) {
+        return false;
+    }
+    
+    $dias_anuales = intval( $empleado->dias_vacaciones_anuales );
+    
+    // Actualizar dias_disponibles = dias_anuales (empleado nuevo, no ha usado nada)
+    $result = $wpdb->update(
+        $table,
+        array(
+            'dias_vacaciones_disponibles' => $dias_anuales,
+            'dias_vacaciones_usados' => 0  // Empleado nuevo, no ha usado días
+        ),
+        array( 'id_empleado' => $id_empleado ),
+        array( '%d', '%d' ),
+        array( '%d' )
+    );
+    
+    if ( $result !== false ) {
+        error_log( "HRM: Días disponibles inicializados para empleado nuevo {$id_empleado}: {$dias_anuales}" );
+        return true;
+    }
+    
+    return false;
+}
+
+/**
+ * Actualiza los días disponibles cuando se modifica un empleado
+ * 
+ * Calcula:
+ * - Días anuales (según antigüedad)
+ * - Menos días ya usados en el período actual
+ * - Más carryover de períodos anteriores (últimos 2 períodos)
+ * 
+ * @param int $id_empleado ID del empleado
+ * @return bool True si se actualizó correctamente
+ */
+function hrm_actualizar_dias_disponibles_empleado( $id_empleado ) {
+    global $wpdb;
+    
+    $table_empleados = $wpdb->prefix . 'rrhh_empleados';
+    $table_vacaciones_anual = $wpdb->prefix . 'rrhh_vacaciones_anual';
+    
+    // Obtener datos del empleado
+    $empleado = $wpdb->get_row(
+        $wpdb->prepare(
+            "SELECT dias_vacaciones_anuales, dias_vacaciones_usados 
+             FROM {$table_empleados}
+             WHERE id_empleado = %d",
+            $id_empleado
+        )
+    );
+    
+    if ( ! $empleado ) {
+        return false;
+    }
+    
+    $ano_actual = date( 'Y' );
+    $dias_anuales = intval( $empleado->dias_vacaciones_anuales );
+    $dias_usados_actual = intval( $empleado->dias_vacaciones_usados ?: 0 );
+    
+    // Obtener carryover de períodos anteriores
+    // Buscar en los registros anuales anteriores
+    $carryover_total = 0;
+    
+    // Buscar últimos 2 años
+    for ( $i = 1; $i <= 2; $i++ ) {
+        $ano_anterior = $ano_actual - $i;
+        
+        $registro_anterior = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT dias_carryover_anterior, dias_disponibles 
+                 FROM {$table_vacaciones_anual}
+                 WHERE id_empleado = %d AND ano = %d",
+                $id_empleado,
+                $ano_anterior
+            )
+        );
+        
+        if ( $registro_anterior ) {
+            // Si hay carryover en ese año, sumarlo
+            $carryover_total += intval( $registro_anterior->dias_carryover_anterior ?: 0 );
+        }
+    }
+    
+    // Calcular días disponibles
+    // = Días anuales - días usados + carryover
+    $dias_disponibles = $dias_anuales - $dias_usados_actual + $carryover_total;
+    $dias_disponibles = max( 0, $dias_disponibles ); // No permitir negativos
+    
+    // Actualizar en la BD
+    $result = $wpdb->update(
+        $table_empleados,
+        array(
+            'dias_vacaciones_disponibles' => $dias_disponibles
+        ),
+        array( 'id_empleado' => $id_empleado ),
+        array( '%d' ),
+        array( '%d' )
+    );
+    
+    if ( $result !== false ) {
+        error_log( "HRM: Días disponibles actualizados para empleado {$id_empleado}: {$dias_disponibles} (Anuales: {$dias_anuales} - Usados: {$dias_usados_actual} + Carryover: {$carryover_total})" );
         return true;
     }
     
@@ -413,4 +550,14 @@ function hrm_actualizar_anos_empleado( $id_empleado ) {
  * Hook: Actualizar años cada vez que se actualiza un empleado
  */
 add_action( 'hrm_after_employee_update', 'hrm_actualizar_anos_empleado' );
+
+/**
+ * Hook: Actualizar días disponibles después de actualizar años
+ */
+add_action( 'hrm_after_employee_update', 'hrm_actualizar_dias_disponibles_empleado', 11 );
+
+/**
+ * Hook: Inicializar días disponibles cuando se CREA un empleado nuevo
+ */
+add_action( 'hrm_after_employee_create', 'hrm_inicializar_dias_disponibles_empleado' );
 

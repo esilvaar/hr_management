@@ -250,6 +250,10 @@ if ( $tab === 'upload' ) {
 
                 <?php hrm_get_template_part( 'employees-documents', '', compact( 'employee', 'documents', 'hrm_tipos_documento', 'message_success', 'message_error' ) ); ?>
 
+            <?php elseif ( ! $employee ) : ?>
+                <div class="d-flex align-items-center justify-content-center" style="min-height: 400px;">
+                    <h2 style="font-size: 24px; color: #856404; text-align: center; max-width: 500px;"><strong>⚠️ Atención:</strong> Por favor selecciona un usuario para continuar.</h2>
+                </div>
             <?php endif; ?>
 
             </div>

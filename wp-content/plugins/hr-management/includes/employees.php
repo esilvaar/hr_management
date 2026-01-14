@@ -135,6 +135,30 @@ function hrm_handle_employees_post() {
             );
         }
 
+        // VALIDACIÓN: Verificar si el RUT está siendo modificado y si ya existe otro empleado con ese RUT
+        if ( isset( $_POST['rut'] ) && ! empty( $_POST['rut'] ) ) {
+            global $wpdb;
+            $table_empleados = $wpdb->prefix . 'rrhh_empleados';
+            
+            $nuevo_rut = sanitize_text_field( $_POST['rut'] );
+            $empleado_con_rut = $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT id_empleado FROM {$table_empleados} WHERE rut = %s AND id_empleado != %d",
+                    $nuevo_rut,
+                    $emp_id
+                )
+            );
+            
+            if ( $empleado_con_rut ) {
+                // El RUT ya existe en otro empleado
+                hrm_redirect_with_message(
+                    $redirect_base,
+                    sprintf( __( 'El RUT %s ya existe en el sistema (Empleado ID: %d). No se puede asignar el mismo RUT a dos empleados.', 'hr-management' ), $nuevo_rut, $empleado_con_rut ),
+                    'error'
+                );
+            }
+        }
+
         // Si el request incluye un archivo de avatar, procesarlo primero
         if ( ! empty( $_FILES['avatar'] ) && isset( $_FILES['avatar']['name'] ) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK ) {
             if ( ! function_exists( 'wp_handle_upload' ) ) {
@@ -637,6 +661,23 @@ function hrm_handle_employees_post() {
             exit;
         }
 
+        // 3.5. VALIDACIÓN: Verificar que el RUT no exista ya en la tabla de empleados
+        global $wpdb;
+        $table_empleados = $wpdb->prefix . 'rrhh_empleados';
+        
+        $rut_existente = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT id_empleado FROM {$table_empleados} WHERE rut = %s",
+                $rut
+            )
+        );
+        
+        if ( $rut_existente ) {
+            // El RUT ya existe, NO crear el empleado
+            wp_redirect( add_query_arg( ['tab' => 'new', 'message_error' => rawurlencode("El RUT $rut ya existe en el sistema. No se puede crear empleado duplicado.")], $base_url ) );
+            exit;
+        }
+
         // 4. Preparar datos para la tabla personalizada
         $data = $_POST;
         
@@ -651,6 +692,16 @@ function hrm_handle_employees_post() {
 
         // 5. Guardar en tabla rrhh_empleados
         if ( $db_emp->create( $data ) ) {
+            // Obtener el ID del empleado recién creado usando la BD de WordPress
+            global $wpdb;
+            $nuevo_id_empleado = $wpdb->insert_id;
+            
+            // ACTIVACIÓN: Ejecutar hook para actualizar años y días de vacaciones
+            do_action( 'hrm_after_employee_update', $nuevo_id_empleado );
+            
+            // ACTIVACIÓN: Ejecutar hook específico para empleado NUEVO (inicializar días disponibles)
+            do_action( 'hrm_after_employee_create', $nuevo_id_empleado );
+            
             // 5.5. Si es Gerente, guardar departamentos a cargo
             $puesto = isset( $data['puesto'] ) ? sanitize_text_field( $data['puesto'] ) : '';
             $area_gerencia = isset( $data['area_gerencia'] ) ? sanitize_text_field( $data['area_gerencia'] ) : '';

@@ -2,7 +2,9 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 if ( ! $employee ) {
-    echo '<p class="notice notice-warning">Selecciona un empleado para gestionar sus documentos.</p>';
+    echo '<div class="d-flex align-items-center justify-content-center" style="min-height: 400px;">';
+    echo '<h2 style="font-size: 24px; color: #856404; text-align: center; max-width: 500px;"><strong>⚠️ Atención:</strong> Por favor selecciona un usuario para gestionar sus documentos.</h2>';
+    echo '</div>';
     return;
 }
 

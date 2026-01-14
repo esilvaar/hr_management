@@ -9,6 +9,132 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * CRÍTICO: Filtro map_meta_cap para permitir acceso a páginas de documentos
+ * Este es el filtro que WordPress usa ANTES de bloquear el acceso a admin pages
+ * DEBE definirse ANTES de ser registrado en hooks
+ */
+function hrm_map_document_capabilities( $caps, $cap, $user_id, $args ) {
+    // Obtener página solicitada
+    $current_page = isset( $_GET['page'] ) ? sanitize_text_field( $_GET['page'] ) : '';
+    
+    // Páginas de documentos que deben ser accesibles con 'read'
+    $document_pages = array(
+        'hrm-mi-documentos',
+        'hrm-mi-documentos-contratos',
+        'hrm-mi-documentos-liquidaciones',
+        'hrm-mi-documentos-licencias',
+    );
+    
+    // Si se está validando 'read' capability en una página de documentos
+    if ( in_array( $current_page, $document_pages, true ) && $cap === 'read' ) {
+        // Obtener roles del usuario
+        $user = get_user_by( 'id', $user_id );
+        if ( $user ) {
+            $allowed_roles = array( 'empleado', 'supervisor', 'editor_vacaciones', 'administrador_anaconda' );
+            $user_roles = (array) $user->roles;
+            
+            // Si el usuario tiene alguno de estos roles, permitir access (capability 'read' es suficiente)
+            foreach ( $user_roles as $role ) {
+                if ( in_array( $role, $allowed_roles, true ) ) {
+                    // No requerir ninguna capability adicional
+                    return array( 'read' );
+                }
+            }
+        }
+    }
+    
+    return $caps;
+}
+
+/**
+ * Filtro user_has_cap como respaldo para asegurar que 'read' siempre sea true
+ * DEBE definirse ANTES de ser registrado en hooks
+ */
+function hrm_ensure_read_capability_for_documents( $allcaps, $caps, $args, $user ) {
+    // Obtener página solicitada
+    $current_page = isset( $_GET['page'] ) ? sanitize_text_field( $_GET['page'] ) : '';
+    
+    // Páginas de documentos que deben ser accesibles con 'read'
+    $document_pages = array(
+        'hrm-mi-documentos',
+        'hrm-mi-documentos-contratos',
+        'hrm-mi-documentos-liquidaciones',
+        'hrm-mi-documentos-licencias',
+    );
+    
+    // Si estamos en una página de documentos
+    if ( in_array( $current_page, $document_pages, true ) ) {
+        $allowed_roles = array( 'empleado', 'supervisor', 'editor_vacaciones', 'administrador_anaconda' );
+        
+        // Si el usuario tiene alguno de estos roles, asegurar que tiene 'read'
+        if ( ! empty( $user->roles ) ) {
+            foreach ( $user->roles as $role ) {
+                if ( in_array( $role, $allowed_roles, true ) ) {
+                    // Forzar que 'read' sea true
+                    $allcaps['read'] = true;
+                    break;
+                }
+            }
+        }
+    }
+    
+    return $allcaps;
+}
+
+/**
+ * Configurar filtros de capability en plugins_loaded
+ * Necesitamos que se ejecute ANTES de que WordPress valide capabilities
+ */
+function hrm_setup_document_access_filters() {
+    // Registrar los filtros de capability tempranamente
+    add_filter( 'map_meta_cap', 'hrm_map_document_capabilities', 10, 4 );
+    add_filter( 'user_has_cap', 'hrm_ensure_read_capability_for_documents', 10, 4 );
+}
+add_action( 'plugins_loaded', 'hrm_setup_document_access_filters', 1 );
+
+/**
+ * En admin_init TEMPRANO, asegurar que todos los usuarios con roles HRM 
+ * tengan las capabilities necesarias. Esto es un workaround para el 403.
+ */
+function hrm_ensure_capabilities_on_admin_init() {
+    // Obtener página solicitada
+    $current_page = isset( $_GET['page'] ) ? sanitize_text_field( $_GET['page'] ) : '';
+    
+    // Páginas de documentos que deben ser accesibles con 'read'
+    $document_pages = array(
+        'hrm-mi-documentos',
+        'hrm-mi-documentos-contratos',
+        'hrm-mi-documentos-liquidaciones',
+        'hrm-mi-documentos-licencias',
+    );
+    
+    // Si estamos intentando acceder a una página de documentos
+    if ( in_array( $current_page, $document_pages, true ) ) {
+        $current_user = wp_get_current_user();
+        $allowed_roles = array( 'empleado', 'supervisor', 'editor_vacaciones', 'administrador_anaconda' );
+        
+        // Debug logging
+        error_log( '[HRM-DEBUG] Intento de acceso a documento: user_id=' . $current_user->ID . ', roles=' . json_encode( $current_user->roles ) . ', page=' . $current_page );
+        error_log( '[HRM-DEBUG] Has read capability: ' . ( $current_user->has_cap( 'read' ) ? 'YES' : 'NO' ) );
+        
+        // Si el usuario tiene uno de estos roles, asegurar que tenga 'read'
+        if ( ! empty( $current_user->roles ) ) {
+            foreach ( $current_user->roles as $role ) {
+                if ( in_array( $role, $allowed_roles, true ) ) {
+                    // Forzar agregar la capability 'read' si no existe
+                    if ( ! $current_user->has_cap( 'read' ) ) {
+                        $current_user->add_cap( 'read' );
+                        error_log( '[HRM-DEBUG] Added read capability to user' );
+                    }
+                    break;
+                }
+            }
+        }
+    }
+}
+add_action( 'admin_init', 'hrm_ensure_capabilities_on_admin_init', 1 );
+
+/**
  * Evitar envío de email al cambiar contraseña para roles HR.
  */
 function hrm_filter_password_change_email( $send, $user, $userdata = null ) {

@@ -135,30 +135,24 @@ $logo_url = esc_url(
                             Mis vacaciones
                         </a>
                     </li>
+                   
                     <li>
-                        <a class="nav-link px-3 py-2 <?= hrm_is_active_sidebar('hrm-mi-documentos'); ?>"
-                           href="<?= esc_url( admin_url('admin.php?page=hrm-mi-documentos') ); ?>">
-                            Mis documentos
+                        <a class="nav-link px-3 py-2 <?= hrm_is_active_sidebar('hrm-mis-documentos-contratos'); ?>"
+                           href="<?= esc_url( admin_url('admin.php?page=hrm-mis-documentos-contratos') ); ?>">
+                            Contrato
                         </a>
                     </li>
                     <li>
-                        <a class="nav-link px-3 py-2 <?= hrm_is_active_sidebar('hrm-mi-documentos-contratos'); ?>"
-                           href="<?= esc_url( admin_url('admin.php?page=hrm-mi-documentos-contratos') ); ?>"
-                           style="margin-left: 1rem; font-size: 0.9rem;">
-                            Contratos
-                        </a>
-                    </li>
-                    <li>
-                        <a class="nav-link px-3 py-2 <?= hrm_is_active_sidebar('hrm-mi-documentos-liquidaciones'); ?>"
-                           href="<?= esc_url( admin_url('admin.php?page=hrm-mi-documentos-liquidaciones') ); ?>"
-                           style="margin-left: 1rem; font-size: 0.9rem;">
+                        <a class="nav-link px-3 py-2 <?= hrm_is_active_sidebar('hrm-mis-documentos-liquidaciones'); ?>"
+                           href="<?= esc_url( admin_url('admin.php?page=hrm-mis-documentos-liquidaciones') ); ?>"
+                           >
                             Liquidaciones
                         </a>
                     </li>
                     <li>
-                        <a class="nav-link px-3 py-2 <?= hrm_is_active_sidebar('hrm-mi-documentos-licencias'); ?>"
-                           href="<?= esc_url( admin_url('admin.php?page=hrm-mi-documentos-licencias') ); ?>"
-                           style="margin-left: 1rem; font-size: 0.9rem;">
+                        <a class="nav-link px-3 py-2 <?= hrm_is_active_sidebar('hrm-mis-documentos-licencias'); ?>"
+                           href="<?= esc_url( admin_url('admin.php?page=hrm-mis-documentos-licencias') ); ?>"
+                           >
                             Licencias
                         </a>
                     </li>

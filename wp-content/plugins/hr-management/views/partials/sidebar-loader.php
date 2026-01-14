@@ -13,8 +13,8 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // Determinar qué sidebar cargar según las capabilities del usuario
-if ( current_user_can( 'manage_options' ) || current_user_can( 'manage_hrm_employees' ) ) {
-    // Administrador o Administrador Anaconda - Acceso completo
+if ( current_user_can( 'manage_options' ) || current_user_can( 'manage_hrm_employees' ) || current_user_can( 'view_hrm_admin_views' ) ) {
+    // Administrador, Administrador Anaconda o similar - Acceso a vistas admin
     require_once __DIR__ . '/sidebar-admin.php';
     
 } elseif ( current_user_can( 'edit_hrm_employees' ) ) {

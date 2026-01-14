@@ -131,13 +131,13 @@ if ( ! empty( $lista_empleados ) ) {
                                         <div class="d-flex gap-1 justify-content-center">
                                             <a href="<?= esc_url( admin_url( 'admin.php?page=hrm-empleados&tab=profile&id=' . rawurlencode( $emp_id ) ) ) ?>" 
                                                class="btn btn-sm btn-primary" 
-                                               title="Ver perfil">
-                                                <span class="dashicons dashicons-admin-users"></span>
+                                               title="Editar">
+                                                <span class="dashicons dashicons-edit"></span>
                                             </a>
                                             <a href="<?= esc_url( admin_url( 'admin.php?page=hrm-mi-documentos-contratos&employee_id=' . absint( $emp_id ) ) ) ?>" 
                                                class="btn btn-sm btn-secondary" 
-                                               title="Ver documentos">
-                                                <span class="dashicons dashicons-media-document"></span>
+                                               title="Subir documentos">
+                                                <span class="dashicons dashicons-upload"></span>
                                             </a>
                                         </div>
                                     <?php endif; ?>

@@ -12,6 +12,33 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Crear roles personalizados y asignar capabilities en la activación del plugin.
  */
 function hrm_create_roles() {
+    // Definir todas las capacidades del plugin
+    $all_caps = array(
+        'view_hrm_employee_admin',
+        'edit_hrm_employees',
+        'view_hrm_own_profile',
+        'manage_hrm_vacaciones',
+        'manage_hrm',
+        'view_hrm_admin_views',
+        'edit_hrm_vacaciones',
+        'delete_hrm_vacaciones',
+        'approve_hrm_vacaciones',
+        'view_hrm_reports',
+        'manage_hrm_documentos',
+    );
+    
+    // ================================================================
+    // Asegurar que el Administrador de WordPress tenga TODO
+    // ================================================================
+    $admin = get_role( 'administrator' );
+    if ( $admin ) {
+        foreach ( $all_caps as $cap ) {
+            if ( ! $admin->has_cap( $cap ) ) {
+                $admin->add_cap( $cap );
+            }
+        }
+    }
+    
     // Crear rol 'administrador_anaconda' (específico del plugin, no WordPress)
     // Nota: Este rol tiene permisos de empleado normal pero con capacidad especial
     // 'view_hrm_admin_views' para ver vistas de administrador
@@ -77,21 +104,33 @@ function hrm_migrate_legacy_roles() {
  * Se ejecuta en el hook 'init' para verificación continua.
  */
 function hrm_ensure_capabilities() {
-    $caps = array(
+    // TODAS las capacidades personalizadas del plugin
+    $all_caps = array(
         'view_hrm_employee_admin',
         'edit_hrm_employees',
         'view_hrm_own_profile',
         'manage_hrm_vacaciones',
+        'manage_hrm',
+        'view_hrm_admin_views',
+        'edit_hrm_vacaciones',
+        'delete_hrm_vacaciones',
+        'approve_hrm_vacaciones',
+        'view_hrm_reports',
+        'manage_hrm_documentos',
     );
 
-    // Administrador: asegurar todas las capabilities
+    // ================================================================
+    // ADMINISTRADOR (WordPress): Acceso total a TODO
+    // ================================================================
     $admin = get_role( 'administrator' );
     if ( $admin ) {
-        foreach ( $caps as $cap ) {
+        // Agregar TODAS las capacidades al admin de WordPress
+        foreach ( $all_caps as $cap ) {
             if ( ! $admin->has_cap( $cap ) ) {
                 $admin->add_cap( $cap );
             }
         }
+        error_log( 'HRM: Administrator role has ALL capabilities' );
     }
 
     // Administrador Anaconda: asegurar capacidades de empleado + capacidad especial para ver vistas admin

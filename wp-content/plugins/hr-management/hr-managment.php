@@ -49,6 +49,12 @@ if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
  */
 add_action( 'admin_init', function () {
     require_once HRM_PLUGIN_DIR . 'includes/vacaciones.php';
+    
+    // ACTIVACIÓN: Verificar que el admin y otros roles tengan los permisos correctos
+    // Esta función se ejecuta cada vez que se carga el admin para garantizar consistencia
+    if ( function_exists( 'hrm_ensure_capabilities' ) ) {
+        hrm_ensure_capabilities();
+    }
 });
 
 // TEMPORAL: Cargar herramientas de verificación de capacidades (solo para admin)
@@ -152,8 +158,8 @@ function hrm_enqueue_admin_assets() {
     global $pagenow;
     
     // Cargar assets solo en páginas del plugin
-    if ( $pagenow === 'admin.php' && isset( $_GET['page'] ) ) {
-        $page = sanitize_text_field( $_GET['page'] );
+    $page = isset($_GET['page']) ? sanitize_text_field($_GET['page']) : '';
+    if ( $pagenow === 'admin.php' && !empty($page) ) {
         
         // Estilos de sidebar/layout y JS específicos (todas las páginas HRM)
         if ( strpos( $page, 'hrm' ) === 0 || $page === 'hr-management' ) {

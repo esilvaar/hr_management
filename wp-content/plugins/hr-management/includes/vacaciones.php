@@ -1873,15 +1873,16 @@ function hrm_procesar_carryover_anual( $ano_anterior = null ) {
             $resultado['procesados']++;
             $resultado['detalles'][] = "Empleado {$empleado->id_empleado}: {$empleado->dias_disponibles} días carryover + {$dias_nuevos_periodo} días nuevos al año $ano_nuevo";
             
-            // Actualizar tabla empleados con los nuevos días disponibles
+            // Actualizar tabla empleados con los nuevos días disponibles y días anuales
             $wpdb->update(
                 $table_empleados,
                 [
+                    'dias_vacaciones_anuales' => $dias_nuevos_periodo,  // Guardar exactamente lo que le corresponde por antigüedad
                     'dias_vacaciones_disponibles' => $dias_nuevos_periodo + $empleado->dias_disponibles,
                     'dias_vacaciones_usados' => 0
                 ],
                 [ 'id_empleado' => $empleado->id_empleado ],
-                [ '%d', '%d' ],
+                [ '%d', '%d', '%d' ],
                 [ '%d' ]
             );
 
@@ -3307,17 +3308,18 @@ function hrm_actualizar_dias_vacaciones_por_aniversario( $id_empleado ) {
         $dias_segun_ley = hrm_calcular_dias_segun_antiguedad( $id_empleado );
         $dias_nuevos_periodo = $dias_segun_ley;  // Días del nuevo período según antigüedad
         
-        // Sumar días nuevos a los que ya tenía (los no usados del período anterior)
-        $nuevos_dias = $empleado->dias_vacaciones_anuales + $dias_nuevos_periodo;
+        // Calcular días disponibles: días nuevos + días no usados del período anterior
+        $nuevos_dias_disponibles = $empleado->dias_vacaciones_anuales + $dias_nuevos_periodo;
         
         $actualizado = $wpdb->update(
             $table_empleados,
             [
-                'dias_vacaciones_anuales' => $nuevos_dias,  // 15 nuevos + los no usados
+                'dias_vacaciones_anuales' => $dias_nuevos_periodo,  // Guardar exactamente lo que le corresponde por antigüedad
+                'dias_vacaciones_disponibles' => $nuevos_dias_disponibles,  // Días del período nuevo + carryover
                 'ultima_actualizacion_vacaciones' => current_time( 'mysql' ),
             ],
             [ 'id_empleado' => $id_empleado ],
-            [ '%d', '%s' ],
+            [ '%d', '%d', '%s' ],
             [ '%d' ]
         );
         

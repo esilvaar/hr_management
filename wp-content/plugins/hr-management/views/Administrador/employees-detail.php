@@ -13,11 +13,8 @@ window.hrmEmployeeData = {
 // Si no se ha seleccionado un empleado, mostrar mensaje y salir (estilo simple)
 // Nota: Verificar que $employee exista y sea un objeto válido
 if ( ! isset( $employee ) || ! is_object( $employee ) || empty( $employee->id ) ) {
-    echo '<div class="mx-auto mt-4 text-center" style="max-width: 900px;">';
-    echo '<h3 class="text-muted d-inline-flex align-items-center gap-2">';
-    echo '<span class="dashicons dashicons-admin-users"></span>';
-    echo '<span>Selecciona un empleado para ver su perfil</span>';
-    echo '</h3>';
+    echo '<div class="d-flex align-items-center justify-content-center" style="min-height: 400px;">';
+    echo '<h2 style="font-size: 24px; color: #856404; text-align: center; max-width: 500px;"><strong>⚠️ Atención:</strong> Por favor selecciona un usuario para ver su perfil.</h2>';
     echo '</div>';
     return;
 }
@@ -117,6 +114,61 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                     </div>
                 </div>
             </div>
+
+            <!-- TARJETA: Acceso a Documentos -->
+            <div class="hrm-panel">
+                <div class="hrm-panel-header">
+                    <h5 class="mb-0">
+                        <span class="dashicons dashicons-media-document"></span>
+                        Mis Documentos
+                    </h5>
+                </div>
+                <div class="hrm-panel-body hrm-doc-panel-body">
+                    <a href="<?= esc_url( add_query_arg( array( 'page' => 'hrm-mis-documentos', 'tab' => 'licencias', 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis licencias" data-icon-color="#c5cad3">
+                        <div class="hrm-doc-btn-icon">
+                            <span class="dashicons dashicons-id"></span>
+                        </div>
+                        <div class="hrm-doc-btn-content">
+                            <div class="hrm-doc-btn-title">Licencias</div>
+                            <div class="hrm-doc-btn-desc">Accede a tus licencias</div>
+                        </div>
+                        <div class="hrm-doc-btn-arrow">
+                            <span class="dashicons dashicons-arrow-right-alt2"></span>
+                        </div>
+                    </a>
+                    <a href="<?= esc_url( add_query_arg( array( 'page' => 'hrm-mis-documentos', 'tab' => 'contratos', 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis contratos" data-icon-color="#b0b5bd">
+                        <div class="hrm-doc-btn-icon">
+                            <span class="dashicons dashicons-media-document"></span>
+                        </div>
+                        <div class="hrm-doc-btn-content">
+                            <div class="hrm-doc-btn-title">Contratos</div>
+                            <div class="hrm-doc-btn-desc">Accede a tus contratos</div>
+                        </div>
+                        <div class="hrm-doc-btn-arrow">
+                            <span class="dashicons dashicons-arrow-right-alt2"></span>
+                        </div>
+                    </a>
+                    <a href="<?= esc_url( add_query_arg( array( 'page' => 'hrm-mis-documentos', 'tab' => 'liquidaciones', 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis liquidaciones" data-icon-color="#d0d5db">
+                        <div class="hrm-doc-btn-icon">
+                            <span class="dashicons dashicons-money-alt"></span>
+                        </div>
+                        <div class="hrm-doc-btn-content">
+                            <div class="hrm-doc-btn-title">Liquidaciones</div>
+                            <div class="hrm-doc-btn-desc">Accede a tus liquidaciones</div>
+                        </div>
+                        <div class="hrm-doc-btn-arrow">
+                            <span class="dashicons dashicons-arrow-right-alt2"></span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            <script>
+                document.querySelectorAll('.hrm-doc-btn').forEach(btn => {
+                    const color = btn.getAttribute('data-icon-color');
+                    const icon = btn.querySelector('.hrm-doc-btn-icon');
+                    icon.style.backgroundColor = color;
+                });
+            </script>
             </div>
 
         <!-- CONTENIDO PRINCIPAL -->
@@ -128,7 +180,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                         <input type="hidden" name="employee_id" value="<?= absint( $employee->id ) ?>">
                         <!-- Hidden inputs para guardar los años calculados -->
                         <input type="hidden" id="hrm_anos_en_la_empresa_hidden" name="anos_en_la_empresa" value="0">
-                        <input type="hidden" id="hrm_anos_totales_trabajados_hidden" name="anos_totales_trabajados" value="0">>
+                        <input type="hidden" id="hrm_anos_totales_trabajados_hidden" name="anos_totales_trabajados" value="0">
 
                         <!-- TARJETA: Datos Personales -->
                         <div class="hrm-panel mb-3">

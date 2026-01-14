@@ -107,6 +107,101 @@
 }
 
 /* =============================================================================
+   DOCUMENTS PANEL - Estilos para Acceso a Documentos
+   ============================================================================= */
+
+.hrm-doc-panel-body {
+    padding: 0 !important;
+}
+
+.hrm-doc-btn {
+    display: flex;
+    align-items: center;
+    padding: 0.9375rem 1.25rem;
+    border: none;
+    border-bottom: 1px solid #e8e8e8;
+    text-decoration: none;
+    color: inherit;
+    background: white;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.hrm-doc-btn:last-child {
+    border-bottom: none;
+}
+
+.hrm-doc-btn:hover {
+    background: #f5f7fa;
+    border-left: 3px solid #b0b5bd;
+    padding-left: 1.0625rem;
+}
+
+.hrm-doc-btn-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    margin-right: 15px;
+    flex-shrink: 0;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.hrm-doc-btn:hover .hrm-doc-btn-icon {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(176, 181, 189, 0.3);
+}
+
+.hrm-doc-btn-icon .dashicons {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+}
+
+.hrm-doc-btn-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.hrm-doc-btn-title {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.hrm-doc-btn-desc {
+    color: #9ca3af;
+    font-size: 12px;
+    margin: 0;
+}
+
+.hrm-doc-btn-arrow {
+    color: #b0b5bd;
+    margin-left: 10px;
+    transition: all 0.3s ease;
+    opacity: 0;
+    transform: translateX(-5px);
+}
+
+.hrm-doc-btn:hover .hrm-doc-btn-arrow {
+    opacity: 1;
+    transform: translateX(0);
+    color: #7a7f87;
+}
+
+.hrm-doc-btn-arrow .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+/* =============================================================================
    CONTAINERS - Departamentos a Cargo
    ============================================================================= */
 
@@ -159,6 +254,28 @@
     
     .hrm-panel-header .dashicons {
         font-size: 1.1rem;
+    }
+    
+    .hrm-doc-btn {
+        padding: 0.75rem 0.9375rem;
+    }
+    
+    .hrm-doc-btn:hover {
+        padding-left: 0.84375rem;
+    }
+    
+    .hrm-doc-btn-icon {
+        width: 40px;
+        height: 40px;
+        margin-right: 12px;
+    }
+    
+    .hrm-doc-btn-title {
+        font-size: 13px;
+    }
+    
+    .hrm-doc-btn-desc {
+        font-size: 11px;
     }
 }
 
