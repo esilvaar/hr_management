@@ -37,8 +37,8 @@ if ( file_exists( HRM_PLUGIN_DIR . 'force-fix-supervisor.php' ) ) {
     require_once HRM_PLUGIN_DIR . 'force-fix-supervisor.php';
 }
 
-// Cargar módulo de debug
-if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+// Cargar módulo de debug (solo si existe y WP_DEBUG está activo)
+if ( defined( 'WP_DEBUG' ) && WP_DEBUG && file_exists( HRM_PLUGIN_DIR . 'debug.php' ) ) {
     require_once HRM_PLUGIN_DIR . 'debug.php';
 }
 
@@ -158,8 +158,8 @@ function hrm_enqueue_admin_assets() {
     global $pagenow;
     
     // Cargar assets solo en páginas del plugin
-    $page = isset($_GET['page']) ? sanitize_text_field($_GET['page']) : '';
-    if ( $pagenow === 'admin.php' && !empty($page) ) {
+    if ( $pagenow === 'admin.php' && isset( $_GET['page'] ) ) {
+        $page = sanitize_text_field( $_GET['page'] );
         
         // Estilos de sidebar/layout y JS específicos (todas las páginas HRM)
         if ( strpos( $page, 'hrm' ) === 0 || $page === 'hr-management' ) {

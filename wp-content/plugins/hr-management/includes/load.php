@@ -16,9 +16,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Módulos a cargar en orden de dependencias
  */
 $modules = array(
-    // FIX CRÍTICO: Cargar primero para AJAX de supervisores
-    'ajax-supervisor-fix.php',
-    
     // Capa de Base de Datos (sin dependencias)
     'db/class-hrm-db-table.php',
     'db/class-hrm-db-empleados.php',

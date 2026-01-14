@@ -127,8 +127,8 @@ $total_solicitudes = count( $solicitudes );
                             role="tab" 
                             aria-controls="contenido-calendario" 
                             aria-selected="false">
-                        <span style="font-size: 1.2rem;">📅</span>
-                        <span class="fw-semibold">Calendario de Vacaciones</span>
+                        
+                        
                     </button>
                 </li>
             </ul>
@@ -454,108 +454,7 @@ $total_solicitudes = count( $solicitudes );
                 </div>
             </div> <!-- Cierre del tab-pane contenido-departamentos -->
 
-            <!-- Contenido Tab 3: Calendario -->
-            <div id="contenido-calendario" class="tab-pane fade" role="tabpanel" aria-labelledby="tab-calendario">
-                <div class="hrm-panel shadow-sm border-0 rounded-3">
-                    <div class="hrm-panel-header bg-light border-bottom px-4 py-3">
-                        <div class="d-flex align-items-center justify-content-between gap-3">
-                            <h2 class="fs-5 fw-bold text-dark mb-0 d-flex align-items-center gap-2">
-                                <span>📅</span> Calendario de Vacaciones
-                            </h2>
-                            <div style="min-width: 280px;">
-                                <label for="filtroCalendarioDepartamento" class="form-label small fw-semibold mb-1">🏢 Filtrar por Departamento</label>
-                                <select id="filtroCalendarioDepartamento" class="form-select form-select-sm">
-                                    <option value="">📊 Todos los Departamentos</option>
-                                    <?php 
-                                    $departamentos_calendario = hrm_get_all_departamentos();
-                                    
-                                    // Filtrar departamentos si es supervisor (solo sus departamentos a cargo)
-                                    // EXCEPTO si es editor de vacaciones (que ve todos)
-                                    if ( $es_supervisor && ! $es_editor_vacaciones && ! empty( $departamentos_supervisor ) ) {
-                                        $departamentos_calendario = array_filter( $departamentos_calendario, function( $depto ) use ( $departamentos_supervisor ) {
-                                            return isset( $depto['nombre_departamento'] ) && in_array( $depto['nombre_departamento'], $departamentos_supervisor, true );
-                                        } );
-                                    }
-                                    
-                                    foreach ( $departamentos_calendario as $dept ) {
-                                        echo '<option value="' . esc_attr( $dept['nombre_departamento'] ) . '">';
-                                        echo esc_html( $dept['nombre_departamento'] );
-                                        echo ' (' . intval( $dept['personal_vigente'] ) . '/' . intval( $dept['total_empleados'] ) . ')';
-                                        echo '</option>';
-                                    }
-                                    ?>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="hrm-panel-body p-4">
-                        <!-- Controles de navegación del calendario -->
-                        <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom">
-                            <button class="btn btn-outline-primary btn-sm" id="btnMesAnterior">
-                                <span>⬅️</span> Mes Anterior
-                            </button>
-                            <h3 class="fs-5 fw-bold text-center mb-0" id="mesesTitulo">Enero 2026</h3>
-                            <button class="btn btn-outline-primary btn-sm" id="btnMesSiguiente">
-                                Mes Siguiente <span>➡️</span>
-                            </button>
-                        </div>
-
-                        <!-- Calendario -->
-                        <div class="calendario-container">
-                            <div class="table-responsive">
-                                <table class="table table-bordered calendario" id="calendarioTabla">
-                                    <thead>
-                                        <tr class="bg-primary text-white text-center">
-                                            <th style="width: 14.28%;">Lunes</th>
-                                            <th style="width: 14.28%;">Martes</th>
-                                            <th style="width: 14.28%;">Miércoles</th>
-                                            <th style="width: 14.28%;">Jueves</th>
-                                            <th style="width: 14.28%;">Viernes</th>
-                                            <th style="width: 14.28%;">Sábado</th>
-                                            <th style="width: 14.28%;">Domingo</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="diasCalendario">
-                                        <!-- Se llenará con JavaScript -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Leyenda -->
-                        <div class="mt-4 pt-3 border-top">
-                            <h5 class="fw-semibold mb-3">📌 Indicadores</h5>
-                            <div class="row">
-                                <div class="col-md-6 mb-2">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div style="width: 30px; height: 30px; background-color: #ff6b6b; border-radius: 4px;"></div>
-                                        <span>Vacaciones aprobadas</span>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div style="width: 30px; height: 30px; background-color: #9775fa; border-radius: 4px; text-decoration: line-through; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px;">—</div>
-                                        <span>Feriados (tachados)</span>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div style="width: 30px; height: 30px; background-color: #ffd43b; border-radius: 4px;"></div>
-                                        <span>Fin de semana</span>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div style="width: 30px; height: 30px; background-color: #fff; border: 2px solid #ddd; border-radius: 4px;"></div>
-                                        <span>Día hábil sin vacaciones</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div> <!-- Cierre del tab-pane contenido-calendario -->
-
+            
             </div> <!-- Cierre del tab-content -->
 
         </div>
