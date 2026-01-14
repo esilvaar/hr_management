@@ -1,0 +1,26 @@
+<wpml-config>
+  <theme-localization>
+    <domain>joyas-business-agency</domain>
+  </theme-localization>
+
+  <custom-fields>
+    <!-- Example: if you use custom fields -->
+    <custom-field action="translate">subtitle</custom-field>
+    <custom-field action="translate">cta_text</custom-field>
+  </custom-fields>
+
+  <customizer>
+    <!-- Example: if you have customizer options -->
+    <option name="copyright_text" translate="1" />
+    <option name="header_button_label" translate="1" />
+    <option name="footer_tagline" translate="1" />
+  </customizer>
+
+  <admin-texts>
+    <!-- For settings stored in options -->
+    <key name="joyas_business_agency_options"> 
+      <key name="copyright_text" />
+      <key name="footer_tagline" />
+    </key>
+  </admin-texts>
+</wpml-config>

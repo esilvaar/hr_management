@@ -1,0 +1,365 @@
+/*
+Theme Name: Joyas Business Agency
+Author: aThemeArt
+Author URI: https://athemeart.com/
+Theme URI: https://athemeart.com/downloads/joyas-business-agency/
+Description: Joyas Business Agency, a child theme of Joyas Shop, delivers a crisp, dynamic design perfect for modern businesses. Ideal for agencies, corporate firms, consultants, law offices, real estate, and more, it features a clean layout with hero banners, service grids, team profiles, and stylish portfolios. Built for clarity and impact, it offers space for achievements, testimonials, fun facts, and blogs. Fully optimized for Elementor and WooCommerce, it’s easy to customize, responsive, and packed with features like skill indicators, testimonial sliders, service boxes, and company stats. Also, while the blogging layout does not show company or latest news, it’s a great option for personal bloggers, supporting various post formats to suit any blog type. Try it for your agency, studio, wellness center, corporate, industrial, insurance company, charity, or construction firm—and see the difference!
+Template: joyas-shop
+Version: 1.0.2
+Requires at least: 5.0
+Tested up to: 5.
+Requires PHP: 7.4
+License: GNU General Public License v3 or later
+License URI: http://www.gnu.org/licenses/gpl-3.0.html
+Tags: one-column, two-columns, three-columns, left-sidebar, right-sidebar, sticky-post, custom-background, custom-header, custom-colors, custom-menu, featured-images, full-width-template, translation-ready, theme-options, threaded-comments, custom-logo, blog, e-commerce
+Text Domain: joyas-business-agency
+*/
+
+/* Header Styles */
+:root {
+  --secondary-color: #01A4EF;
+  --tertiary-color: #000;
+  --quaternary-color:#fff;
+  --secondary-alpha: #d2a35c;
+   
+  --nav-color:#000;
+  --nav-h-color:#d2a35c;
+  --nav-bg:#fff;
+  --nav-h-bg:#FF4343;
+  --nav-h-bg-2:#f01a1a;
+  
+  --body-font:'Jost', sans-serif;
+  --heading-font:'Jost', sans-serif;
+  
+  }
+
+#masthead.style_6 {
+  position: relative;
+  padding: 0;
+  height: 0;
+}
+#masthead.style_6 .header_wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 999;
+}
+#masthead.style_6 .navigation-menu > li > a {
+  border-radius: 0;
+  color: #fff;
+  font-size: 18px;
+  letter-spacing:1px;
+}
+#masthead.style_6 .navigation-menu > li > a:hover,
+#masthead.style_6 .navigation-menu > li > a:focus{
+  color: #01A4EF; 
+}
+#masthead.style_6 .navigation-menu li li > a:hover,
+#masthead.style_6 .navigation-menu li li > a:focus, 
+#masthead.style_6 .navigation-menu li li.current-menu-item > a,
+#masthead.style_6 .navigation-menu li li.current-page-parent > a{
+  background: #01A4EF;
+}
+#navbar.underline .navigation-menu > li > a::after{
+  display: none;
+}
+#masthead.style_6 .navsticky.active {
+  position: fixed;
+}
+#masthead.style_6 .logo-wrap {
+  position: relative;
+  padding: 25px 0;
+}
+#masthead.style_6 #navbar {
+  margin-left: auto;
+}
+#masthead.style_6 .header-icon {
+  padding: 25px 0 25px 25px;
+  margin-left: 25px;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+}
+#masthead.style_6 .header-icon a{
+	color: var(--nav-color);
+	border: 1px solid var(--nav-color);
+	background: none!important;
+}
+/* Password Field Styles */
+.password-input {
+  position: relative;
+  display: block;
+}
+.show-password-input {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0 20px;
+  background: none !important;
+  border: none;
+}
+.show-password-input:before {
+  font-family: 'bootstrap-icons' !important;
+  content: "\f33f";
+  font-size: 18px;
+  color: var(--secondary-color);
+}
+.show-password-input.display-password:before {
+  content: "\f341";
+}
+/* Section Specific Padding */
+#gs-home-page-hero.style_6 .slideUp.center,
+#static_header_banner.style_6 .content-text {
+   padding-top: 120px;
+}
+.top-bar-menu li ul.sub-menu{
+	 z-index: 9999!important;
+}
+#static_header_banner{
+    height: 55vh!important;
+}
+#static_header_banner .site-header-text-wrap{
+    padding-top: 100px;
+}
+#masthead.style_6 .navigation-menu li ul{
+    top: 100%!important;
+}
+#masthead.style_6 .navigation-menu li ul ul {
+    top: 3px!important;
+}
+.joyas-shop-single-post .img-box .animation_on:before,
+.joyas-shop-single-post .img-box .animation_on:after{
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    z-index: 1;
+    opacity: 0;
+    -webkit-transition: opacity .4s, -webkit-transform .35s ease-in-out;
+    -moz-transition: opacity .4s, -moz-transform .35s ease-in-out;
+    -o-transition: opacity .4s, -o-transform .35s ease-in-out;
+    transition: opacity .4s, transform .35s ease-in-out;
+}
+.joyas-shop-single-post .img-box .animation_on:before{
+    border-top: 1px solid #FFF;
+    border-bottom: 1px solid #FFF;
+    -webkit-transform: scale(0,1);
+    transform: scale(0,1);
+}
+.joyas-shop-single-post .img-box .animation_on:after{
+    border-right: 1px solid #FFF;
+    border-left: 1px solid #FFF;
+    -webkit-transform: scale(1,0);
+    transform: scale(1,0);
+}
+.joyas-shop-single-post .img-box:hover .animation_on:before,
+.joyas-shop-single-post .img-box:hover .animation_on:after,
+.joyas-shop-single-post .img-box .animation_on:hover:before,
+.joyas-shop-single-post .img-box .animation_on:hover:after,
+.joyas-shop-single-post .img-box .animation_on:focus:before,
+.joyas-shop-single-post .img-box .animation_on:focus:after{
+    opacity: 1;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+}
+.joyas-shop-single-post .img-box .animation_on img{
+    transform: scale(1) rotate(0deg);
+    transition: transform 0.5s ease-in-out;
+}
+.joyas-shop-single-post .img-box .animation_on:hover img{
+    transform: scale(1.2) rotate(4deg);
+}
+#secondary .widget li{
+    padding: 3px 0 3px 0px !important;
+}
+.top-bar-menu .container a:hover,
+.top-bar-menu .container a:focus{
+    color: var(--secondary-color);
+}
+.top-bar-menu .right-menu li ul a:hover,
+.top-bar-menu .right-menu li ul a:focus{
+    color: var(--secondary-color);
+}
+#masthead.style_6 .header-icon li a,
+#masthead.style_6 .header-icon .searchbar-action{
+    color: var(--secondary-color);
+    height: 40px;
+    width: 40px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 40px;
+    display: inline-block;
+    position: relative;
+    background: none;
+    padding: 0px;
+    color: #fff;
+    font-size: 12px;
+    border: 1px solid rgba(256, 256, 256, 0.5);
+}
+#masthead.style_6 .header-icon li a:hover,
+#masthead.style_6 .header-icon .searchbar-action:hover,
+#masthead.style_6 .header-icon li a:focus,
+#masthead.style_6 .header-icon .searchbar-action:focus{
+    background: var(--secondary-color)!important;
+    border-color: var(--secondary-color);
+}
+
+/*==========================================================
+********************** Search modal ********************
+===========================================================*/ 
+.search-bar-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+    color: rgba(255, 255, 255, 0.5);
+    transition: opacity 0s linear 0.3s, visibility 0s linear 0.3s;
+    opacity: 0;
+    display: none;
+}
+.search-bar-modal.active {
+    visibility: visible;
+    opacity: 1;
+    display: block;
+}
+.search-bar-modal .modal-wrap {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    width: 80%;
+    max-width: 550px;
+    transform: translateX(-50%);
+    box-sizing: border-box;
+    text-align: left;
+    z-index: 9999;
+    transition: all 0.5s;
+}
+.search-bar-modal.active .modal-wrap {
+    top: 48%;
+}
+.search-bar-modal form.search-form {
+    display: flex;
+}
+.search-bar-modal form.search-form input[type="search"] {
+    width: calc(100% - 120px);
+    height: 45px;
+    line-height: 45px;
+    padding-left: 10px;
+    border: 1px solid #1F526B;
+    outline: 2px solid transparent;
+    background: #fff;
+    color: #000;
+    border-radius: 7px 0 0 7px;
+    margin-bottom: 0;
+}
+.search-bar-modal form.search-form input[type="search"]:focus,
+.search-bar-modal form.search-form input[type="search"]:active,
+.search-bar-modal form.search-form input[type="search"]:focus-visible {
+    background: #C8F2FF !important;
+}
+.search-bar-modal form.search-form .search-submit {
+    width: 120px;
+    height: 48px;
+    line-height: 48px;
+    background: #1F526B !important;
+    color: #fff;
+    text-align: center;
+    transform: translateX(-5px);
+    padding: 0;
+}
+.search-bar-modal form.search-form .search-submit:focus,
+.search-bar-modal form.search-form .search-submit:active,
+.search-bar-modal form.search-form .search-submit:focus-visible {
+    color: var(--secondary-color);
+}
+.search-bar-modal .appw-modal-close-button {
+    position: absolute;
+    right: -30px;
+    top: -30px;
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 50%;
+    background: #000;
+    color: #fff;
+    padding: 0;
+}
+.search-bar-modal .appw-modal-close-button:focus,
+.search-bar-modal .appw-modal-close-button:active,
+.search-bar-modal .appw-modal-close-button:focus-visible {
+   color: var(--secondary-color);
+}
+
+#static_header_banner ul.post-meta{
+    display: block;
+    margin: 0px auto;
+    color: #fff;
+}
+#static_header_banner ul.post-meta a:hover,
+#static_header_banner ul.post-meta a:focus{
+    color: var(--secondary-color);
+    text-decoration: underline;
+}
+.joyas-business-agency,
+.joyas-business-agency .nav-links{
+    display: block;
+    text-align: center;
+    margin: 0px auto;
+}
+.joyas-business-agency ul.page-numbers{
+    display: flex;
+    list-style: none;
+    gap: 5px;
+}
+.joyas-business-agency ul.page-numbers a,
+.joyas-business-agency ul.page-numbers span{
+    margin: 0;
+    text-decoration: none!important;
+    padding: 0;
+    line-height: 1;
+    font-size: 1rem;
+    font-weight: 400;
+    padding: 15px 18px;
+    min-width: 1em;
+    display: block;
+    border: 1px solid var(--secondary-color);
+    background: var(--quaternary-color);
+    color: var(--secondary-color);
+    border-radius: 3px;
+    -webkit-border-radius: 3px;
+}
+.joyas-business-agency ul.page-numbers a:hover,
+.joyas-business-agency ul.page-numbers a:focus,
+.joyas-business-agency ul.page-numbers span.current{
+    background: var(--secondary-color);
+    color: #fff;
+}
+.logo-wrap a.site-title{
+    color: #fff;
+}
+.logo-wrap a.site-title:hover,
+.logo-wrap a.site-title:focus,
+.logo-wrap h3 a.site-title:hover,
+.logo-wrap h3 a.site-title:focus{
+    color: var(--secondary-color);
+    text-decoration: underline;
+}
+@media screen and (max-width: 850px) {
+    #masthead.style_6 .navigation-menu > li > a{
+        color: #000;
+    }
+    #navbar li > .responsive-submenu-toggle{
+        color: var(--secondary-color);
+    }
+    #masthead.style_6 .logo-wrap{
+        text-align: left;
+    }
+}
+#commentform input[type="checkbox"]{
+    margin-top: 5px;
+}

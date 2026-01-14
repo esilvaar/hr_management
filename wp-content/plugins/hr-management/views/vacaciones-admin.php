@@ -1,0 +1,1289 @@
+<?php
+// Cargar estilos CSS
+wp_enqueue_style( 'hrm-vacaciones-admin-estilos', plugins_url( 'hr-management/assets/css/vacaciones-admin-estilos.css' ), array(), '1.0.0' );
+wp_enqueue_style( 'hrm-vacaciones-tabs', plugins_url( 'hr-management/assets/css/vacaciones-tabs.css' ), array(), '1.0.0' );
+
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+$search_term = sanitize_text_field( $_GET['empleado'] ?? '' );
+$estado_filtro = sanitize_text_field( $_GET['estado'] ?? 'PENDIENTE' );
+
+// Determinar qué tab debe ser activo
+// Mostramos tab de Solicitudes si:
+// 1. El usuario escribió un nombre en la búsqueda, O
+// 2. El usuario seleccionó un estado específico (enviado el formulario)
+// Si no hay búsqueda, mostrar tab de Resumen de Departamentos
+$tiene_busqueda = ! empty( $_GET['empleado'] ) || isset( $_GET['estado'] );
+$tab_activo = $tiene_busqueda ? 'solicitudes' : 'departamentos';
+
+// Si es supervisor (gerente), obtener sus departamentos a cargo desde la tabla de gerencia
+// EXCEPTO si es editor de vacaciones (que ve TODO sin filtros)
+$es_supervisor = current_user_can( 'edit_hrm_employees' ) && ! current_user_can( 'manage_options' );
+$es_editor_vacaciones = current_user_can( 'manage_hrm_vacaciones' ) && ! current_user_can( 'edit_hrm_employees' );
+$departamentos_supervisor = array(); // Array de departamentos a cargo
+$es_gerente_operaciones = false; // Flag para identificar al Gerente de Operaciones
+
+// Solo filtrar por departamentos si es supervisor (pero no si es editor de vacaciones)
+if ( $es_supervisor && ! $es_editor_vacaciones ) {
+    global $wpdb;
+    $user_id = get_current_user_id();
+    
+    // Primero verificar si es el Gerente de Operaciones (area_gerencia = 'Operaciones')
+    $area_gerencia_usuario = $wpdb->get_var( $wpdb->prepare(
+        "SELECT area_gerencia FROM {$wpdb->prefix}rrhh_empleados 
+         WHERE user_id = %d AND departamento = 'Gerencia' AND estado = 1 LIMIT 1",
+        $user_id
+    ) );
+    
+    if ( $area_gerencia_usuario && strtolower( $area_gerencia_usuario ) === 'operaciones' ) {
+        // Es el Gerente de Operaciones - puede ver Gerencia, Sistemas y Administración
+        $es_gerente_operaciones = true;
+        $departamentos_supervisor = array( 'Gerencia', 'Sistemas', 'Administración', 'Administracion' );
+        
+        // También agregar los departamentos que tenga asignados en gerencia_deptos
+        $deptos_adicionales = $wpdb->get_col( $wpdb->prepare(
+            "SELECT DISTINCT depto_a_cargo FROM {$wpdb->prefix}rrhh_gerencia_deptos 
+             WHERE nombre_gerente = (SELECT CONCAT(nombre, ' ', apellido) FROM {$wpdb->prefix}rrhh_empleados WHERE user_id = %d)
+             AND estado = 1",
+            $user_id
+        ) );
+        
+        if ( ! empty( $deptos_adicionales ) ) {
+            $departamentos_supervisor = array_unique( array_merge( $departamentos_supervisor, $deptos_adicionales ) );
+        }
+    } else {
+        // Supervisor normal - obtener departamentos a cargo desde gerencia_deptos
+        $departamentos_supervisor = $wpdb->get_col( $wpdb->prepare(
+            "SELECT DISTINCT depto_a_cargo FROM {$wpdb->prefix}rrhh_gerencia_deptos 
+             WHERE nombre_gerente = (SELECT CONCAT(nombre, ' ', apellido) FROM {$wpdb->prefix}rrhh_empleados WHERE user_id = %d)
+             AND estado = 1
+             ORDER BY depto_a_cargo ASC",
+            $user_id
+        ) );
+        
+        // Si no encuentra por nombre completo, intentar por nombre solamente
+        if ( empty( $departamentos_supervisor ) ) {
+            $nombre_gerente = $wpdb->get_var( $wpdb->prepare(
+                "SELECT nombre FROM {$wpdb->prefix}rrhh_empleados WHERE user_id = %d LIMIT 1",
+                $user_id
+            ) );
+            
+            if ( $nombre_gerente ) {
+                $departamentos_supervisor = $wpdb->get_col( $wpdb->prepare(
+                    "SELECT DISTINCT depto_a_cargo FROM {$wpdb->prefix}rrhh_gerencia_deptos 
+                     WHERE nombre_gerente LIKE %s AND estado = 1
+                     ORDER BY depto_a_cargo ASC",
+                    '%' . $nombre_gerente . '%'
+                ) );
+            }
+        }
+    }
+}
+
+$solicitudes = hrm_get_all_vacaciones( $search_term, $estado_filtro );
+
+$total_solicitudes = count( $solicitudes );
+?>
+
+<div class="wrap">
+    <div class="container-fluid px-4">
+        <div class="hrm-admin-dashboard">
+
+            <!-- Título principal -->
+            <div class="d-flex align-items-center gap-2 mb-4">
+                <h1 class="wp-heading-inline fs-2 fw-bold text-primary mb-0">
+                    Panel de Gestion de Vacaciones
+                </h1>
+            </div>
+
+            <!-- Navegación de Tabs -->
+            <ul class="nav nav-tabs nav-fill mb-4 border-bottom-2" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link <?php echo $tab_activo === 'solicitudes' ? 'active' : ''; ?> d-flex align-items-center justify-content-center gap-2" 
+                            id="tab-solicitudes" 
+                            type="button" 
+                            role="tab" 
+                            aria-controls="contenido-solicitudes" 
+                            aria-selected="<?php echo $tab_activo === 'solicitudes' ? 'true' : 'false'; ?>">
+                        <span style="font-size: 1.2rem;">📋</span>
+                        <span class="fw-semibold">Solicitudes de Vacaciones</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link <?php echo $tab_activo === 'departamentos' ? 'active' : ''; ?> d-flex align-items-center justify-content-center gap-2" 
+                            id="tab-departamentos" 
+                            type="button" 
+                            role="tab" 
+                            aria-controls="contenido-departamentos" 
+                            aria-selected="<?php echo $tab_activo === 'departamentos' ? 'true' : 'false'; ?>">
+                        <span style="font-size: 1.2rem;">🏢</span>
+                        <span class="fw-semibold">Resumen de Departamentos</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link d-flex align-items-center justify-content-center gap-2" 
+                            id="tab-calendario" 
+                            type="button" 
+                            role="tab" 
+                            aria-controls="contenido-calendario" 
+                            aria-selected="false">
+                        <span style="font-size: 1.2rem;">📅</span>
+                        <span class="fw-semibold">Calendario de Vacaciones</span>
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Content Container -->
+            <div class="tab-content">
+
+            <!-- Contenido Tab 1: Solicitudes -->
+            <div id="contenido-solicitudes" class="tab-pane fade <?php echo $tab_activo === 'solicitudes' ? 'show active' : ''; ?>" role="tabpanel" aria-labelledby="tab-solicitudes">
+    
+    <!-- Formulario de búsqueda -->
+    <div class="hrm-panel-search shadow border-0 rounded-3 mb-4">
+        <div class="hrm-panel-search-body">
+            <form method="get" class="row g-3 align-items-end">
+                <input type="hidden" name="page" value="<?php echo esc_attr( $_GET['page'] ); ?>">
+                
+                <div class="col-md-5">
+                    <label for="empleado" class="form-label fw-semibold">🔍 Buscar Empleado</label>
+                    <input type="text" 
+                           id="empleado"
+                           name="empleado" 
+                           value="<?php echo esc_attr( $_GET['empleado'] ?? '' ); ?>" 
+                           placeholder="Buscar por nombre o apellido..." 
+                           class="form-control form-control-lg">
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="estado" class="form-label fw-semibold">📋 Estado</label>
+                    <select name="estado" id="estado" class="form-select form-select-lg hrm-select">
+                        <option value="">Todos los estados</option>
+                        <option value="PENDIENTE" <?php selected( $_GET['estado'] ?? '', 'PENDIENTE' ); ?>>
+                            ⏳ Pendiente
+                        </option>
+                        <option value="APROBADA" <?php selected( $_GET['estado'] ?? '', 'APROBADA' ); ?>>
+                            ✅ Aprobada
+                        </option>
+                        <option value="RECHAZADA" <?php selected( $_GET['estado'] ?? '', 'RECHAZADA' ); ?>>
+                            ❌ Rechazada
+                        </option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-success btn-lg w-100 d-flex align-items-center justify-content-center gap-2">
+                        <span>🔍</span> Buscar
+                    </button>
+                </div>
+                
+                <?php if ( ! empty( $_GET['empleado'] ) || ! empty( $_GET['estado'] ) ) : ?>
+                    <div class="col-md-2">
+                        <a href="<?php echo esc_url( admin_url( 'admin.php?page=' . $_GET['page'] ) ); ?>" 
+                           class="btn btn-outline-light btn-lg w-100 d-flex align-items-center justify-content-center gap-2">
+                            <span>🗑️</span> Limpiar
+                        </a>
+                    </div>
+                <?php endif; ?>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla de solicitudes -->
+    <div class="hrm-panel shadow-sm border-0 rounded-3">
+        <div class="hrm-panel-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0 align-middle">
+                    <thead class="table-dark">
+                    <tr class="text-uppercase small text-secondary">
+                        <th class="py-3 px-4">👤 Empleado</th>
+                        <th class="py-3 px-4"> Tipo</th>
+                        <th class="py-3 px-4 text-center">💬 Comentarios</th>
+                        <th class="py-3 px-4"> Desde</th>
+                        <th class="py-3 px-4"> Hasta</th>
+                        <th class="py-3 px-4 text-center"> Días</th>
+                        <th class="py-3 px-4 text-center"> Estado</th>
+                        <th class="py-3 px-4 text-center" style="min-width: 220px;"> Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="text-secondary small">
+                <?php 
+                // Filtrar solicitudes por departamento si es supervisor
+                if ( $es_supervisor && ! $es_editor_vacaciones && ! empty( $departamentos_supervisor ) ) {
+                    $solicitudes = array_filter( $solicitudes, function( $sol ) use ( $departamentos_supervisor ) {
+                        return isset( $sol['departamento'] ) && in_array( $sol['departamento'], $departamentos_supervisor, true );
+                    } );
+                }
+                ?>
+                <?php if ( empty( $solicitudes ) ) : ?>
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <div class="text-muted">
+                                <div class="fs-1 mb-3 opacity-50">📭</div>
+                                <p class="fs-5 fw-semibold mb-2">No hay solicitudes de vacaciones registradas.</p>
+                                <?php if ( ! empty( $search_term ) || ! empty( $estado_filtro ) ) : ?>
+                                    <p class="text-secondary">Prueba con otros filtros de búsqueda.</p>
+                                <?php endif; ?>
+                            </div>
+                        </td>
+                    </tr>
+                <?php else : ?>
+                    <?php foreach ( $solicitudes as $s ) : ?>
+                        <tr>
+                            <!-- Nombre del empleado -->
+                            <td class="py-3 px-4 fw-bold text-dark">
+                                <?php echo esc_html( $s['nombre'] . ' ' . $s['apellido'] ); ?>
+                            </td>
+                            
+                            <!-- Tipo de ausencia -->
+                            <td class="py-3 px-4"><?php echo esc_html( $s['tipo'] ); ?></td>
+                            
+                            <!-- Botón de comentarios -->
+                            <td class="py-3 px-4 text-center">
+                                <button class="btn btn-primary btn-sm rounded d-inline-flex align-items-center justify-content-center btn-comentarios" 
+                                        data-id="<?php echo esc_attr( $s['id_solicitud'] ); ?>" 
+                                        title="Ver comentarios"
+                                        style="width: 40px; height: 40px; font-size: 18px; padding: 0;">
+                                    💬
+                                </button>
+                            </td>
+                            
+                            <!-- Fecha de inicio -->
+                            <td class="py-3 px-4">
+                                <span class="badge bg-light text-dark border px-3 py-2 font-monospace">
+                                    <?php echo esc_html( $s['fecha_inicio'] ); ?>
+                                </span>
+                            </td>
+                            
+                            <!-- Fecha de fin -->
+                            <td class="py-3 px-4">
+                                <span class="badge bg-light text-dark border px-3 py-2 font-monospace">
+                                    <?php echo esc_html( $s['fecha_fin'] ); ?>
+                                </span>
+                            </td>
+                            
+                            <!-- Total de días -->
+                            <td class="py-3 px-4 text-center">
+                                <span class="badge bg-info text-white rounded-circle d-inline-flex align-items-center justify-content-center" 
+                                      style="width: 45px; height: 45px; font-size: 15px; font-weight: 700;">
+                                    <?php echo esc_html( $s['total_dias'] ); ?>
+                                </span>
+                            </td>
+                            
+                            <!-- Estado actual -->
+                            <td class="py-3 px-4 text-center">
+                                <?php 
+                                $estado = strtoupper( $s['estado'] ?? '' );
+                                $clase_estado = '';
+                                
+                                if ( $estado === 'APROBADA' ) {
+                                    $clase_estado = 'bg-success';
+                                } elseif ( $estado === 'RECHAZADA' ) {
+                                    $clase_estado = 'bg-danger';
+                                } else {
+                                    $clase_estado = 'bg-warning';
+                                }
+                                ?>
+                                <span class="badge <?= esc_attr( $clase_estado ) ?> text-white px-3 py-2 text-uppercase fw-bold">
+                                    <?php echo esc_html( $s['estado'] ); ?>
+                                </span>
+                            </td>
+                            
+                            <!-- Acciones disponibles -->
+                            <td class="py-3 px-4 text-center">
+                                <!-- Botón VER/EDITAR SOLICITUD -->
+                                <a href="<?php echo esc_url( add_query_arg( 'solicitud_id', $s['id_solicitud'], admin_url('admin.php?page=hrm-vacaciones-formulario') ) ); ?>" 
+                                   class="btn btn-info btn-sm d-inline-flex align-items-center gap-1 mb-2 mb-md-0"
+                                   style="font-size: 0.8rem; min-width: 110px;"
+                                   title="Ver o editar solicitud">
+                                    <span style="font-size: 0.9rem;">📄</span> Ver/Editar
+                                </a>
+                                
+                                <?php if ( $s['estado'] === 'PENDIENTE' ) : ?>
+                                    <?php 
+                                    // Validar si la solicitud puede ser aprobada
+                                    $validacion = hrm_validar_aprobacion_solicitud( $s['id_solicitud'] );
+                                    $puede_aprobar = $validacion['puede_aprobar'];
+                                    $razon = $validacion['razon'];
+                                    ?>
+                                    <div class="d-flex gap-2 justify-content-center flex-wrap">
+                                        <!-- Formulario APROBAR -->
+                                        <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" class="d-inline">
+                                            <input type="hidden" name="action" value="hrm_aprobar_rechazar_solicitud">
+                                            <?php wp_nonce_field( 'hrm_aprobar_solicitud', 'hrm_nonce' ); ?>
+                                            <input type="hidden" name="accion" value="aprobar">
+                                            <input type="hidden" name="solicitud_id" value="<?php echo esc_attr( $s['id_solicitud'] ); ?>">
+                                            <button class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" 
+                                                    style="font-size: 0.8rem; min-width: 90px;"
+                                                    <?php disabled( ! $puede_aprobar ); ?>
+                                                    title="<?php echo $puede_aprobar ? 'Aprobar solicitud' : esc_attr( $razon ); ?>">
+                                                <span style="font-size: 0.9rem;">✅</span> Aprobar
+                                            </button>
+                                        </form>
+                                        
+                                        <!-- Botón RECHAZAR (Abre Modal) -->
+                                        <button type="button" 
+                                                class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 btn-modal-rechazo"
+                                                style="font-size: 0.8rem; min-width: 90px;"
+                                                data-solicitud-id="<?php echo esc_attr( $s['id_solicitud'] ); ?>"
+                                                data-nonce="<?php echo esc_attr( wp_create_nonce('hrm_rechazar_solicitud') ); ?>">
+                                            <span style="font-size: 0.9rem;">❌</span> Rechazar
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- ALERTA DE VALIDACIÓN -->
+                                    <?php if ( ! $puede_aprobar ) : ?>
+                                        <div class="alert alert-warning alert-dismissible fade show mt-2 mb-0 p-2 small" role="alert" style="max-width: 300px; margin: 8px auto 0;">
+                                            <div class="d-flex align-items-start gap-2">
+                                                <span class="fs-6">⚠️</span>
+                                                <div class="small">
+                                                    <strong>No se puede aprobar:</strong><br>
+                                                    <?php echo esc_html( $razon ); ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+                                <?php else : ?>
+                                    <span class="badge bg-secondary text-white">Procesada</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+            </div> <!-- Cierre del tab-pane contenido-solicitudes -->
+
+            <!-- Contenido Tab 2: Departamentos -->
+            <div id="contenido-departamentos" class="tab-pane fade <?php echo $tab_activo === 'departamentos' ? 'show active' : ''; ?>" role="tabpanel" aria-labelledby="tab-departamentos">
+                <div class="hrm-panel shadow-sm border-0 rounded-3">
+                    <div class="hrm-panel-header bg-light border-bottom px-4 py-3 d-flex align-items-center justify-content-between">
+                        <h2 class="fs-5 fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                            <span></span> Resumen de Departamentos
+                        </h2>
+                        <button type="button" class="btn btn-sm btn-outline-info" id="btnSincronizarPersonal" title="Sincronizar personal vigente manualmente">
+                            <span>🔄</span> Sincronizar Personal
+                        </button>
+                    </div>
+                    <div class="hrm-panel-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped mb-0 align-middle">
+                                <thead class="table-dark">
+                                    <tr class="text-uppercase small text-secondary">
+                                        <th class="py-3 px-4"> Departamento</th>
+                                        <th class="py-3 px-4 text-center"> Total Empleados</th>
+                                        <th class="py-3 px-4 text-center"> Personal Activo </th>
+                                        <th class="py-3 px-4 text-center"> Personal en Vacaciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-secondary small">
+                                    <?php 
+                                    $departamentos = hrm_get_all_departamentos();
+                                    
+                                    // Filtrar departamentos si es supervisor (solo sus departamentos a cargo)
+                                    // EXCEPTO si es editor de vacaciones (que ve todos)
+                                    if ( $es_supervisor && ! $es_editor_vacaciones && ! empty( $departamentos_supervisor ) ) {
+                                        $departamentos = array_filter( $departamentos, function( $depto ) use ( $departamentos_supervisor ) {
+                                            return isset( $depto['nombre_departamento'] ) && in_array( $depto['nombre_departamento'], $departamentos_supervisor, true );
+                                        } );
+                                    }
+                                    
+                                    if ( empty( $departamentos ) ) : 
+                                    ?>
+                                        <tr>
+                                            <td colspan="4" class="text-center py-4">
+                                                <div class="text-muted">
+                                                    <p class="fs-6 fw-semibold mb-1">No hay departamentos registrados.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php else : ?>
+                                        <?php foreach ( $departamentos as $depto ) : 
+                                            $total = (int) $depto['total_empleados'];
+                                            $nombre_depto = $depto['nombre_departamento'];
+                                            
+                                            // Obtener personal activo hoy (trabajando)
+                                            $activo_hoy = hrm_get_personal_activo_hoy( $nombre_depto );
+                                            
+                                            // Obtener personal en vacaciones hoy
+                                            $vacaciones_hoy = hrm_get_personal_vacaciones_hoy( $nombre_depto );
+                                            
+                                            // Determinar estado visual del personal activo
+                                            $estado_activo = $activo_hoy > 0 ? 'success' : ($activo_hoy === 0 && $total > 0 ? 'danger' : 'secondary');
+                                            $icono_activo = $activo_hoy > 0 ? '' : '';
+                                        ?>
+                                            <tr>
+                                                <td class="py-3 px-4 fw-bold text-dark">
+                                                    <?php echo esc_html( $nombre_depto ); ?>
+                                                </td>
+                                                <td class="py-3 px-4 text-center">
+                                                    <?php echo esc_html( $total ); ?>
+                                                </td>
+                                                <td class="py-3 px-4 text-center">
+                                                    <span class="text-<?php echo esc_attr( $estado_activo ); ?> fw-bold" style="font-size: 1.1rem;">
+                                                        <?php echo $icono_activo; ?> <?php echo esc_html( $activo_hoy ); ?>
+                                                    </span>
+                                                </td>
+                                                <td class="py-3 px-4 text-center">
+                                                    <span class="fw-bold" style="font-size: 1.1rem;">
+                                                        <?php 
+                                                        if ( $vacaciones_hoy > 0 ) {
+                                                            // Obtener datos para el tooltip - Se actualiza cada vez que se carga la página
+                                                            $tooltip_data = hrm_get_tooltip_vacaciones_hoy( $nombre_depto );
+                                                            echo '<div class="tooltip-vacaciones hrm-tooltip-dinamico" style="display: inline-block;" data-departamento="' . esc_attr( $nombre_depto ) . '">';
+                                                            echo '<button type="button" class="btn btn-link btn-vacaciones-detalle p-0" data-departamento="' . esc_attr( $nombre_depto ) . '" style="color: #0d6efd; text-decoration: none; font-size: 1.1rem; cursor: pointer; border: none; background: none;">🏖️ ' . esc_html( $vacaciones_hoy ) . '</button>';
+                                                            echo '<span class="tooltip-text">' . nl2br( esc_html( $tooltip_data ) ) . '</span>';
+                                                            echo '</div>';
+                                                        } else {
+                                                            echo '<span class="text-success">Sin empleados de vacaciones </span>';
+                                                        }
+                                                        ?>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- Cierre del tab-pane contenido-departamentos -->
+
+            <!-- Contenido Tab 3: Calendario -->
+            <div id="contenido-calendario" class="tab-pane fade" role="tabpanel" aria-labelledby="tab-calendario">
+                <div class="hrm-panel shadow-sm border-0 rounded-3">
+                    <div class="hrm-panel-header bg-light border-bottom px-4 py-3">
+                        <div class="d-flex align-items-center justify-content-between gap-3">
+                            <h2 class="fs-5 fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                                <span>📅</span> Calendario de Vacaciones
+                            </h2>
+                            <div style="min-width: 280px;">
+                                <label for="filtroCalendarioDepartamento" class="form-label small fw-semibold mb-1">🏢 Filtrar por Departamento</label>
+                                <select id="filtroCalendarioDepartamento" class="form-select form-select-sm">
+                                    <option value="">📊 Todos los Departamentos</option>
+                                    <?php 
+                                    $departamentos_calendario = hrm_get_all_departamentos();
+                                    
+                                    // Filtrar departamentos si es supervisor (solo sus departamentos a cargo)
+                                    // EXCEPTO si es editor de vacaciones (que ve todos)
+                                    if ( $es_supervisor && ! $es_editor_vacaciones && ! empty( $departamentos_supervisor ) ) {
+                                        $departamentos_calendario = array_filter( $departamentos_calendario, function( $depto ) use ( $departamentos_supervisor ) {
+                                            return isset( $depto['nombre_departamento'] ) && in_array( $depto['nombre_departamento'], $departamentos_supervisor, true );
+                                        } );
+                                    }
+                                    
+                                    foreach ( $departamentos_calendario as $dept ) {
+                                        echo '<option value="' . esc_attr( $dept['nombre_departamento'] ) . '">';
+                                        echo esc_html( $dept['nombre_departamento'] );
+                                        echo ' (' . intval( $dept['personal_vigente'] ) . '/' . intval( $dept['total_empleados'] ) . ')';
+                                        echo '</option>';
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hrm-panel-body p-4">
+                        <!-- Controles de navegación del calendario -->
+                        <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom">
+                            <button class="btn btn-outline-primary btn-sm" id="btnMesAnterior">
+                                <span>⬅️</span> Mes Anterior
+                            </button>
+                            <h3 class="fs-5 fw-bold text-center mb-0" id="mesesTitulo">Enero 2026</h3>
+                            <button class="btn btn-outline-primary btn-sm" id="btnMesSiguiente">
+                                Mes Siguiente <span>➡️</span>
+                            </button>
+                        </div>
+
+                        <!-- Calendario -->
+                        <div class="calendario-container">
+                            <div class="table-responsive">
+                                <table class="table table-bordered calendario" id="calendarioTabla">
+                                    <thead>
+                                        <tr class="bg-primary text-white text-center">
+                                            <th style="width: 14.28%;">Lunes</th>
+                                            <th style="width: 14.28%;">Martes</th>
+                                            <th style="width: 14.28%;">Miércoles</th>
+                                            <th style="width: 14.28%;">Jueves</th>
+                                            <th style="width: 14.28%;">Viernes</th>
+                                            <th style="width: 14.28%;">Sábado</th>
+                                            <th style="width: 14.28%;">Domingo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="diasCalendario">
+                                        <!-- Se llenará con JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Leyenda -->
+                        <div class="mt-4 pt-3 border-top">
+                            <h5 class="fw-semibold mb-3">📌 Indicadores</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div style="width: 30px; height: 30px; background-color: #ff6b6b; border-radius: 4px;"></div>
+                                        <span>Vacaciones aprobadas</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div style="width: 30px; height: 30px; background-color: #9775fa; border-radius: 4px; text-decoration: line-through; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px;">—</div>
+                                        <span>Feriados (tachados)</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div style="width: 30px; height: 30px; background-color: #ffd43b; border-radius: 4px;"></div>
+                                        <span>Fin de semana</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div style="width: 30px; height: 30px; background-color: #fff; border: 2px solid #ddd; border-radius: 4px;"></div>
+                                        <span>Día hábil sin vacaciones</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- Cierre del tab-pane contenido-calendario -->
+
+            </div> <!-- Cierre del tab-content -->
+
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // =====================================================
+    // LÓGICA DE NAVEGACIÓN DE TABS
+    // =====================================================
+    const tabButtons = document.querySelectorAll('[role="tab"]');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetId = this.getAttribute('aria-controls');
+            
+            // Remover active de todos los buttons y panes
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('[role="tabpanel"]').forEach(pane => {
+                pane.classList.remove('show', 'active');
+            });
+            
+            // Agregar active al button clickeado y su pane
+            this.classList.add('active');
+            this.setAttribute('aria-selected', 'true');
+            
+            const targetPane = document.getElementById(targetId);
+            if (targetPane) {
+                targetPane.classList.add('show', 'active');
+                
+                // Si es el tab del calendario, renderizar el calendario
+                if (targetId === 'contenido-calendario') {
+                    renderizarCalendario(mesActual, anoActual);
+                }
+            }
+        });
+    });
+
+    // =====================================================
+    // LÓGICA DEL CALENDARIO
+    // =====================================================
+    let mesActual = new Date().getMonth();
+    let anoActual = new Date().getFullYear();
+    let feriados = {}; // Objeto para almacenar feriados
+    let vacacionesAprobadas = []; // Variable para almacenar vacaciones dinámicamente
+    let departamentoFiltro = ''; // Variable para almacenar el departamento seleccionado
+
+    // Función para cargar vacaciones del departamento seleccionado
+    function cargarVacacionesPorDepartamento(departamento) {
+        return fetch('<?php echo esc_url( admin_url('admin-ajax.php') ); ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                action: 'hrm_get_vacaciones_calendario',
+                departamento: departamento
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                vacacionesAprobadas = data.data;
+                return true;
+            }
+            return false;
+        })
+        .catch(error => {
+            console.error('Error cargando vacaciones:', error);
+            return false;
+        });
+    }
+
+    // Event listener para el selector de departamento
+    const selectorDepartamento = document.getElementById('filtroCalendarioDepartamento');
+    if (selectorDepartamento) {
+        selectorDepartamento.addEventListener('change', function() {
+            departamentoFiltro = this.value;
+            cargarVacacionesPorDepartamento(departamentoFiltro).then(() => {
+                renderizarCalendario(mesActual, anoActual);
+            });
+        });
+    }
+
+    // Función para cargar feriados del año especificado
+    function cargarFeriadosDelAno(ano) {
+        return fetch('<?php echo esc_url( admin_url('admin-ajax.php') ); ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                action: 'hrm_get_feriados',
+                ano: ano
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                feriados = data.data;
+                return true;
+            }
+            return false;
+        })
+        .catch(error => {
+            console.error('Error cargando feriados:', error);
+            return false;
+        });
+    }
+
+    // Cargar feriados iniciales y vacaciones del departamento seleccionado
+    cargarFeriadosDelAno(anoActual).then(() => {
+        cargarVacacionesPorDepartamento(departamentoFiltro);
+    });
+
+    function renderizarCalendario(mes, ano) {
+        const primerDia = new Date(ano, mes, 1);
+        const ultimoDia = new Date(ano, mes + 1, 0);
+        const diasEnMes = ultimoDia.getDate();
+        
+        // getDay() retorna: 0=domingo, 1=lunes, ..., 6=sábado
+        // Pero nuestra tabla empieza en lunes (posición 0)
+        // Convertir: domingo (0) -> 6, lunes (1) -> 0, martes (2) -> 1, etc.
+        let diaInicio = primerDia.getDay();
+        diaInicio = diaInicio === 0 ? 6 : diaInicio - 1;
+        
+        // Nombres de meses en español
+        const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        
+        document.getElementById('mesesTitulo').textContent = meses[mes] + ' ' + ano;
+        
+        let html = '';
+        let diaActual = 1;
+        
+        // Calcular número de semanas
+        const totalCeldas = Math.ceil((diasEnMes + diaInicio) / 7) * 7;
+        
+        for (let i = 0; i < totalCeldas / 7; i++) {
+            html += '<tr>';
+            
+            for (let j = 0; j < 7; j++) {
+                const indice = i * 7 + j;
+                
+                if (indice < diaInicio || diaActual > diasEnMes) {
+                    html += '<td class="other-month"></td>';
+                } else {
+                    const fecha = new Date(ano, mes, diaActual);
+                    const fechaStr = ano + '-' + String(mes + 1).padStart(2, '0') + '-' + String(diaActual).padStart(2, '0');
+                    
+                    let clasesCelda = '';
+                    let contenido = '<span class="dia-numero">' + diaActual + '</span>';
+                    
+                    // Verificar si es un feriado
+                    let esFeriado = false;
+                    let nombreFeriado = '';
+                    
+                    if (fechaStr in feriados) {
+                        esFeriado = true;
+                        nombreFeriado = feriados[fechaStr];
+                        clasesCelda += ' feriado';
+                        contenido += '<div class="dia-info">🎉 Feriado</div>';
+                    }
+                    
+                    // Verificar si es fin de semana (sábado=6, domingo=0)
+                    if (j === 5 || j === 6) {
+                        clasesCelda += ' fin-semana';
+                    }
+                    
+                    // Verificar si hay vacaciones en este día (solo si no es feriado)
+                    let tieneVacaciones = false;
+                    let empleadosVacaciones = [];
+                    
+                    if (!esFeriado) {
+                        for (let vac of vacacionesAprobadas) {
+                            if (fechaStr >= vac.fecha_inicio && fechaStr <= vac.fecha_fin) {
+                                tieneVacaciones = true;
+                                empleadosVacaciones.push(vac.empleado);
+                            }
+                        }
+                        
+                        if (tieneVacaciones) {
+                            clasesCelda += ' vacaciones';
+                            contenido += '<div class="dia-info">🏖️ ' + empleadosVacaciones.length + ' empleado(s)</div>';
+                        }
+                    }
+                    
+                    // Verificar si es hoy
+                    const hoy = new Date();
+                    if (fecha.toDateString() === hoy.toDateString()) {
+                        clasesCelda += ' hoy';
+                    }
+                    
+                    // Agregar título (tooltip) con nombre del feriado
+                    const titulo = esFeriado ? ` title="${nombreFeriado}"` : '';
+                    
+                    html += '<td class="' + clasesCelda + '"' + titulo + '>' + contenido + '</td>';
+                    diaActual++;
+                }
+            }
+            
+            html += '</tr>';
+        }
+        
+        document.getElementById('diasCalendario').innerHTML = html;
+    }
+    
+    // Botones de navegación
+    document.getElementById('btnMesAnterior').addEventListener('click', function() {
+        const anoAnterior = anoActual;
+        
+        mesActual--;
+        if (mesActual < 0) {
+            mesActual = 11;
+            anoActual--;
+        }
+        
+        // Si cambió el año, cargar feriados del nuevo año
+        if (anoActual !== anoAnterior) {
+            cargarFeriadosDelAno(anoActual).then(() => {
+                renderizarCalendario(mesActual, anoActual);
+            });
+        } else {
+            renderizarCalendario(mesActual, anoActual);
+        }
+    });
+    
+    document.getElementById('btnMesSiguiente').addEventListener('click', function() {
+        const anoAnterior = anoActual;
+        
+        mesActual++;
+        if (mesActual > 11) {
+            mesActual = 0;
+            anoActual++;
+        }
+        
+        // Si cambió el año, cargar feriados del nuevo año
+        if (anoActual !== anoAnterior) {
+            cargarFeriadosDelAno(anoActual).then(() => {
+                renderizarCalendario(mesActual, anoActual);
+            });
+        } else {
+            renderizarCalendario(mesActual, anoActual);
+        }
+    });
+
+    // =====================================================
+    // LÓGICA DE SINCRONIZACIÓN MANUAL DE PERSONAL
+    // =====================================================
+    const btnSincronizar = document.getElementById('btnSincronizarPersonal');
+    
+    if (btnSincronizar) {
+        btnSincronizar.addEventListener('click', function() {
+            // Cambiar estado del botón
+            const textoOriginal = btnSincronizar.innerHTML;
+            btnSincronizar.disabled = true;
+            btnSincronizar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sincronizando...';
+            
+            // Realizar la solicitud AJAX
+            fetch('<?php echo esc_url( admin_url('admin-ajax.php') ); ?>', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'hrm_sincronizar_personal_vigente',
+                    nonce: '<?php echo esc_js( wp_create_nonce('hrm_sincronizar_personal') ); ?>'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Restaurar estado del botón
+                btnSincronizar.disabled = false;
+                btnSincronizar.innerHTML = textoOriginal;
+                
+                if (data.success) {
+                    // Mostrar notificación de éxito
+                    mostrarNotificacionExito(
+                        'Sincronización completada',
+                        `Se actualizaron ${data.data.departamentos_actualizados} departamento(s).`,
+                        data.data.detalles
+                    );
+                    
+                    // Recargar la tabla de departamentos
+                    location.reload();
+                } else {
+                    // Mostrar notificación de error
+                    mostrarNotificacionError(
+                        'Error en la sincronización',
+                        data.data.mensaje || 'Ocurrió un error al sincronizar el personal.',
+                        data.data.errores || []
+                    );
+                }
+            })
+            .catch(error => {
+                // Restaurar estado del botón
+                btnSincronizar.disabled = false;
+                btnSincronizar.innerHTML = textoOriginal;
+                
+                // Mostrar error de red
+                mostrarNotificacionError(
+                    'Error de conexión',
+                    'No se pudo conectar con el servidor.',
+                    [error.message]
+                );
+            });
+        });
+    }
+    
+    // Función para mostrar notificación de éxito
+    function mostrarNotificacionExito(titulo, mensaje, detalles) {
+        const notif = document.createElement('div');
+        notif.className = 'alert alert-success alert-dismissible fade show shadow-lg';
+        notif.setAttribute('role', 'alert');
+        notif.style.position = 'fixed';
+        notif.style.top = '20px';
+        notif.style.right = '20px';
+        notif.style.zIndex = '9999';
+        notif.style.minWidth = '400px';
+        
+        let detalleHtml = '';
+        if (detalles && detalles.length > 0) {
+            detalleHtml = '<ul class="mb-0 mt-2 small">';
+            detalles.forEach(detalle => {
+                detalleHtml += `<li>${detalle.nombre}: ${detalle.total_empleados} total, ${detalle.personal_vigente} vigente</li>`;
+            });
+            detalleHtml += '</ul>';
+        }
+        
+        notif.innerHTML = `
+            <div class="d-flex gap-2 align-items-start">
+                <span style="font-size: 1.5rem;">✅</span>
+                <div class="flex-grow-1">
+                    <strong>${titulo}</strong>
+                    <p class="mb-0">${mensaje}</p>
+                    ${detalleHtml}
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        document.body.appendChild(notif);
+        
+        // Auto-cerrar después de 5 segundos
+        setTimeout(() => {
+            notif.remove();
+        }, 5000);
+    }
+    
+    // Función para mostrar notificación de error
+    function mostrarNotificacionError(titulo, mensaje, errores) {
+        const notif = document.createElement('div');
+        notif.className = 'alert alert-danger alert-dismissible fade show shadow-lg';
+        notif.setAttribute('role', 'alert');
+        notif.style.position = 'fixed';
+        notif.style.top = '20px';
+        notif.style.right = '20px';
+        notif.style.zIndex = '9999';
+        notif.style.minWidth = '400px';
+        
+        let erroresHtml = '';
+        if (errores && errores.length > 0) {
+            erroresHtml = '<ul class="mb-0 mt-2 small">';
+            errores.forEach(error => {
+                erroresHtml += `<li>${error}</li>`;
+            });
+            erroresHtml += '</ul>';
+        }
+        
+        notif.innerHTML = `
+            <div class="d-flex gap-2 align-items-start">
+                <span style="font-size: 1.5rem;">❌</span>
+                <div class="flex-grow-1">
+                    <strong>${titulo}</strong>
+                    <p class="mb-0">${mensaje}</p>
+                    ${erroresHtml}
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        document.body.appendChild(notif);
+        
+        // Auto-cerrar después de 6 segundos
+        setTimeout(() => {
+            notif.remove();
+        }, 6000);
+    }
+
+    // =====================================================
+    // LÓGICA DEL MODAL DE COMENTARIOS
+    // =====================================================
+    
+    // Datos de las solicitudes con comentarios
+    const solicitudesData = {
+        <?php 
+        $primera = true;
+        foreach ( $solicitudes as $s ) {
+            if ( ! $primera ) echo ",";
+            echo "'" . esc_js( $s['id_solicitud'] ) . "': {";
+            echo "nombre: '" . esc_js( $s['nombre'] . ' ' . $s['apellido'] ) . "',";
+            echo "comentario: '" . esc_js( $s['comentario_empleado'] ?? '' ) . "'";
+            echo "}";
+            $primera = false;
+        }
+        ?>
+    };
+    
+    const botonesComentarios = document.querySelectorAll('.btn-comentarios');
+    const modal = document.getElementById('modalComentarios');
+    const btnCerrar = document.querySelector('.modal-cerrar');
+    const btnCerrarModal = document.querySelector('.btn-cerrar-modal');
+    
+    // Abrir modal
+    botonesComentarios.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            const datos = solicitudesData[id];
+            
+            if (datos) {
+                document.getElementById('modalEmpleado').textContent = datos.nombre;
+                const contenidoComentario = document.getElementById('modalComentarioContenido');
+                
+                if (datos.comentario.trim() === '') {
+                    contenidoComentario.innerHTML = '<div class="text-muted fst-italic text-center py-4">No hay comentarios agregados</div>';
+                } else {
+                    contenidoComentario.textContent = datos.comentario;
+                }
+                
+                modal.classList.add('activo');
+            }
+        });
+    });
+    
+    // Cerrar modal - botón X
+    if (btnCerrar) {
+        btnCerrar.addEventListener('click', function() {
+            modal.classList.remove('activo');
+        });
+    }
+    
+    // Cerrar modal - botón Cerrar
+    if (btnCerrarModal) {
+        btnCerrarModal.addEventListener('click', function() {
+            modal.classList.remove('activo');
+        });
+    }
+    
+    // Cerrar modal - click fuera del modal
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                modal.classList.remove('activo');
+            }
+        });
+    }
+    
+    // Cerrar modal con ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal && modal.classList.contains('activo')) {
+            modal.classList.remove('activo');
+        }
+    });
+    
+    // =====================================================
+    // LÓGICA DEL MODAL DE RECHAZO CON MOTIVO
+    // =====================================================
+    
+    const modalRechazo = document.getElementById('modalRechazo');
+    const botonesModalRechazo = document.querySelectorAll('.btn-modal-rechazo');
+    const btnCerrarRechazo = document.querySelector('.modal-rechazo-cerrar');
+    const btnCancelarRechazo = document.querySelector('.btn-cancelar-rechazo');
+    const btnConfirmarRechazo = document.querySelector('.btn-confirmar-rechazo');
+    const formRechazo = document.getElementById('formRechazo');
+    
+    // Abrir modal de rechazo
+    botonesModalRechazo.forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const solicitudId = this.getAttribute('data-solicitud-id');
+            const nonce = this.getAttribute('data-nonce');
+            
+            // Establecer valores en el formulario
+            document.getElementById('solicitudIdRechazo').value = solicitudId;
+            document.getElementById('nonceRechazo').value = nonce;
+            document.getElementById('motivoRechazo').value = ''; // Limpiar campo
+            
+            // Mostrar modal
+            modalRechazo.classList.add('activo');
+        });
+    });
+    
+    // Cerrar modal - botón X
+    if (btnCerrarRechazo) {
+        btnCerrarRechazo.addEventListener('click', function() {
+            modalRechazo.classList.remove('activo');
+        });
+    }
+    
+    // Cerrar modal - botón Cancelar
+    if (btnCancelarRechazo) {
+        btnCancelarRechazo.addEventListener('click', function() {
+            modalRechazo.classList.remove('activo');
+        });
+    }
+    
+    // Cerrar modal - click fuera del modal
+    if (modalRechazo) {
+        modalRechazo.addEventListener('click', function(e) {
+            if (e.target === modalRechazo) {
+                modalRechazo.classList.remove('activo');
+            }
+        });
+    }
+    
+    // Confirmar rechazo - enviar formulario
+    if (btnConfirmarRechazo) {
+        btnConfirmarRechazo.addEventListener('click', function() {
+            const motivo = document.getElementById('motivoRechazo').value.trim();
+            
+            // Validación simple
+            if (motivo === '') {
+                alert('Por favor ingresa un motivo para el rechazo.');
+                return;
+            }
+            
+            if (motivo.length < 5) {
+                alert('El motivo debe tener al menos 5 caracteres.');
+                return;
+            }
+            
+            // Enviar el formulario
+            formRechazo.submit();
+        });
+    }
+    
+    // Cerrar modal con ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modalRechazo && modalRechazo.classList.contains('activo')) {
+            modalRechazo.classList.remove('activo');
+        }
+    });
+    
+    // =====================================================
+    // LÓGICA DEL MODAL DE EMPLEADOS EN VACACIONES
+    // =====================================================
+    const modalVacacionesDetalle = document.getElementById('modalVacacionesDetalle');
+    const botonesVacacionesDetalle = document.querySelectorAll('.btn-vacaciones-detalle');
+    const btnCerrarVacaciones = document.querySelectorAll('.modal-vacaciones-cerrar');
+    
+    // Abrir modal de detalles de vacaciones
+    botonesVacacionesDetalle.forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const departamento = this.getAttribute('data-departamento');
+            
+            // Cambiar contenido a "Cargando..."
+            document.getElementById('modalVacacionesContenido').innerHTML = '<div class="text-center"><span class="spinner-border spinner-border-sm me-2"></span> Cargando información...</div>';
+            
+            // Mostrar modal
+            modalVacacionesDetalle.style.display = 'flex';
+            
+            // Cargar datos
+            fetch('<?php echo esc_url( admin_url('admin-ajax.php') ); ?>', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'hrm_get_empleados_vacaciones_hoy',
+                    departamento: departamento
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data.length > 0) {
+                    let html = '<div class="list-group">';
+                    
+                    data.data.forEach(function(empleado) {
+                        // Parsear fecha manualmente para evitar problemas de zona horaria
+                        const [year, month, day] = empleado.fecha_inicio.split('-');
+                        const fechaInicio = new Date(year, month - 1, day);
+                        
+                        const [yearFin, monthFin, dayFin] = empleado.fecha_fin.split('-');
+                        const fechaFin = new Date(yearFin, monthFin - 1, dayFin);
+                        
+                        const opciones = { year: 'numeric', month: 'long', day: 'numeric' };
+                        const fechaInicioFormato = fechaInicio.toLocaleDateString('es-ES', opciones);
+                        const fechaFinFormato = fechaFin.toLocaleDateString('es-ES', opciones);
+                        
+                        html += '<div class="list-group-item px-3 py-3 border-bottom">';
+                        html += '<h6 class="fw-bold text-dark mb-1">' + empleado.nombre + '</h6>';
+                        html += '<small class="text-muted d-block">📅 ' + fechaInicioFormato + ' hasta ' + fechaFinFormato + '</small>';
+                        html += '</div>';
+                    });
+                    
+                    html += '</div>';
+                    document.getElementById('modalVacacionesContenido').innerHTML = html;
+                } else {
+                    document.getElementById('modalVacacionesContenido').innerHTML = '<div class="alert alert-info">No hay empleados en vacaciones hoy</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('modalVacacionesContenido').innerHTML = '<div class="alert alert-danger">Error al cargar la información</div>';
+            });
+        });
+    });
+    
+    // Cerrar modal - botones cerrar
+    btnCerrarVacaciones.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            modalVacacionesDetalle.style.display = 'none';
+        });
+    });
+    
+    // Cerrar modal - click fuera del modal
+    if (modalVacacionesDetalle) {
+        modalVacacionesDetalle.addEventListener('click', function(e) {
+            if (e.target === modalVacacionesDetalle) {
+                modalVacacionesDetalle.style.display = 'none';
+            }
+        });
+    }
+    
+    // Cerrar modal con ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modalVacacionesDetalle && modalVacacionesDetalle.style.display === 'flex') {
+            modalVacacionesDetalle.style.display = 'none';
+        }
+    });
+});
+</script>
+
+<!-- =====================================================
+     MODAL DE RECHAZO CON MOTIVO
+     ===================================================== -->
+<div id="modalRechazo" class="modal-rechazo">
+    <div class="modal-contenido bg-white rounded-4 shadow-lg p-4" style="max-width: 650px; width: 90%;">
+        <div class="modal-header border-bottom border-3 border-danger pb-3 mb-4">
+            <h2 class="modal-titulo fs-4 fw-bold text-danger d-flex align-items-center gap-2 mb-0">
+                <span>⛔</span> Rechazar Solicitud de Vacaciones
+            </h2>
+            <button type="button" class="modal-rechazo-cerrar" aria-label="Close">×</button>
+        </div>
+        
+        <form id="formRechazo" method="post" action="<?php echo admin_url('admin-post.php'); ?>">
+            <input type="hidden" name="action" value="hrm_aprobar_rechazar_solicitud">
+            <input type="hidden" name="accion" value="rechazar">
+            <input type="hidden" id="solicitudIdRechazo" name="solicitud_id" value="">
+            <input type="hidden" id="nonceRechazo" name="hrm_nonce" value="">
+            
+            <div class="modal-body">
+                <div class="alert alert-danger border-start border-4 border-danger mb-3">
+                    <span class="fw-semibold">📝</span> Por favor ingresa el motivo del rechazo. Este mensaje será enviado al empleado.
+                </div>
+                
+                <div class="mb-3">
+                    <label for="motivoRechazo" class="form-label fw-bold">Motivo del Rechazo</label>
+                    <textarea 
+                        id="motivoRechazo" 
+                        name="motivo_rechazo" 
+                        class="form-control"
+                        placeholder="Ejemplo: Falta de cobertura en el departamento durante esas fechas..."
+                        rows="5"
+                        maxlength="1000"
+                        required
+                    ></textarea>
+                    <div class="form-text">Mínimo 5 caracteres, máximo 1000</div>
+                </div>
+            </div>
+            
+            <div class="modal-footer border-top pt-3 d-flex gap-2 justify-content-end">
+                <button type="button" class="btn btn-secondary btn-cancelar-rechazo">Cancelar</button>
+                <button type="button" class="btn btn-danger btn-confirmar-rechazo">Rechazar Solicitud</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- =====================================================
+     MODAL DE COMENTARIOS
+     ===================================================== -->
+<div id="modalComentarios" class="modal-comentarios">
+    <div class="modal-contenido bg-white rounded-4 shadow-lg p-4" style="max-width: 600px; width: 90%;">
+        <div class="modal-header border-bottom pb-3 mb-4">
+            <h2 class="modal-titulo fs-4 fw-bold text-primary d-flex align-items-center gap-2 mb-0">
+                <span>💬</span> Comentarios de la Solicitud
+            </h2>
+            <button type="button" class="modal-cerrar" aria-label="Close">×</button>
+        </div>
+        
+        <div class="modal-body">
+            <div class="alert alert-primary mb-3">
+                <strong>Empleado:</strong> <span id="modalEmpleado">-</span>
+            </div>
+            
+            <div class="bg-light p-3 rounded-3 border-start border-4 border-primary" id="modalComentarioContenido">
+                Cargando comentarios...
+            </div>
+        </div>
+        
+        <div class="modal-footer border-top pt-3 d-flex justify-content-end">
+            <button type="button" class="btn btn-primary btn-cerrar-modal">Cerrar</button>
+        </div>
+    </div>
+</div>
+<!-- =====================================================
+     MODAL DE EMPLEADOS EN VACACIONES
+     ===================================================== -->
+<div id="modalVacacionesDetalle" class="modal-vacaciones-detalle" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 10000; align-items: center; justify-content: center;">
+    <div class="modal-contenido bg-white rounded-4 shadow-lg p-4" style="max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+        <div class="modal-header border-bottom border-3 pb-3 mb-4 d-flex justify-content-between align-items-center">
+            <h2 class="modal-titulo fs-4 fw-bold text-info d-flex align-items-center gap-2 mb-0">
+                <span>🏖️</span> Empleados en Vacaciones Hoy
+            </h2>
+            <button type="button" class="modal-vacaciones-cerrar" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+        </div>
+        
+        <div class="modal-body" id="modalVacacionesContenido">
+            <div class="text-center text-muted">
+                <p class="spinner-border spinner-border-sm me-2"></p> Cargando información...
+            </div>
+        </div>
+        
+        <div class="modal-footer border-top pt-3 d-flex justify-content-end">
+            <button type="button" class="btn btn-secondary modal-vacaciones-cerrar">Cerrar</button>
+        </div>
+    </div>
+</div>

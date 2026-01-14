@@ -1,0 +1,109 @@
+
+.rrhh-login, .rrhh-dashboard { max-width:720px; margin:20px auto; padding:16px; border:1px solid #ddd; background:#fff; border-radius:4px; }
+.rrhh-login input[type="text"], .rrhh-login input[type="password"] { width:100%; padding:8px; box-sizing:border-box; }
+.rrhh-login button { padding:8px 14px; }
+.rrhh-error{ color:#b00020; margin-bottom:12px; }
+.rrhh-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.rrhh-tablist{ list-style:none; padding:0; margin:0 0 12px 0; display:flex; gap:8px; }
+.rrhh-tablist li{ cursor:pointer; padding:8px 12px; border:1px solid #ddd; border-radius:4px; background:#f7f7f7; }
+.rrhh-tablist li.active{ background:#fff; border-bottom-color:transparent; font-weight:600; }
+.rrhh-tabcontent{ border:1px solid #ddd; padding:12px; border-radius:4px; background:#fff; }
+.rrhh-tabpane{ display:none; }
+.rrhh-tabpane.active{ display:block; }
+.rrhh-logout{ font-size:0.9em; }
+
+/* Mockup styles (full frontend) */
+* { box-sizing: border-box; font-family: Arial, sans-serif; }
+body.rrhh-frontend { margin: 0; display: flex; min-height: 100vh; background: #f4f6f9; }
+
+/* Sidebar */
+.sidebar { width: 240px; background: #1f3a5f; color: #fff; padding: 20px 0; }
+.sidebar h2 { text-align: center; margin-bottom: 30px; font-size: 20px; }
+.menu { list-style: none; padding: 0; }
+.menu > li { padding: 12px 20px; cursor: pointer; font-weight: bold; }
+.submenu { list-style: none; padding-left: 20px; font-weight: normal; }
+.submenu li { padding: 8px 0; font-size: 14px; }
+
+/* Main content */
+.content { flex: 1; padding: 20px 30px; }
+.header { background: #fff; padding: 20px; border-radius: 6px; display: flex; align-items: center; margin-bottom: 20px; }
+.avatar { width: 80px; height: 80px; border-radius: 50%; background: #ccc; margin-right: 20px; }
+.header h1 { margin: 0; }
+.header p { margin: 4px 0; color: #666; }
+
+/* Tabs */
+.tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #ddd; }
+.tab { padding: 10px 20px; cursor: pointer; color: #555; }
+.tab.active { border-bottom: 3px solid #1f3a5f; color: #1f3a5f; font-weight: bold; }
+
+/* Tab panes */
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* Cards */
+.cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+.card { background: #fff; padding: 15px; border-radius: 6px; text-align: center; }
+.card h3 { margin: 0; font-size: 14px; color: #666; }
+.card span { font-size: 28px; font-weight: bold; }
+
+/* Vacation form specific styles */
+.tab-pane form input[name="days"] { width: 100px; padding: 8px; border: 1px solid #dcdcdc; border-radius: 4px; }
+.calculated-days-note { display:block; margin-top:6px; color:#555; font-size:13px; }
+.tab-pane form label { display:block; margin-bottom:8px; }
+.tab-pane form input[type="date"] { padding:8px; border:1px solid #e3e6ea; border-radius:4px; }
+.tab-pane form button { background:#1f3a5f; color:#fff; border:none; padding:10px 14px; border-radius:4px; cursor:pointer; }
+.tab-pane form button:hover { opacity:0.95; }
+
+/* Calendar improvements */
+#rrhh-calendar { background: #fff; padding: 12px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+.fc .fc-daygrid-event { padding: 4px 6px; border-radius: 4px; font-size: 13px; }
+.fc .fc-daygrid-event .fc-event-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-cell.has-event { background: #fff9e6; }
+.admin-feedback { margin-top:6px; font-size:12px; color:#444; }
+/* Table */
+table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 6px; overflow: hidden; }
+th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+th { background: #f0f2f5; }
+.badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; color: #fff; }
+.approved { background: #28a745; }
+.rejected { background: #dc3545; }
+.registered { background: #6c757d; }
+
+/* Responsive tweaks */
+@media (max-width: 900px) {
+	.content { padding: 12px; }
+	.cards { grid-template-columns: repeat(2, 1fr); }
+	.sidebar { width: 100%; }
+	body.rrhh-frontend { flex-direction: column; }
+}
+
+
+/* Mockup styles for Interfaz (sidebar + main) */
+.rrhh-mock { display:flex; gap:20px; }
+.rrhh-mock .sidebar { width:240px; background:#1f3a5f; color:#fff; padding:20px; border-radius:6px; }
+.rrhh-mock .sidebar h2 { text-align:center; margin:0 0 16px 0; font-size:18px; }
+.rrhh-mock .sidebar .menu { list-style:none; padding:0; margin:0; }
+.rrhh-mock .sidebar .menu li { padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+.rrhh-mock .content-area { flex:1; }
+.rrhh-mock .header { background:#fff; padding:16px; border-radius:6px; display:flex; gap:16px; align-items:center; margin-bottom:16px; }
+.rrhh-mock .avatar { width:80px; height:80px; border-radius:50%; background:#ccc; flex:0 0 80px; }
+.rrhh-mock .header h1{ margin:0; font-size:20px; }
+.rrhh-mock .header p{ margin:4px 0; color:#666; }
+.rrhh-mock .tabs-row { display:flex; gap:8px; margin-bottom:16px; }
+.rrhh-mock .tab-pill { padding:8px 14px; background:transparent; border-radius:6px; cursor:pointer; color:#555; }
+.rrhh-mock .tab-pill.active { border-bottom:3px solid #1f3a5f; color:#1f3a5f; font-weight:600; }
+.rrhh-mock .cards { display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom:16px; }
+.rrhh-mock .card { background:#fff; padding:12px; border-radius:6px; text-align:center; }
+.rrhh-mock table { width:100%; border-collapse:collapse; background:#fff; border-radius:6px; overflow:hidden; }
+.rrhh-mock th, .rrhh-mock td { padding:12px; border-bottom:1px solid #eee; text-align:left; }
+.rrhh-mock th { background:#f0f2f5; }
+.rrhh-mock .badge { padding:4px 10px; border-radius:12px; font-size:12px; color:#fff; }
+.rrhh-mock .approved{ background:#28a745; }
+.rrhh-mock .rejected{ background:#dc3545; }
+.rrhh-mock .registered{ background:#6c757d; }
+
+@media (max-width:900px) {
+	.rrhh-mock { flex-direction:column; }
+	.rrhh-mock .cards { grid-template-columns: repeat(2, 1fr); }
+}
+

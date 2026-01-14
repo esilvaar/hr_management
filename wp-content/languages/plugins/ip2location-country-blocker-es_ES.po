@@ -1,0 +1,513 @@
+# Translation of Plugins - IP2Location Country Blocker - Stable (latest release) in Spanish (Spain)
+# This file is distributed under the same license as the Plugins - IP2Location Country Blocker - Stable (latest release) package.
+msgid ""
+msgstr ""
+"PO-Revision-Date: 2024-01-22 12:59:23+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: GlotPress/4.0.1\n"
+"Language: es\n"
+"Project-Id-Version: Plugins - IP2Location Country Blocker - Stable (latest release)\n"
+
+#: ip2location-country-blocker.php:3436
+msgid "Please contact web administrator for assistance."
+msgstr "Por favor, contacta con el administrador web para pedir ayuda."
+
+#: ip2location-country-blocker.php:2845
+msgid "IP2Location Country Blocker requires the IP2Location BIN database to work. %1$sSetup your database%2$s now."
+msgstr "El bloqueador de países IP2Location requiere la base de datos BIN de IP2Location para funcionar. %1$sConfigura tu base de datos%2$s ahora."
+
+#: ip2location-country-blocker.php:2281
+msgid "Statistics"
+msgstr "Estadísticas"
+
+#: ip2location-country-blocker.php:2278
+msgid "Country Blocker"
+msgstr "Bloqueador de países"
+
+#: ip2location-country-blocker.php:1659
+msgid "Debugging Logs"
+msgstr "Registros de depuración"
+
+#: ip2location-country-blocker.php:1652
+msgid "No statistics will be available if this option is disabled."
+msgstr "No habrá ninguna estadística disponible si está opción está desactivada."
+
+#: ip2location-country-blocker.php:1650
+msgid "Enable Logging"
+msgstr "Activar el registro"
+
+#: ip2location-country-blocker.php:1646
+msgid "Visitor Logs"
+msgstr "Registros de visitantes"
+
+#: ip2location-country-blocker.php:1639
+msgid "Enable this option to try detecting the IP address behind the Forwarder (such as CDN provider)."
+msgstr "Activar esta opción para tratar de detectar la dirección IP tras el transmisor (como por ejemplo un proveedor de CDN)."
+
+#: ip2location-country-blocker.php:1637
+msgid "Enable"
+msgstr "Activar"
+
+#: ip2location-country-blocker.php:1633
+msgid "Detect Forwarder IP"
+msgstr "Detectar IP del transmisor"
+
+#: ip2location-country-blocker.php:1515
+msgid "Disabled"
+msgstr "Desactivado"
+
+#: ip2location-country-blocker.php:1445
+msgid "Update Database"
+msgstr "Actualizar base de datos"
+
+#: ip2location-country-blocker.php:1433
+msgid "Database Date"
+msgstr "Fecha de la base de datos"
+
+#: ip2location-country-blocker.php:1425
+msgid "Database Path"
+msgstr "Ruta de la base de datos"
+
+#: ip2location-country-blocker.php:1420
+msgid "If you are looking for high accuracy result, you should consider using the commercial version of %1$sIP2Location BIN database%2$s."
+msgstr "Si buscas resultados de alta precisión, deberías plantearte el uso de la versión comercial de %1$sIP2Location BIN database%2$s."
+
+#: ip2location-country-blocker.php:1416
+msgid "Database File"
+msgstr "Archivo de la base de datos"
+
+#: ip2location-country-blocker.php:1410
+msgid "Download a smaller database which is faster in lookup speed. Perfect for website with only IPv4 supported."
+msgstr "Descarga una base de datos más pequeña que es más rápido en la velocidad de búsqueda. Perfecto para webs que solo admiten IPv4."
+
+#: ip2location-country-blocker.php:1406
+msgid "Download IPv4 database only"
+msgstr "Descargar sólo base de datos IPv4"
+
+#: ip2location-country-blocker.php:1398 ip2location-country-blocker.php:1534
+msgid "Enter your IP2Location download token."
+msgstr "Introduce tu token de descarga de IP2Location."
+
+#: ip2location-country-blocker.php:1393 ip2location-country-blocker.php:1529
+msgid "Download Token"
+msgstr "Descargar token"
+
+#: ip2location-country-blocker.php:1381 ip2location-country-blocker.php:1517
+msgid "API Web Service"
+msgstr "Servicio web API"
+
+#: ip2location-country-blocker.php:1380 ip2location-country-blocker.php:1516
+msgid "Local BIN Database"
+msgstr "Base de datos local BIN"
+
+#: ip2location-country-blocker.php:1357 ip2location-country-blocker.php:2283
+msgid "Settings"
+msgstr "Ajustes"
+
+#: ip2location-country-blocker.php:1297
+msgid "%1$sERROR:%2$s Error when accessing IP2Proxy web service gateway."
+msgstr "%1$sERROR:%2$s Error al acceder a la pasarela del servicio web de IP2Proxy."
+
+#: ip2location-country-blocker.php:1276 ip2location-country-blocker.php:1303
+#: ip2location-country-blocker.php:1313
+msgid "%1$sERROR:%2$s Invalid IP2Proxy API key."
+msgstr "%1$sERROR:%2$s Clave API de IP2Proxy no válida."
+
+#: ip2location-country-blocker.php:1247
+msgid "%1$sERROR:%2$s Error when accessing IP2Location web service gateway."
+msgstr "%1$sERROR:%2$s Error al acceder a la pasarela del servicio web de IP2Location."
+
+#: ip2location-country-blocker.php:1226 ip2location-country-blocker.php:1253
+#: ip2location-country-blocker.php:1263
+msgid "%1$sERROR:%2$s Invalid IP2Location API key."
+msgstr "%1$sERROR:%2$s Clave API de IP2Location no válida."
+
+#: ip2location-country-blocker.php:1161
+msgid "Enter a valid IP address to lookup for country information."
+msgstr "Introduce una dirección IP válida para buscar información del país."
+
+#: ip2location-country-blocker.php:1150 ip2location-country-blocker.php:2282
+msgid "IP Lookup"
+msgstr "Búsqueda de IP"
+
+#: ip2location-country-blocker.php:1167
+msgid "Lookup"
+msgstr "Búsqueda"
+
+#: ip2location-country-blocker.php:1511
+msgid "IP2Proxy Lookup Mode"
+msgstr "Modo de búsqueda de IP2Proxy"
+
+#: ip2location-country-blocker.php:1376
+msgid "IP2Location Lookup Mode"
+msgstr "Modo de búsqueda de IP2Location"
+
+#: ip2location-country-blocker.php:1135
+msgid "IP address %1$s%2$s%3$s belongs to %4$s%5$s (%6$s)%7$s."
+msgstr "La dirección IP %1$s%2$s%3$s pertenece a %4$s%5$s (%6$s)%7$s."
+
+#: ip2location-country-blocker.php:1130
+msgid "%1$sERROR:%2$s Unable to lookup IP address %3$s%4$s%5$s."
+msgstr "%1$sERROR:%2$s No ha sido posible buscar la dirección IP %3$s%4$s%5$s."
+
+#: ip2location-country-blocker.php:1122
+msgid "%1$sERROR:%2$s Please enter an IP address."
+msgstr "%1$sERROR:%2$s Por favor, introduce una dirección IP."
+
+#: ip2location-country-blocker.php:1015
+msgid "Purge All Logs"
+msgstr "Vaciar todos los registros"
+
+#: ip2location-country-blocker.php:966 ip2location-country-blocker.php:2280
+msgid "Backend"
+msgstr "Administración"
+
+#: ip2location-country-blocker.php:940 ip2location-country-blocker.php:984
+msgid "Total"
+msgstr "Total"
+
+#: ip2location-country-blocker.php:939 ip2location-country-blocker.php:983
+msgid "Country Code"
+msgstr "Código de país"
+
+#: ip2location-country-blocker.php:938 ip2location-country-blocker.php:982
+#: ip2location-country-blocker.php:1158
+msgid "IP Address"
+msgstr "Dirección IP"
+
+#: ip2location-country-blocker.php:933
+msgid "Top 10 IP Address Blocked"
+msgstr "Las 10 principales direcciones IP bloqueadas"
+
+#: ip2location-country-blocker.php:926 ip2location-country-blocker.php:970
+msgid "No data available."
+msgstr "No hay datos disponibles."
+
+#: ip2location-country-blocker.php:922 ip2location-country-blocker.php:2279
+msgid "Frontend"
+msgstr "Portada"
+
+#: ip2location-country-blocker.php:914
+msgid "Visitor log is disabled. Please enable it in %1$sSettings%2$s page to collect statistics data."
+msgstr "El registro de visitantes está desactivado. Por favor, actívalo en la página de %1$sajustes%2$s para recopilar datos estadísticos."
+
+#: ip2location-country-blocker.php:912
+msgid "Statistics (Past 30 Days)"
+msgstr "Estadísticas (últimos 30 días)"
+
+#: ip2location-country-blocker.php:832
+msgid "Send email notification to selected recipient when a visitor is blocked."
+msgstr "Envía un eviso por correo electrónico al destinatario seleccionado cuando se bloquee a un visitante."
+
+#: ip2location-country-blocker.php:820
+msgid "None"
+msgstr "Nada"
+
+#: ip2location-country-blocker.php:816
+msgid "Email Notification"
+msgstr "Aviso por correo electrónico"
+
+#: ip2location-country-blocker.php:799
+msgid "Automatically add client IP into blacklist if client keep hitting admin area more than this threshold within 24 hours."
+msgstr "Añade automáticamente la IP del cliente a la lista negra si el cliente sigue tratando de acceder al área de administración más veces que este umbral durante 24 horas."
+
+#: ip2location-country-blocker.php:771
+msgid "Secret code to bypass blocking (Max 20 characters)"
+msgstr "Código secreto para saltarse el bloqueo (máximo 20 caracteres)"
+
+#: ip2location-country-blocker.php:735
+msgid "Show the following page when a visitor is blocked."
+msgstr "Muestra la siguiente página cuando se bloquea a un visitante."
+
+#: ip2location-country-blocker.php:619
+msgid "Enable Backend Blocking"
+msgstr "Activar el bloqueo de la administración"
+
+#: ip2location-country-blocker.php:608
+msgid "Backend Settings"
+msgstr "Ajustes de administración"
+
+#: ip2location-country-blocker.php:468 ip2location-country-blocker.php:840
+#: ip2location-country-blocker.php:1730
+msgid "Save Changes"
+msgstr "Guardar cambios"
+
+#: ip2location-country-blocker.php:463
+msgid "Bypass blocking for logged in user."
+msgstr "Saltarse el bloqueo para usuarios conectados."
+
+#: ip2location-country-blocker.php:450 ip2location-country-blocker.php:804
+msgid "Whitelist IP addresses"
+msgstr "Direccciones IP en lista blanca"
+
+#: ip2location-country-blocker.php:794
+msgid "Automatic Blacklist"
+msgstr "Lista negra automática"
+
+#: ip2location-country-blocker.php:432 ip2location-country-blocker.php:786
+#: ip2location-country-blocker.php:808
+msgid "Blacklist"
+msgstr "Lista negra"
+
+#: ip2location-country-blocker.php:428 ip2location-country-blocker.php:782
+msgid "Blacklist IP addresses"
+msgstr "Direcciones IP en la lista negra"
+
+#: ip2location-country-blocker.php:420 ip2location-country-blocker.php:763
+msgid "URL: "
+msgstr "URL: "
+
+#: ip2location-country-blocker.php:406 ip2location-country-blocker.php:748
+msgid "Custom Error Page: "
+msgstr "Página de error personalizada: "
+
+#: ip2location-country-blocker.php:401 ip2location-country-blocker.php:743
+msgid "Default Error 403 Page"
+msgstr "Página de error 403 por defecto"
+
+#: ip2location-country-blocker.php:397 ip2location-country-blocker.php:739
+msgid "Error Option"
+msgstr "Opción de error"
+
+#: ip2location-country-blocker.php:393
+msgid "Show the following page when visitor is blocked."
+msgstr "Muestra la siguiente página cuando se bloquea a un visitante."
+
+#: ip2location-country-blocker.php:389 ip2location-country-blocker.php:731
+msgid "Display page when visitor is blocked"
+msgstr "Página a mostrar cuando se bloquea a un visitante"
+
+#: ip2location-country-blocker.php:375
+msgid "Choose Robot..."
+msgstr "Elegir robot…"
+
+#: ip2location-country-blocker.php:371 ip2location-country-blocker.php:714
+msgid "Do not block the below bots and crawlers."
+msgstr "No bloquear a los siguientes bots y rastreadores."
+
+#: ip2location-country-blocker.php:366 ip2location-country-blocker.php:709
+msgid "Block by bot"
+msgstr "Bloqueo por bot"
+
+#: ip2location-country-blocker.php:361 ip2location-country-blocker.php:704
+msgid "Other Settings"
+msgstr "Otros ajustes"
+
+#: ip2location-country-blocker.php:343
+msgid "Choose Proxy Type..."
+msgstr "Elegir el tipo de proxy…"
+
+#: ip2location-country-blocker.php:340 ip2location-country-blocker.php:682
+msgid "Block following proxy type."
+msgstr "Bloquear el siguiente tipo de proxy."
+
+#: ip2location-country-blocker.php:336 ip2location-country-blocker.php:678
+msgid "Block by proxy type"
+msgstr "Bloquear por tipo de proxy"
+
+#: ip2location-country-blocker.php:327 ip2location-country-blocker.php:669
+msgid "Block proxy IP."
+msgstr "Bloquear IP de proxy."
+
+#: ip2location-country-blocker.php:322 ip2location-country-blocker.php:664
+msgid "Block by proxy IP"
+msgstr "Bloquear por IP de proxy"
+
+#: ip2location-country-blocker.php:317 ip2location-country-blocker.php:659
+msgid "Block By Proxy"
+msgstr "Bloquear por proxy"
+
+#: ip2location-country-blocker.php:298
+msgid "Choose Country..."
+msgstr "Elegir país…"
+
+#: ip2location-country-blocker.php:296 ip2location-country-blocker.php:635
+msgid "Block all countries %1$sexcept%2$s countries listed below."
+msgstr "Blqouea todos los países %1$sexcepto%2$s los países listados abajo."
+
+#: ip2location-country-blocker.php:295 ip2location-country-blocker.php:634
+msgid "Block countries listed below."
+msgstr "Bloquea los países listados abajo."
+
+#: ip2location-country-blocker.php:294
+msgid "Blocking Mode"
+msgstr "Modo de bloqueo"
+
+#: ip2location-country-blocker.php:290 ip2location-country-blocker.php:629
+msgid "Block by country"
+msgstr "Bloquear por país"
+
+#: ip2location-country-blocker.php:287 ip2location-country-blocker.php:624
+msgid "Block By Country"
+msgstr "Bloquear por país"
+
+#: ip2location-country-blocker.php:281
+msgid "Enable Frontend Blocking"
+msgstr "Activar bloqueo en portada"
+
+#: ip2location-country-blocker.php:272
+msgid "Frontend Settings"
+msgstr "Ajustes de portada"
+
+#: ip2location-country-blocker.php:257 ip2location-country-blocker.php:593
+#: ip2location-country-blocker.php:1347
+msgid "Changes saved."
+msgstr "Cambios guardados."
+
+#: ip2location-country-blocker.php:602
+msgid "%1$sERROR:%2$s Unable to find the IP2Location BIN database! Please download the database at at %3$sIP2Location commercial database%4$s | %5$sIP2Location LITE database (free edition)%6$s."
+msgstr "%1$sERROR:%2$s ¡No ha sido posible encontrar la base de datos de IP2Location! Por favor, descarga la base de datos en %3$sbase de datos comercial de IP2Location%4$s | %5$sbase de datos de IP2Location LITE (edición gratuita)%6$s."
+
+#: ip2location-country-blocker.php:484
+msgid "This IP2Location Country Blocker plugin does not work well with the %1$s%2$s%3$s cache plugin. To avoid unexpected results, we will strongly recommend you to deactivate the cache plugin."
+msgstr "El plugin bloqueador de países IP2Location no funciona bien con el plugin de caché %1$s%2$s%3$s. Para evitar resultados inesperados recomendamos encarecidamente que desactives el plugin de caché."
+
+#: ip2location-country-blocker.php:445
+msgid "Automatically add client IP into blacklist if client keep hitting front pages more than this threshold within 24 hours."
+msgstr "Añade automáticamente la IP del cliente a la lista negra si el cliente sigue tratando de acceder a las páginas de portada más veces que este umbral durante 24 horas."
+
+#: ip2location-country-blocker.php:434 ip2location-country-blocker.php:456
+#: ip2location-country-blocker.php:788 ip2location-country-blocker.php:810
+msgid "Use asterisk (*) for wildcard matching. E.g.: 8.8.8.* will match IP from 8.8.8.0 to 8.8.8.255. CIDR format also supported."
+msgstr "Usa asteriscos (*) para añadir comodines. P.ej.: 8.8.8.* incluirá las IPs desde la 8.8.8.0 hasta la 8.8.8.255. También se admite el formato CIDR."
+
+#: ip2location-country-blocker.php:352 ip2location-country-blocker.php:695
+msgid "This feature only works with %1$sIP2Proxy Commercial%2$s database."
+msgstr "Esta característica solo funciona con la base de datos %1$scomercial de IP2Proxy%2$s."
+
+#: ip2location-country-blocker.php:329 ip2location-country-blocker.php:672
+msgid "IP2Proxy Lookup Mode is required for this option. You can enable/disable the IP2Proxy Lookup Mode at the Settings tab."
+msgstr "Para esta opción es obligatorio el modo de búsqueda de IP2Proxy. Puedes activar/desactivar el modo de búsqueda de IP2Proxy en la pestaña de ajustes."
+
+#: ip2location-country-blocker.php:310 ip2location-country-blocker.php:652
+msgid "%1$sNote:%2$s For EU, APAC and other country groupings, please visit %3$sGeoDataSource Country Grouping Terminology%4$s for details."
+msgstr "%1$sNota:%2$s Para UE, LATAM y otras agrupaciones de países, por favor, visita %3$sla terminología de agrupamiento de países de GeoDataSource%4$s para conocer los detalles."
+
+#: ip2location-country-blocker.php:266
+msgid "%1$sERROR:%2$s Unable to find the IP2Location BIN database! Please %3$sdownload the BIN database%4$s in Settings page."
+msgstr "%1$sERROR:%2$s ¡No ha sido posible encontrar la base datos BIN de IP2Location! Por favor, %3$sdescarga la base de datos BIN%4$s en la página de ajustes."
+
+#: ip2location-country-blocker.php:222 ip2location-country-blocker.php:552
+msgid "%1$sERROR:%2$s Please provide a valid URL for redirection."
+msgstr "%1$sERROR:%2$s Por favor, facilita una URL válida para la redirección."
+
+#: ip2location-country-blocker.php:217 ip2location-country-blocker.php:547
+msgid "%1$sERROR:%2$s Please choose a custom error page."
+msgstr "%1$sERROR:%2$s Por favor, elige una página de error personalizada."
+
+#: ip2location-country-blocker.php:212 ip2location-country-blocker.php:542
+msgid "%1$sERROR:%2$s Auto block threshold has to be a number."
+msgstr "%1$sERROR:%2$s El umbral de bloqueo automático debe ser un número."
+
+#: ip2location-country-blocker.php:2350 ip2location-country-blocker.php:2515
+#: ip2location-country-blocker.php:2655 ip2location-country-blocker.php:2732
+#: ip2location-country-blocker.php:2797
+msgid "Permission denied."
+msgstr "Permiso denegado."
+
+#: ip2location-country-blocker.php:1918 ip2location-country-blocker.php:1984
+msgid "Finish"
+msgstr "Finalizar"
+
+#: ip2location-country-blocker.php:1850 ip2location-country-blocker.php:1883
+#: ip2location-country-blocker.php:1953
+msgid "Previous"
+msgstr "Anterior"
+
+#: ip2location-country-blocker.php:1811 ip2location-country-blocker.php:1851
+#: ip2location-country-blocker.php:1884 ip2location-country-blocker.php:1954
+msgid "Next"
+msgstr "Siguiente"
+
+#: ip2location-country-blocker.php:1833 ip2location-country-blocker.php:1872
+#: ip2location-country-blocker.php:1905
+msgid "Step 3"
+msgstr "Paso 3"
+
+#: ip2location-country-blocker.php:1829 ip2location-country-blocker.php:1868
+#: ip2location-country-blocker.php:1901 ip2location-country-blocker.php:1936
+#: ip2location-country-blocker.php:1971
+msgid "Step 2"
+msgstr "Paso 2"
+
+#: ip2location-country-blocker.php:1825 ip2location-country-blocker.php:1864
+#: ip2location-country-blocker.php:1897 ip2location-country-blocker.php:1932
+#: ip2location-country-blocker.php:1967
+msgid "Step 1"
+msgstr "Paso 1"
+
+#: ip2location-country-blocker.php:1770 ip2location-country-blocker.php:1775
+msgid "Get Started"
+msgstr "Primeros pasos"
+
+#: ip2location-country-blocker.php:1768
+msgid "IP2Location requires %1$s PHP extension enabled. Please enable this extension in your %2$s."
+msgstr "IP2Location requiere extensión PHP %1$s activa. Por favor, activa esta extensión en tu %2$s."
+
+#. Author URI of the plugin
+#: ip2location-country-blocker.php
+msgid "https://www.ip2location.com"
+msgstr "https://www.ip2location.com"
+
+#. Author of the plugin
+#: ip2location-country-blocker.php
+msgid "IP2Location"
+msgstr "IP2Location"
+
+#. Plugin URI of the plugin
+#: ip2location-country-blocker.php
+msgid "https://ip2location.com/resources/wordpress-ip2location-country-blocker"
+msgstr "https://ip2location.com/resources/wordpress-ip2location-country-blocker"
+
+#. Plugin Name of the plugin
+#: ip2location-country-blocker.php ip2location-country-blocker.php:2945
+msgid "IP2Location Country Blocker"
+msgstr "Bloqueador de países IP2Location"
+
+#: ip2location-country-blocker.php:2944
+msgid "Enjoyed %1$s? Please leave us a %2$s rating. A huge thanks in advance!"
+msgstr "¿Te gusta %1$s? Por favor, déjanos una valoración de %2$s. ¡Muchas gracias de antemano!"
+
+#: ip2location-country-blocker.php:2706
+msgid "Invalid download token."
+msgstr "Token de descarga no válido."
+
+#: ip2location-country-blocker.php:2461 ip2location-country-blocker.php:2605
+msgid "There is problem when decompress the database."
+msgstr "Hay un problema al descomprimir la base de datos."
+
+#: ip2location-country-blocker.php:2446
+msgid "Downloaded database is corrupted. Please try again later."
+msgstr "La base de datos descargada está corrupta. Por favor, inténtalo de nuevo más tarde."
+
+#: ip2location-country-blocker.php:2433
+msgid "No permission to write into file system."
+msgstr "No hay permisos de escritura en el sistema de archivos."
+
+#: ip2location-country-blocker.php:2423 ip2location-country-blocker.php:2577
+msgid "Connection timed out while downloading database."
+msgstr "La conexión se ha interrumpido durante la descarga de la base de datos."
+
+#: ip2location-country-blocker.php:2403 ip2location-country-blocker.php:2560
+msgid "You do not have permission to download this database."
+msgstr "No tienes permisos para descargar esta base de datos."
+
+#: ip2location-country-blocker.php:1841
+msgid "Enter IP2Location LITE download token"
+msgstr "Introduce el token de descarga de IP2Location LITE"
+
+#. Description of the plugin
+#: ip2location-country-blocker.php
+msgid "Block visitors from accessing your website or admin area by their country."
+msgstr "Bloquea a los visitantes el acceso a tu web o al área de administración según su país."
+
+#: ip2location-country-blocker.php:1859
+msgid "Download IP2Location BIN Database"
+msgstr "Descargar base de datos BIN de IP2Location"
+
+#: ip2location-country-blocker.php:1845
+msgid "Don't have an account yet? Sign up a %1$s free IP geolocation account%2$s to obtain your download token."
+msgstr "¿Todavía no tienes una cuenta? Registra una %1$s cuenta gratuita de geolocalización por IP%2$s para obtener tu token de descarga."
