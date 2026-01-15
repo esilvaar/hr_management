@@ -14,30 +14,44 @@ $message_error   = '';
 // 2. CONTROLADOR (Procesamiento de Formularios)
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
     $action = $_POST['hrm_action'] ?? '';
+    error_log( 'HRM Controller - Action: ' . $action );
+    error_log( 'HRM Controller - POST data: ' . print_r( $_POST, true ) );
 
     // --- ACCIÓN A: Actualizar Empleado ---
     if ( $action === 'update_employee' && check_admin_referer( 'hrm_update_employee', 'hrm_update_employee_nonce' ) ) {
+        error_log( 'HRM Controller - Nonce OK for update_employee' );
         $emp_id = absint( $_POST['employee_id'] );
+        error_log( 'HRM Controller - Employee ID: ' . $emp_id );
 
         // Verificar permisos (igual que en el handler central): admin/editor o el propio usuario
         $employee_obj = $db_emp->get( $emp_id );
+        error_log( 'HRM Controller - Employee obj: ' . print_r( $employee_obj, true ) );
         $current_user_id = get_current_user_id();
+        error_log( 'HRM Controller - Current user ID: ' . $current_user_id );
 
         $allowed = false;
         if ( current_user_can( 'edit_hrm_employees' ) || current_user_can( 'manage_options' ) || current_user_can( 'manage_hrm_employees' ) ) {
             $allowed = true;
+            error_log( 'HRM Controller - Allowed by capability' );
         } elseif ( current_user_can( 'view_hrm_own_profile' ) && $employee_obj && intval( $employee_obj->user_id ) === $current_user_id ) {
             $allowed = true;
+            error_log( 'HRM Controller - Allowed by own profile' );
         }
 
         if ( ! $allowed ) {
             $message_error = 'No tienes permisos para editar este perfil.';
+            error_log( 'HRM Controller - Permission denied' );
         } else {
-            if ( $db_emp->update( $emp_id, $_POST ) ) {
+            error_log( 'HRM Controller - Calling update' );
+            $update_result = $db_emp->update( $emp_id, $_POST );
+            error_log( 'HRM Controller - Update result: ' . print_r( $update_result, true ) );
+            if ( $update_result ) {
                 $message_success = 'Datos actualizados correctamente.';
                 $employee = $db_emp->get( $emp_id ); // Recargar datos
+                error_log( 'HRM Controller - Update success' );
             } else {
                 $message_error = 'No se realizaron cambios.';
+                error_log( 'HRM Controller - Update failed' );
             }
         }
     }
@@ -55,6 +69,10 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 
         // 2. Detectar Checkbox
         $crear_wp = isset($_POST['crear_usuario_wp']); 
+        // Si se va a crear usuario y no se seleccionó rol, forzar 'subscriber'
+        if ($crear_wp && empty($rol_wp)) {
+            $rol_wp = 'subscriber';
+        }
 
         // 3. Validación de campos obligatorios
         $missing = array();
@@ -62,16 +80,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
         if ( $nombre === '' ) $missing[] = 'Nombres';
         if ( $apellido === '' ) $missing[] = 'Apellidos';
         if ( $email === '' || ! is_email( $email ) ) $missing[] = 'Email válido';
-        if ( $fecha_ingreso === '' ) $missing[] = 'Fecha de ingreso';
-
-        // Validar formato de fecha (esperamos YYYY-MM-DD)
-        if ( $fecha_ingreso !== '' ) {
-            $dt = DateTime::createFromFormat( 'Y-m-d', $fecha_ingreso );
-            $valid_date = $dt && $dt->format('Y-m-d') === $fecha_ingreso;
-            if ( ! $valid_date ) {
-                $missing[] = 'Fecha de ingreso (formato inválido)';
-            }
-        }
 
         if ( ! empty( $missing ) ) {
             $message_error = 'Faltan campos obligatorios: ' . implode( ', ', $missing );
@@ -310,7 +318,7 @@ $hrm_puestos = apply_filters( 'hrm_puestos', array(
     'Desarrollador de Software',
     'Diseñador Gráfico'
 ) );
-$hrm_tipos_documento = apply_filters( 'hrm_tipos_documento', array( 'Contrato', 'Liquidaciones', 'Licencia', 'Induccion' ) );
+$hrm_tipos_documento = apply_filters( 'hrm_tipos_documento', array( 'Contrato', 'Liquidaciones', 'Licencia' ) );
 $hrm_tipos_contrato = apply_filters( 'hrm_tipos_contrato', array( 'Indefinido', 'Plazo Fijo', 'Por Proyecto' ) );
 
 // Detectar filtro de estado (activos/inactivos)

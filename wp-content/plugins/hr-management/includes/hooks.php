@@ -23,6 +23,7 @@ function hrm_map_document_capabilities( $caps, $cap, $user_id, $args ) {
         'hrm-mi-documentos-contratos',
         'hrm-mi-documentos-liquidaciones',
         'hrm-mi-documentos-licencias',
+        'hrm-convivencia',
     );
     
     // Si se está validando 'read' capability en una página de documentos
@@ -60,6 +61,7 @@ function hrm_ensure_read_capability_for_documents( $allcaps, $caps, $args, $user
         'hrm-mi-documentos-contratos',
         'hrm-mi-documentos-liquidaciones',
         'hrm-mi-documentos-licencias',
+        'hrm-convivencia',
     );
     
     // Si estamos en una página de documentos
@@ -106,6 +108,7 @@ function hrm_ensure_capabilities_on_admin_init() {
         'hrm-mi-documentos-contratos',
         'hrm-mi-documentos-liquidaciones',
         'hrm-mi-documentos-licencias',
+        'hrm-convivencia',
     );
     
     // Si estamos intentando acceder a una página de documentos

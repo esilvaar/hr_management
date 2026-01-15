@@ -14,6 +14,9 @@ if ( $current_user && $current_user->ID ) {
 $search_term = sanitize_text_field( $_GET['empleado'] ?? '' );
 $estado_filtro = sanitize_text_field( $_GET['estado'] ?? 'PENDIENTE' );
 
+// Determinar capacidades del usuario actual
+$es_usuario_administrativo = current_user_can( 'edit_hrm_employees' ) || current_user_can( 'manage_hrm_vacaciones' ) || current_user_can( 'manage_options' );
+
 // Determinar qué tab debe ser activo
 // Mostramos tab de Solicitudes si:
 // 1. El usuario escribió un nombre en la búsqueda, O
@@ -96,7 +99,7 @@ $total_solicitudes = count( $solicitudes );
         <div class="hrm-admin-dashboard">
 
             <!-- Título principal -->
-            <div class="d-flex align-items-center gap-2 mb-4">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-4">
                 <h1 class="wp-heading-inline fs-2 fw-bold text-primary mb-0">
                     Panel de Gestion de Vacaciones
                 </h1>
@@ -115,6 +118,23 @@ $total_solicitudes = count( $solicitudes );
                         <span class="fw-semibold">Solicitudes de Vacaciones</span>
                     </button>
                 </li>
+                <?php 
+                // Mostrar tab de Medio Día solo si el usuario NO es un empleado simple
+                // (es decir, es supervisor, editor de vacaciones o admin)
+                if ( $es_usuario_administrativo ) : 
+                ?>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link <?php echo $tab_activo === 'medio-dia' ? 'active' : ''; ?> d-flex align-items-center justify-content-center gap-2" 
+                            id="tab-medio-dia" 
+                            type="button" 
+                            role="tab" 
+                            aria-controls="contenido-medio-dia" 
+                            aria-selected="<?php echo $tab_activo === 'medio-dia' ? 'true' : 'false'; ?>">
+                        <span style="font-size: 1.2rem;">⏰</span>
+                        <span class="fw-semibold">Solicitudes de Medio Día</span>
+                    </button>
+                </li>
+                <?php endif; ?>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link <?php echo $tab_activo === 'departamentos' ? 'active' : ''; ?> d-flex align-items-center justify-content-center gap-2" 
                             id="tab-departamentos" 
@@ -352,15 +372,143 @@ $total_solicitudes = count( $solicitudes );
     </div>
 </div>
 
-            </div> <!-- Cierre del tab-pane contenido-solicitudes -->
+            <!-- Contenido Tab 2: Solicitudes de Medio Día -->
+            <div id="contenido-medio-dia" class="tab-pane fade <?php echo $tab_activo === 'medio-dia' ? 'show active' : ''; ?>" role="tabpanel" aria-labelledby="tab-medio-dia">
+                <?php 
+                // Solo mostrar contenido si el usuario es administrativo
+                if ( $es_usuario_administrativo ) : 
+                ?>
+    
+    <!-- Tabla de solicitudes de medio día -->
+    <div class="hrm-panel shadow-sm border-0 rounded-3">
+        <div class="hrm-panel-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0 align-middle">
+                    <thead class="table-dark">
+                    <tr class="text-uppercase small text-secondary">
+                        <th class="py-3 px-4">👤 Empleado</th>
+                        <th class="py-3 px-4">📅 Fecha</th>
+                        <th class="py-3 px-4 text-center">⏰ Período</th>
+                        <th class="py-3 px-4 text-center">📊 Días</th>
+                        <th class="py-3 px-4 text-center">📋 Estado</th>
+                        <th class="py-3 px-4 text-center" style="min-width: 220px;">⚙️ Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="text-secondary small">
+                <?php 
+                // Obtener solicitudes de medio día
+                global $wpdb;
+                $solicitudes_medio_dia = $wpdb->get_results(
+                    "SELECT s.*, e.nombre, e.apellido, e.departamento 
+                     FROM {$wpdb->prefix}rrhh_solicitudes_ausencia s
+                     JOIN {$wpdb->prefix}rrhh_empleados e ON s.id_empleado = e.id_empleado
+                     WHERE s.fecha_inicio = s.fecha_fin
+                     AND s.periodo_ausencia IN ('mañana', 'tarde')
+                     ORDER BY s.fecha_creacion DESC",
+                    ARRAY_A
+                );
+                ?>
+                <?php if ( empty( $solicitudes_medio_dia ) ) : ?>
+                    <tr>
+                        <td colspan="6" class="text-center py-5">
+                            <div class="text-muted">
+                                <div class="fs-1 mb-3 opacity-50">📭</div>
+                                <p class="fs-5 fw-semibold mb-2">No hay solicitudes de medio día registradas.</p>
+                            </div>
+                        </td>
+                    </tr>
+                <?php else : ?>
+                    <?php foreach ( $solicitudes_medio_dia as $s ) : ?>
+                        <tr>
+                            <!-- Nombre del empleado -->
+                            <td class="py-3 px-4 fw-bold text-dark">
+                                <?php echo esc_html( $s['nombre'] . ' ' . $s['apellido'] ); ?>
+                            </td>
+                            
+                            <!-- Fecha -->
+                            <td class="py-3 px-4">
+                                <?php echo esc_html( $s['fecha_inicio'] ); ?>
+                            </td>
+                            
+                            <!-- Período -->
+                            <td class="py-3 px-4 text-center">
+                                <span class="badge bg-info text-dark">
+                                    <?php echo esc_html( ucfirst( $s['periodo_ausencia'] ) ); ?>
+                                </span>
+                            </td>
+                            
+                            <!-- Días -->
+                            <td class="py-3 px-4 text-center">
+                                <span class="badge bg-warning text-dark">0.5</span>
+                            </td>
+                            
+                            <!-- Estado -->
+                            <td class="py-3 px-4 text-center">
+                                <?php
+                                $estado = strtoupper( $s['estado'] ?? '' );
+                                $badge_class = 'bg-secondary';
+                                
+                                if ( $estado === 'APROBADA' ) {
+                                    $badge_class = 'bg-success';
+                                } elseif ( $estado === 'RECHAZADA' ) {
+                                    $badge_class = 'bg-danger';
+                                } elseif ( $estado === 'PENDIENTE' ) {
+                                    $badge_class = 'bg-warning text-dark';
+                                }
+                                ?>
+                                <span class="badge <?php echo esc_attr( $badge_class ); ?> rounded-pill px-3">
+                                    <?php echo esc_html( $s['estado'] ); ?>
+                                </span>
+                            </td>
+                            
+                            <!-- Acciones -->
+                            <td class="py-3 px-4 text-center">
+                                <?php if ( strtoupper( $s['estado'] ) === 'PENDIENTE' ) : ?>
+                                    <!-- Botón Aprobar -->
+                                    <button class="btn btn-sm btn-success me-2" 
+                                            data-id="<?php echo esc_attr( $s['id_solicitud'] ); ?>"
+                                            data-accion="aprobar"
+                                            onclick="confirmarAccion(this)"
+                                            title="Aprobar solicitud">
+                                        <span class="dashicons dashicons-yes-alt"></span> Aprobar
+                                    </button>
+                                    
+                                    <!-- Botón Rechazar -->
+                                    <button class="btn btn-sm btn-danger" 
+                                            data-id="<?php echo esc_attr( $s['id_solicitud'] ); ?>"
+                                            data-accion="rechazar"
+                                            onclick="confirmarAccion(this)"
+                                            title="Rechazar solicitud">
+                                        <span class="dashicons dashicons-dismiss"></span> Rechazar
+                                    </button>
+                                <?php else : ?>
+                                    <span class="text-muted">—</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+                <?php else : ?>
+                    <div class="alert alert-warning">
+                        <p>No tienes acceso a esta sección.</p>
+                    </div>
+                <?php endif; ?>
+            </div> <!-- Cierre de contenido-medio-dia -->
 
-            <!-- Contenido Tab 2: Departamentos -->
+            <!-- Contenido Tab 3: Departamentos -->
             <div id="contenido-departamentos" class="tab-pane fade <?php echo $tab_activo === 'departamentos' ? 'show active' : ''; ?>" role="tabpanel" aria-labelledby="tab-departamentos">
                 <div class="hrm-panel shadow-sm border-0 rounded-3">
                     <div class="hrm-panel-header bg-light border-bottom px-4 py-3 d-flex align-items-center justify-content-between">
                         <h2 class="fs-5 fw-bold text-dark mb-0 d-flex align-items-center gap-2">
                             <span></span> Resumen de Departamentos
                         </h2>
+                        <a href="<?php echo esc_url( add_query_arg( [ 'hrm_manual_sync' => '1', 'hrm_nonce' => wp_create_nonce( 'hrm_manual_sync' ), 'hrm_return_page' => 'hrm-vacaciones' ], admin_url( 'admin.php?page=hrm-vacaciones' ) ) ); ?>" class="btn btn-outline-primary d-flex align-items-center gap-2" title="Sincronizar personal vigente ahora">
+                            <span>🔄</span> Sincronizar Personal Vigente
+                        </a>
                     </div>
                     <div class="hrm-panel-body">
                         <div class="table-responsive">

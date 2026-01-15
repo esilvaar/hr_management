@@ -1,25 +1,22 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-// Obtener empleado a consultar
+// DB
 $db_emp  = new HRM_DB_Empleados();
 $db_docs = new HRM_DB_Documentos();
 
 $current_user_id = get_current_user_id();
 
-// Si viene employee_id (admin viendo documentos de otro empleado), usar ese
-// Si no, usar el usuario actual
+// Admin puede consultar otro empleado
 $employee_id = isset( $_GET['employee_id'] ) ? absint( $_GET['employee_id'] ) : null;
 
 if ( $employee_id ) {
-    // Admin consultando documento de otro empleado
     $employee = $db_emp->get( $employee_id );
     if ( ! $employee ) {
         echo '<div class="notice notice-error"><p>Empleado no encontrado.</p></div>';
         return;
     }
 } else {
-    // Usuario viendo sus propios documentos
     $employee = $db_emp->get_by_user_id( $current_user_id );
     if ( ! $employee ) {
         echo '<div class="notice notice-warning"><p>No se encontró tu registro de empleado.</p></div>';
@@ -27,45 +24,28 @@ if ( $employee_id ) {
     }
 }
 
-// Obtener documentos del empleado (solo Contratos)
-$documents = $db_docs->get_by_rut( $employee->rut, 'contrato' );
-
-// Pasar variables al JavaScript
-wp_localize_script( 'hrm-mis-documentos', 'hrmMisDocsData', array(
-    'employeeRut' => $employee->rut,
-    'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-) );
-
-$hrm_sidebar_logo = esc_url( plugins_url( 'assets/images/logo.webp', dirname( __FILE__, 2 ) ) );
+// Obtener licencias
+$documents = $db_docs->get_by_rut( $employee->rut, 'licencia' );
 ?>
 
 <div class="container-fluid mt-4">
     <div class="row">
-        <!-- CONTENIDO PRINCIPAL -->
         <div class="col-12">
-            <!-- TARJETA: Mis Contratos -->
+
             <div class="hrm-panel mb-3">
                 <div class="hrm-panel-header">
                     <h5 class="mb-0">
                         <span class="dashicons dashicons-media-document"></span>
-                        Mis Contratos
+                        Mis Licencias
                     </h5>
                     <small class="text-muted d-block mt-2">
-                        <?= esc_html( $employee->nombre . ' ' . $employee->apellido ) ?> (RUT: <?= esc_html( $employee->rut ) ?>)
+                        <?= esc_html( $employee->nombre . ' ' . $employee->apellido ) ?>
+                        (RUT: <?= esc_html( $employee->rut ) ?>)
                     </small>
                 </div>
-                <div class="hrm-panel-body">
-                    
-                    <!-- Filtro por Año -->
-                    <div class="mb-4 pb-3 border-bottom">
-                        <h6 class="fw-bold mb-2">Filtrar por Año</h6>
-                        <div style="position: relative; max-width: 250px;">
-                            <input type="text" class="form-control" id="hrm-mis-doc-year-filter-search" placeholder="Buscar año..." autocomplete="off">
-                            <div id="hrm-mis-doc-year-filter-items" style="position: absolute; top: 100%; left: 0; width: 100%; background: white; border: 1px solid #dee2e6; border-top: none; max-height: 300px; overflow-y: auto; z-index: 1000; display: none;"></div>
-                        </div>
-                    </div>
 
-                    <!-- Listado de Documentos -->
+                <div class="hrm-panel-body">
+
                     <div id="hrm-mis-documents-container">
                         <?php if ( ! empty( $documents ) ) : ?>
                             <div class="table-responsive">
@@ -88,20 +68,25 @@ $hrm_sidebar_logo = esc_url( plugins_url( 'assets/images/logo.webp', dirname( __
                                                 </td>
                                                 <td>
                                                     <small class="text-muted">
-                                                        <?php 
+                                                        <?php
                                                         $date = strtotime( $doc->fecha_carga ?? 'now' );
                                                         echo date_i18n( 'd/m/Y H:i', $date );
                                                         ?>
                                                     </small>
                                                 </td>
                                                 <td>
-                                                    <a href="<?= esc_url( $doc->url ) ?>" 
-                                                       class="btn btn-sm btn-outline-primary" 
+                                                    <a href="<?= esc_url( $doc->url ) ?>"
+                                                       class="btn btn-sm btn-outline-primary"
                                                        target="_blank"
-                                                       rel="noopener noreferrer"
-                                                       title="Descargar documento">
+                                                       rel="noopener noreferrer">
                                                         <span class="dashicons dashicons-download"></span> Descargar
                                                     </a>
+
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-secondary btn-preview-doc ms-2"
+                                                            data-url="<?= esc_url( $doc->url ) ?>">
+                                                        <span class="dashicons dashicons-visibility"></span> Previsualizar
+                                                    </button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -110,109 +95,59 @@ $hrm_sidebar_logo = esc_url( plugins_url( 'assets/images/logo.webp', dirname( __
                             </div>
                         <?php else : ?>
                             <div class="alert alert-info text-center py-4">
-                                <span class="dashicons dashicons-media-document" style="font-size: 48px; opacity: 0.5;"></span>
-                                <p class="mt-2 mb-0">No hay contratos disponibles.</p>
+                                <span class="dashicons dashicons-media-document" style="font-size:48px;opacity:.5;"></span>
+                                <p class="mt-2 mb-0">No hay licencias disponibles.</p>
                             </div>
                         <?php endif; ?>
                     </div>
+
+                    <!-- PREVISUALIZACIÓN -->
+                    <div class="mt-4" id="hrm-preview-panel" style="display:none;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="fw-bold mb-0">Previsualización de documento</h6>
+                            <button type="button" id="btn-cerrar-preview" class="btn btn-sm btn-outline-secondary">
+                                Cerrar
+                            </button>
+                        </div>
+                        <iframe id="hrm-preview-iframe"
+                                style="width:100%;min-height:600px;border:1px solid #ccc;background:#fff;"></iframe>
+                    </div>
+
                 </div>
             </div>
+
         </div>
     </div>
 </div>
 
-<style>
-#hrm-mis-doc-year-filter-items .dropdown-item {
-    cursor: pointer;
-    border-bottom: 1px solid #eee;
-}
-
-#hrm-mis-doc-year-filter-items .dropdown-item:hover {
-    background-color: #f8f9fa;
-}
-</style>
-
 <script>
-document.addEventListener( 'DOMContentLoaded', function() {
-    // Elementos DOM
-    const yearSearch = document.getElementById( 'hrm-mis-doc-year-filter-search' );
-    const yearDropdown = document.getElementById( 'hrm-mis-doc-year-filter-items' );
-    const docTable = document.querySelectorAll( '#hrm-mis-documents-container table tbody tr' );
-    
-    // Datos disponibles
-    const allYears = new Set();
-    
-    // Construir lista de años disponibles
-    docTable.forEach( row => {
-        const year = row.getAttribute( 'data-year' );
-        if ( year ) allYears.add( year );
-    } );
-    
-    // Ordenar años de mayor a menor
-    const sortedYears = Array.from( allYears ).sort( (a, b) => b - a );
-    
-    // ===== FILTRO DE AÑO =====
-    function buildYearList() {
-        yearDropdown.innerHTML = '';
-        
-        sortedYears.forEach( year => {
-            const link = document.createElement( 'a' );
-            link.href = '#';
-            link.className = 'dropdown-item py-2 px-3';
-            link.textContent = year;
-            link.addEventListener( 'click', function( e ) {
-                e.preventDefault();
-                yearSearch.value = year;
-                yearDropdown.style.display = 'none';
-                applyYearFilter();
-            } );
-            yearDropdown.appendChild( link );
-        } );
+document.addEventListener('DOMContentLoaded', function () {
+
+    const previewPanel  = document.getElementById('hrm-preview-panel');
+    const previewIframe = document.getElementById('hrm-preview-iframe');
+    const closeBtn      = document.getElementById('btn-cerrar-preview');
+
+    document.querySelectorAll('.btn-preview-doc').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const url = this.dataset.url;
+            if (!url) return;
+
+            // Visor nativo (mejor que Google Docs)
+            previewIframe.src = url;
+            previewPanel.style.display = 'block';
+
+            setTimeout(() => {
+                previewPanel.scrollIntoView({ behavior: 'smooth' });
+            }, 50);
+        });
+    });
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function () {
+            previewPanel.style.display = 'none';
+            previewIframe.src = '';
+        });
     }
-    
-    function applyYearFilter() {
-        const selectedYear = yearSearch.value;
-        
-        docTable.forEach( row => {
-            const rowYear = row.getAttribute( 'data-year' );
-            if ( selectedYear === '' ) {
-                row.style.display = '';
-            } else {
-                row.style.display = rowYear === selectedYear ? '' : 'none';
-            }
-        } );
-    }
-    
-    // Evento de búsqueda de año
-    if ( yearSearch ) {
-        yearSearch.addEventListener( 'focus', function() {
-            buildYearList();
-            yearDropdown.style.display = 'block';
-        } );
-        
-        yearSearch.addEventListener( 'blur', function() {
-            setTimeout( () => {
-                yearDropdown.style.display = 'none';
-            }, 100 );
-        } );
-        
-        yearSearch.addEventListener( 'input', function() {
-            const q = this.value.toLowerCase();
-            const items = yearDropdown.querySelectorAll( 'a' );
-            items.forEach( item => {
-                const txt = item.textContent.toLowerCase();
-                item.style.display = txt.includes( q ) ? '' : 'none';
-            } );
-        } );
-    }
-    
-    // Inicial
-    buildYearList();
-    
-    // ===== ESTABLECER AÑO POR DEFECTO (2026) =====
-    if ( yearSearch && sortedYears.includes( '2026' ) ) {
-        yearSearch.value = '2026';
-        applyYearFilter();
-    }
-} );
+
+});
 </script>

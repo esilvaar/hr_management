@@ -149,13 +149,6 @@ $logo_url = esc_url(
                             Liquidaciones
                         </a>
                     </li>
-                    <li>
-                        <a class="nav-link px-3 py-2 <?= hrm_is_active_sidebar('hrm-mi-documentos-licencias'); ?>"
-                           href="<?= esc_url( admin_url('admin.php?page=hrm-mi-documentos-licencias') ); ?>"
-                           >
-                            Licencias
-                        </a>
-                    </li>
                 </ul>
             </details>
 
@@ -167,8 +160,8 @@ $logo_url = esc_url(
                 </summary>
                 <ul class="list-unstyled px-2 mb-2">
                     <li>
-                        <a class="nav-link px-3 py-2 <?= hrm_is_active_sidebar('hrm-reglamento-interno'); ?>"
-                           href="<?= esc_url( admin_url('admin.php?page=hrm-reglamento-interno') ); ?>">
+                        <a class="nav-link px-3 py-2 <?= hrm_is_active_sidebar('hrm-convivencia'); ?>"
+                           href="<?= esc_url( admin_url('admin.php?page=hrm-convivencia') ); ?>">
                             Reglamento Interno
                         </a>
                     </li>

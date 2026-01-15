@@ -56,14 +56,14 @@ $hrm_sidebar_logo = esc_url( plugins_url( 'assets/images/logo.webp', dirname( __
                 </div>
                 <div class="hrm-panel-body">
                     
-                    <!-- Filtro por Año -->
+                    <!-- Filtro por Año
                     <div class="mb-4 pb-3 border-bottom">
                         <h6 class="fw-bold mb-2">Filtrar por Año</h6>
                         <div style="position: relative; max-width: 250px;">
                             <input type="text" class="form-control" id="hrm-mis-doc-year-filter-search" placeholder="Buscar año..." autocomplete="off">
                             <div id="hrm-mis-doc-year-filter-items" style="position: absolute; top: 100%; left: 0; width: 100%; background: white; border: 1px solid #dee2e6; border-top: none; max-height: 300px; overflow-y: auto; z-index: 1000; display: none;"></div>
                         </div>
-                    </div>
+                    </div> -->
 
                     <!-- Listado de Documentos -->
                     <div id="hrm-mis-documents-container">
@@ -102,6 +102,9 @@ $hrm_sidebar_logo = esc_url( plugins_url( 'assets/images/logo.webp', dirname( __
                                                        title="Descargar documento">
                                                         <span class="dashicons dashicons-download"></span> Descargar
                                                     </a>
+                                                    <button type="button" class="btn btn-sm btn-secondary btn-preview-doc ms-2" data-url="<?= esc_url( $doc->url ) ?>">
+                                                        <span class="dashicons dashicons-visibility"></span> Previsualizar
+                                                    </button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -138,6 +141,29 @@ $hrm_sidebar_logo = esc_url( plugins_url( 'assets/images/logo.webp', dirname( __
 
 <script>
 document.addEventListener( 'DOMContentLoaded', function() {
+    // Previsualización de documentos
+    const previewPanel = document.getElementById('hrm-preview-panel');
+    const previewIframe = document.getElementById('hrm-preview-iframe');
+    document.querySelectorAll('.btn-preview-doc').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const url = this.getAttribute('data-url');
+            if (url) {
+                // Usar Google Docs Viewer para previsualizar documentos
+                const viewerUrl = 'https://docs.google.com/viewer?url=' + encodeURIComponent(url) + '&embedded=true';
+                previewIframe.src = viewerUrl;
+                previewPanel.style.display = 'block';
+                previewPanel.scrollIntoView({behavior:'smooth'});
+            }
+        });
+    });
+    // Botón para cerrar la previsualización
+    const btnCerrarPreview = document.getElementById('btn-cerrar-preview');
+    if (btnCerrarPreview) {
+        btnCerrarPreview.addEventListener('click', function() {
+            previewPanel.style.display = 'none';
+            previewIframe.src = '';
+        });
+    }
     // Elementos DOM
     const yearSearch = document.getElementById( 'hrm-mis-doc-year-filter-search' );
     const yearDropdown = document.getElementById( 'hrm-mis-doc-year-filter-items' );
@@ -181,30 +207,65 @@ document.addEventListener( 'DOMContentLoaded', function() {
             const rowYear = row.getAttribute( 'data-year' );
             if ( selectedYear === '' ) {
                 row.style.display = '';
-            } else {
-                row.style.display = rowYear === selectedYear ? '' : 'none';
-            }
-        } );
-    }
-    
-    // Evento de búsqueda de año
-    if ( yearSearch ) {
-        yearSearch.addEventListener( 'focus', function() {
-            buildYearList();
-            yearDropdown.style.display = 'block';
-        } );
-        
-        yearSearch.addEventListener( 'blur', function() {
-            setTimeout( () => {
-                yearDropdown.style.display = 'none';
-            }, 100 );
-        } );
-        
-        yearSearch.addEventListener( 'input', function() {
-            const q = this.value.toLowerCase();
-            const items = yearDropdown.querySelectorAll( 'a' );
             items.forEach( item => {
+                </div>
+            </div>
+            <!-- IFRAME de previsualización -->
+            <div class="mt-4" id="hrm-preview-panel" style="display:none;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="fw-bold mb-0">Previsualización de documento</h6>
+                    <button type="button" id="btn-cerrar-preview" class="btn btn-sm btn-outline-secondary">Cerrar</button>
+                </div>
+                <iframe id="hrm-preview-iframe" src="" style="width:100%; min-height:600px; border:1px solid #ccc; background:#fff;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.hrm-mis-documents-section table {
+    margin-bottom: 0;
+}
+
+#hrm-mis-doc-year-filter-items .dropdown-item {
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+
+#hrm-mis-doc-year-filter-items .dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+</style>
+
+<script>
                 const txt = item.textContent.toLowerCase();
+    // Previsualización de documentos
+    const previewPanel = document.getElementById('hrm-preview-panel');
+    const previewIframe = document.getElementById('hrm-preview-iframe');
+    console.log('Panel:', previewPanel, 'Iframe:', previewIframe);
+    document.querySelectorAll('.btn-preview-doc').forEach(btn => {
+        console.log('Botón encontrado:', btn);
+        btn.addEventListener('click', function() {
+            const url = this.getAttribute('data-url');
+            console.log('URL del documento:', url);
+            if (url) {
+                // Usar Google Docs Viewer para previsualizar documentos
+                const viewerUrl = 'https://docs.google.com/viewer?url=' + encodeURIComponent(url) + '&embedded=true';
+                console.log('Viewer URL:', viewerUrl);
+                previewIframe.src = viewerUrl;
+                previewPanel.style.display = 'block';
+                previewPanel.scrollIntoView({behavior:'smooth'});
+            }
+        });
+    });
+    // Botón para cerrar la previsualización
+    const btnCerrarPreview = document.getElementById('btn-cerrar-preview');
+    if (btnCerrarPreview) {
+        btnCerrarPreview.addEventListener('click', function() {
+            previewPanel.style.display = 'none';
+            previewIframe.src = '';
+        });
+    }
                 item.style.display = txt.includes( q ) ? '' : 'none';
             } );
         } );

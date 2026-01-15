@@ -171,6 +171,51 @@ if ( ! empty( $lista_empleados ) ) {
                     <?php endif; ?>
                 </tbody>
             </table>
+
+        <!-- Panel fijo para desactivar empleado -->
+        <div id="hrm-desactivar-panel" class="border rounded shadow p-4 mb-4 bg-white" style="max-width: 400px; margin: 0 auto; display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); z-index: 9999;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0 text-danger"><span class="dashicons dashicons-no"></span> Desactivar Empleado</h5>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-cerrar-desactivar">Cerrar</button>
+            </div>
+            <div id="hrm-desactivar-msg" class="mb-3"></div>
+            <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary" id="btn-cancelar-desactivar">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btn-confirmar-desactivar">Desactivar</button>
+            </div>
         </div>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const desactivarPanel = document.getElementById('hrm-desactivar-panel');
+            const desactivarMsg = document.getElementById('hrm-desactivar-msg');
+            let empleadoId = null;
+            let empleadoNombre = '';
+            document.querySelectorAll('.btn-desactivar-empleado').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    empleadoId = this.getAttribute('data-id');
+                    empleadoNombre = this.getAttribute('data-nombre');
+                    desactivarMsg.innerHTML = `<strong>¿Seguro que deseas desactivar a <span class='text-danger'>${empleadoNombre}</span>?<br>Esta acción bloqueará su acceso.</strong>`;
+                    desactivarPanel.style.display = 'block';
+                });
+            });
+            document.getElementById('btn-cerrar-desactivar').onclick = function() {
+                desactivarPanel.style.display = 'none';
+            };
+            document.getElementById('btn-cancelar-desactivar').onclick = function() {
+                desactivarPanel.style.display = 'none';
+            };
+            document.getElementById('btn-confirmar-desactivar').onclick = function() {
+                if (!empleadoId) return;
+                // Aquí puedes hacer el AJAX para desactivar
+                desactivarMsg.innerHTML = `<span class='text-success'>Desactivando empleado...</span>`;
+                // Simulación de AJAX
+                setTimeout(function() {
+                    desactivarMsg.innerHTML = `<span class='text-success'>Empleado desactivado correctamente.</span>`;
+                    setTimeout(function() { desactivarPanel.style.display = 'none'; location.reload(); }, 1200);
+                }, 1000);
+            };
+        });
+        </script>
     </div>    
 </div>

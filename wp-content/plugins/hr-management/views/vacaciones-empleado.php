@@ -116,7 +116,7 @@ $form_admin_url = add_query_arg( 'show', 'form' );
     <div class="card-body">
         <?php if ( $show === 'form' ) : ?>
             
-            <!-- Formulario de Nueva Solicitud -->
+            <!-- Formulario de Nueva Solicitud de Vacaciones -->
             <div class="mb-4">
                 <a href="<?= esc_url( remove_query_arg('show') ) ?>" class="btn btn-outline-secondary">
                     <span class="dashicons dashicons-arrow-left-alt me-1"></span> Volver a mis vacaciones
@@ -124,6 +124,17 @@ $form_admin_url = add_query_arg( 'show', 'form' );
             </div>
 
             <?php include HRM_PLUGIN_DIR . 'views/vacaciones-form.php'; ?>
+            
+        <?php elseif ( $show === 'medio-dia' ) : ?>
+            
+            <!-- Formulario de Solicitud de Medio Día -->
+            <div class="mb-4">
+                <a href="<?= esc_url( remove_query_arg('show') ) ?>" class="btn btn-outline-secondary">
+                    <span class="dashicons dashicons-arrow-left-alt me-1"></span> Volver a mis vacaciones
+                </a>
+            </div>
+
+            <?php include HRM_PLUGIN_DIR . 'views/medio-dia-form.php'; ?>
             
         <?php else : ?>
             
@@ -293,10 +304,13 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                 <?php endif; ?>
             </div>
             
-            <!-- Botón Nueva Solicitud -->
-            <div class="text-center mt-4 pt-3 border-top">
-                <a href="<?= esc_url( $form_admin_url ) ?>" class="btn btn-lg px-5" style="background: #009929; color: white; border: none; font-weight: 600;">
+            <!-- Botones Nueva Solicitud -->
+            <div class="text-center mt-4 pt-3 border-top d-flex gap-3 justify-content-center">
+                <a href="<?= esc_url( $form_admin_url ) ?>" style="display: inline-block; padding: 12px 40px; background: #232523; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 1.05rem; border: none; transition: background 0.3s ease;">
                     <span class="dashicons dashicons-plus me-2"></span> Nueva solicitud de vacaciones
+                </a>
+                <a href="<?= esc_url( add_query_arg( 'show', 'medio-dia' ) ) ?>" style="display: inline-block; padding: 12px 40px; background: #ff9800; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 1.05rem; border: none; transition: background 0.3s ease;">
+                    <span class="dashicons dashicons-clock me-2"></span> Solicitar medio día
                 </a>
             </div>
             

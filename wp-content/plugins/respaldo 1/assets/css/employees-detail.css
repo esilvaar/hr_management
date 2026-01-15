@@ -1,0 +1,285 @@
+/**
+ * Vista de Detalle de Empleado
+ * Estilos específicos para hr-management/views/Administrador/employees-detail.php
+ * 
+ * NOTAS:
+ * - Se utiliza Bootstrap 5 para la mayoría de estilos (col-lg-*, row, container-fluid, etc.)
+ * - Las clases hrm-* son personalizadas y reemplazan las clases de card de Bootstrap
+ * - Los estilos son mínimos y complementan los de Bootstrap
+ */
+
+/* =============================================================================
+   AVATAR - Estilos Personalizados
+   ============================================================================= */
+
+.hrm-avatar-size {
+    width: 18rem !important;
+    height: 18rem !important;
+    min-width: 15rem;
+    min-height: 15rem;
+    object-fit: cover;
+    display: block;
+    border-radius: 50% !important;
+}
+
+.avatar-hover-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 19rem;
+    height: 19rem;
+    margin: 0 auto;
+}
+
+.avatar-hover-container:hover .hrm-avatar-overlay {
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.hrm-avatar-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 19rem;
+    height: 19rem;
+    display: flex;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 50%;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.hrm-avatar-overlay .btn {
+    font-size: 0.875rem;
+    z-index: 10;
+}
+
+/* =============================================================================
+   PANEL - Alternativa personalizada a Card de Bootstrap
+   ============================================================================= */
+
+.hrm-panel {
+    
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+    background-color: #fff;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    overflow: hidden;
+}
+
+.hrm-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.hrm-panel-header h5 {
+    font-size: 1rem;
+    margin: 0;
+    font-weight: 600;
+}
+
+.hrm-panel-header .dashicons {
+    font-size: 1.25rem;
+    color: #495057;
+}
+
+.hrm-panel-body {
+    padding: 1.25rem;
+}
+
+/* Panel de Avatar - Mayor tamaño */
+.hrm-panel:has(.avatar-hover-container) .hrm-panel-body {
+    padding: 2.5rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 20rem;
+}
+
+/* =============================================================================
+   DOCUMENTS PANEL - Estilos para Acceso a Documentos
+   ============================================================================= */
+
+.hrm-doc-panel-body {
+    padding: 0 !important;
+}
+
+.hrm-doc-btn {
+    display: flex;
+    align-items: center;
+    padding: 0.9375rem 1.25rem;
+    border: none;
+    border-bottom: 1px solid #e8e8e8;
+    text-decoration: none;
+    color: inherit;
+    background: white;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.hrm-doc-btn:last-child {
+    border-bottom: none;
+}
+
+.hrm-doc-btn:hover {
+    background: #f5f7fa;
+    border-left: 3px solid #b0b5bd;
+    padding-left: 1.0625rem;
+}
+
+.hrm-doc-btn-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    margin-right: 15px;
+    flex-shrink: 0;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.hrm-doc-btn:hover .hrm-doc-btn-icon {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(176, 181, 189, 0.3);
+}
+
+.hrm-doc-btn-icon .dashicons {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+}
+
+.hrm-doc-btn-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.hrm-doc-btn-title {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.hrm-doc-btn-desc {
+    color: #9ca3af;
+    font-size: 12px;
+    margin: 0;
+}
+
+.hrm-doc-btn-arrow {
+    color: #b0b5bd;
+    margin-left: 10px;
+    transition: all 0.3s ease;
+    opacity: 0;
+    transform: translateX(-5px);
+}
+
+.hrm-doc-btn:hover .hrm-doc-btn-arrow {
+    opacity: 1;
+    transform: translateX(0);
+    color: #7a7f87;
+}
+
+.hrm-doc-btn-arrow .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+/* =============================================================================
+   CONTAINERS - Departamentos a Cargo
+   ============================================================================= */
+
+#deptos_a_cargo_container {
+    margin-top: 1rem;
+}
+
+/* =============================================================================
+   RESPONSIVE - Media Queries
+   ============================================================================= */
+
+@media (max-width: 991.98px) {
+    /* Bootstrap ya maneja col-lg-3 y col-lg-9 responsive */
+    
+    .hrm-avatar-size {
+        width: 12rem !important;
+        height: 12rem !important;
+    }
+    
+    .avatar-hover-container {
+        width: 12rem;
+        height: 12rem;
+    }
+    
+    .hrm-avatar-overlay {
+        width: 12rem !important;
+        height: 12rem !important;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .hrm-avatar-size {
+        width: 10rem !important;
+        height: 10rem !important;
+    }
+    
+    .avatar-hover-container {
+        width: 10rem;
+        height: 10rem;
+    }
+    
+    .hrm-avatar-overlay {
+        width: 10rem !important;
+        height: 10rem !important;
+    }
+    
+    .hrm-panel-header h5 {
+        font-size: 0.95rem;
+    }
+    
+    .hrm-panel-header .dashicons {
+        font-size: 1.1rem;
+    }
+    
+    .hrm-doc-btn {
+        padding: 0.75rem 0.9375rem;
+    }
+    
+    .hrm-doc-btn:hover {
+        padding-left: 0.84375rem;
+    }
+    
+    .hrm-doc-btn-icon {
+        width: 40px;
+        height: 40px;
+        margin-right: 12px;
+    }
+    
+    .hrm-doc-btn-title {
+        font-size: 13px;
+    }
+    
+    .hrm-doc-btn-desc {
+        font-size: 11px;
+    }
+}
+
+/* Asegurar que el avatar sea siempre circular */
+.rounded-circle {
+    border-radius: 50% !important;
+}

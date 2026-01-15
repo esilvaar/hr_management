@@ -1,0 +1,121 @@
+/* ============================================================
+ * Estilos Personalizados para Checkboxes
+ * Se carga DESPUÉS de Bootstrap para sobrescribir sus estilos
+ * ============================================================ */
+
+/* Checkbox general - ID específico */
+#hrm_crear_usuario_wp {
+    width: 1.2em;
+    height: 1.2em;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: #fff;
+    border: 2px solid #537345;
+    border-radius: 0.25em;
+    outline: none;
+    transition: all 0.2s ease;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+#hrm_crear_usuario_wp:checked {
+    background-color: #537345;
+    border-color: #537345;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='white' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 8l4 4 8-8'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 60%;
+}
+
+#hrm_crear_usuario_wp:hover:not(:disabled) {
+    border-color: #537345;
+    box-shadow: 0 0 0 0.25rem rgba(83, 115, 69, 0.25);
+}
+
+#hrm_crear_usuario_wp:focus {
+    border-color: #537345;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(83, 115, 69, 0.25);
+}
+
+/* Checkboxes de departamentos (dinámicos) */
+#hrm_deptos_checkboxes .form-check-input,
+#deptos_checkboxes .form-check-input {
+    width: 1.2em;
+    height: 1.2em;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: #fff;
+    border: 2px solid #537345;
+    border-radius: 0.25em;
+    outline: none;
+    transition: all 0.2s ease;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+#hrm_deptos_checkboxes .form-check-input:checked,
+#deptos_checkboxes .form-check-input:checked {
+    background-color: #537345;
+    border-color: #537345;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='white' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 8l4 4 8-8'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 60%;
+}
+
+#hrm_deptos_checkboxes .form-check-input:hover:not(:disabled),
+#deptos_checkboxes .form-check-input:hover:not(:disabled) {
+    border-color: #537345;
+    box-shadow: 0 0 0 0.25rem rgba(83, 115, 69, 0.25);
+}
+
+#hrm_deptos_checkboxes .form-check-input:focus,
+#deptos_checkboxes .form-check-input:focus {
+    border-color: #537345;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(83, 115, 69, 0.25);
+}
+
+/* Deshabilitar el accent-color de Bootstrap */
+#hrm_crear_usuario_wp::before,
+#hrm_deptos_checkboxes .form-check-input::before,
+#deptos_checkboxes .form-check-input::before {
+    content: none !important;
+}
+
+/* ============================================================
+ * Estilos para Dropdowns Personalizados
+ * ============================================================ */
+
+.dropdown-item {
+    padding: 0.5rem 0.75rem !important;
+    color: #212529 !important;
+    text-decoration: none !important;
+    background-color: transparent !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease-in-out !important;
+}
+
+.dropdown-item:hover {
+    background-color: #d1d9c1 !important;
+    color: #212529 !important;
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+    background-color: #537345 !important;
+    color: #fff !important;
+}
+
+#hrm_departamento_items .dropdown-item,
+#hrm_area_gerencia_items .dropdown-item,
+#hrm_puesto_items .dropdown-item,
+#hrm_tipo_contrato_items .dropdown-item,
+#hrm_rol_usuario_wp_items .dropdown-item {
+    border-bottom: 1px solid #f0f0f0 !important;
+}

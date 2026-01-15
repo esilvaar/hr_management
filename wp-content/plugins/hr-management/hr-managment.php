@@ -1,4 +1,22 @@
 <?php
+// Encolar JS de mis-documentos en admin para liquidaciones, contratos y licencias
+function hrm_enqueue_mis_documentos_admin($hook) {
+    if (isset($_GET['page']) && in_array($_GET['page'], [
+        'hrm-mi-documentos-liquidaciones',
+        'hrm-mi-documentos-contratos',
+        'hrm-mi-documentos-licencias',
+        'hrm-mi-documentos',
+    ])) {
+        wp_enqueue_script(
+            'hrm-mis-documentos',
+            HRM_PLUGIN_URL . 'assets/js/mis-documentos.js',
+            array('jquery'),
+            HRM_PLUGIN_VERSION,
+            true
+        );
+    }
+}
+add_action('admin_enqueue_scripts', 'hrm_enqueue_mis_documentos_admin');
 /**
  * Plugin Name: HR Management
  * Plugin URI: https://example.com
@@ -632,15 +650,7 @@ function hrm_register_admin_menus() {
             'hrm_render_formulario_solicitud_page'
         );
 
-        // Submenú: Reglamento Interno
-        add_submenu_page(
-            'hrm-empleados',
-            'Reglamento Interno',
-            'Reglamento Interno',
-            'view_hrm_admin_views',
-            'hrm-reglamento-interno',
-            'hrm_render_reglamento_interno_page'
-        );
+        // Submenú: Reglamento Interno eliminado para evitar confusión de permisos. Solo menú independiente.
 
         // // Submenú: Roles y Usuarios (Opcional)
         // if ( function_exists( 'rrhh_add_user_page' ) ) {

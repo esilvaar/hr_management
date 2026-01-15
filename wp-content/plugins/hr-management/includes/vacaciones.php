@@ -744,7 +744,7 @@ if ( $total_dias <= 0 ) {
 
     /* =====================================================
      * ENVÍO DE NOTIFICACIÓN AL GERENTE (ESPECÍFICO DEL DEPARTAMENTO)
-     * Y AL EDITOR DE VACACIONES
+     * Y AL EDITOR DE VACACIONES + CONFIRMACIÓN AL EMPLEADO
      * ===================================================== */
     
     // Obtener datos del empleado para el email
@@ -788,10 +788,13 @@ if ( $total_dias <= 0 ) {
         $tipos_ausencia = hrm_get_tipos_ausencia_definidos();
         $tipo_nombre = isset( $tipos_ausencia[ $id_tipo ] ) ? $tipos_ausencia[ $id_tipo ] : 'Ausencia';
         
-        // Construir mensaje de email (reutilizable)
-        $asunto = "Nueva solicitud de {$tipo_nombre} - {$empleado->nombre} {$empleado->apellido}";
+        // Configurar headers para HTML
+        $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
         
-        $mensaje = "
+        // ===== EMAIL AL GERENTE Y EDITORES =====
+        $asunto_gerente = "Nueva solicitud de {$tipo_nombre} - {$empleado->nombre} {$empleado->apellido}";
+        
+        $mensaje_gerente = "
             <h2>Nueva Solicitud de {$tipo_nombre}</h2>
             <p>Un empleado de tu departamento ha enviado una nueva solicitud.</p>
             
@@ -816,9 +819,6 @@ if ( $total_dias <= 0 ) {
             
             <p><a href='" . admin_url( 'admin.php?page=hr-management-vacaciones' ) . "'>Revisar solicitud en el sistema</a></p>
         ";
-        
-        // Configurar headers para HTML
-        $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
         
         // Construir lista de destinatarios
         $destinatarios = array();
@@ -853,7 +853,7 @@ if ( $total_dias <= 0 ) {
         if ( ! empty( $destinatarios ) ) {
             foreach ( $destinatarios as $dest ) {
                 error_log( "HRM: Enviando correo a {$dest['nombre']} ({$dest['email']})" );
-                $enviado = wp_mail( $dest['email'], $asunto, $mensaje, $headers );
+                $enviado = wp_mail( $dest['email'], $asunto_gerente, $mensaje_gerente, $headers );
                 
                 if ( $enviado ) {
                     error_log( "HRM: Email de solicitud enviado a {$dest['nombre']} ({$dest['email']})" );
@@ -863,6 +863,63 @@ if ( $total_dias <= 0 ) {
             }
         } else {
             error_log( "HRM: No se encontró gerente ni editor de vacaciones para enviar la solicitud" );
+        }
+        
+        // ===== EMAIL AL EMPLEADO (CONFIRMACIÓN) =====
+        $asunto_empleado = "Solicitud de {$tipo_nombre} creada exitosamente";
+        
+        $nombres_gerente = $gerente ? $gerente['nombre_gerente'] : 'tu gerente directo';
+        $nombres_editores = ! empty( $editores_vacaciones_emails ) ? 'el editor de vacaciones' : 'el administrador';
+        
+        $mensaje_empleado = "
+            <h2 style='color: #4caf50;'>✓ Solicitud de {$tipo_nombre} Creada Exitosamente</h2>
+            
+            <p>Estimado/a <strong>{$empleado->nombre} {$empleado->apellido}</strong>,</p>
+            
+            <p>Tu solicitud de <strong>{$tipo_nombre}</strong> ha sido creada exitosamente y ha sido enviada para revisión.</p>
+            
+            <h3>Detalles de tu Solicitud:</h3>
+            <div style='background: #f5f5f5; padding: 15px; border-left: 4px solid #4caf50; border-radius: 4px;'>
+                <ul style='margin: 0;'>
+                    <li><strong>Tipo de Ausencia:</strong> {$tipo_nombre}</li>
+                    <li><strong>Fecha de Inicio:</strong> {$fecha_inicio}</li>
+                    <li><strong>Fecha de Término:</strong> {$fecha_fin}</li>
+                    <li><strong>Total de Días:</strong> {$total_dias}</li>
+                    <li><strong>Estado Actual:</strong> <span style='color: #ff9800; font-weight: bold;'>PENDIENTE DE APROBACIÓN</span></li>
+                </ul>
+            </div>
+            
+            <h3>¿Qué ocurre ahora?</h3>
+            <p>Tu solicitud ha sido enviada a:</p>
+            <ul>
+                <li><strong>{$nombres_gerente}</strong> (para revisión)</li>
+                <li><strong>{$nombres_editores}</strong> (para gestión)</li>
+            </ul>
+            
+            <p>Recibirás una notificación por correo cuando tu solicitud sea aprobada o rechazada.</p>
+            
+            " . ( ! empty( $descripcion ) ? "<h3>Observaciones que incluiste:</h3><p style='background: #f9f9f9; padding: 10px; border-radius: 4px;'>{$descripcion}</p>" : '' ) . "
+            
+            <p style='margin-top: 20px; color: #666;'>
+                <em>Si tienes preguntas sobre tu solicitud, contáctate con tu gerente directo o con el equipo de Recursos Humanos.</em>
+            </p>
+            
+            <hr style='border: none; border-top: 1px solid #ddd; margin: 20px 0;'>
+            <p style='font-size: 12px; color: #999;'>
+                Este es un correo automático del sistema de gestión de vacaciones.
+            </p>
+        ";
+        
+        // Enviar email de confirmación al empleado
+        if ( ! empty( $empleado->correo ) ) {
+            error_log( "HRM: Enviando correo de confirmación al empleado ({$empleado->correo})" );
+            $enviado_empleado = wp_mail( $empleado->correo, $asunto_empleado, $mensaje_empleado, $headers );
+            
+            if ( $enviado_empleado ) {
+                error_log( "HRM: Email de confirmación enviado al empleado" );
+            } else {
+                error_log( "HRM Error: Fallo al enviar email de confirmación al empleado" );
+            }
         }
     }
 
@@ -929,12 +986,159 @@ if ( $total_dias <= 0 ) {
         }
     }
 
-    // Redirección final con mensaje de éxito
+    // Redirección final con mensaje de éxito (volver al formulario)
     $redirect = wp_get_referer() ?: home_url();
-    wp_safe_redirect( add_query_arg( 'hrm_msg', 'created', $redirect ) );
+    wp_safe_redirect( add_query_arg( 'solicitud_creada', '1', $redirect ) );
     exit;
 }
 add_action( 'admin_post_hrm_enviar_vacaciones', 'hrm_enviar_vacaciones_handler' );
+
+/* =====================================================
+ * MANEJADOR: ENVIAR SOLICITUD DE MEDIO DÍA
+ * ===================================================== */
+function hrm_enviar_medio_dia_handler() {
+    // Verificar nonce
+    if ( ! isset( $_POST['hrm_nonce'] ) || ! wp_verify_nonce( $_POST['hrm_nonce'], 'hrm_solicitud_medio_dia' ) ) {
+        wp_die( 'Error de seguridad: Nonce inválido.' );
+    }
+
+    // Obtener usuario actual
+    $user_id = get_current_user_id();
+    if ( ! $user_id ) {
+        wp_die( 'Debes estar logueado para enviar una solicitud.' );
+    }
+
+    global $wpdb;
+
+    // Obtener ID del empleado
+    $id_empleado = $wpdb->get_var(
+        $wpdb->prepare(
+            "SELECT id_empleado FROM {$wpdb->prefix}rrhh_empleados WHERE user_id = %d",
+            $user_id
+        )
+    );
+
+    if ( ! $id_empleado ) {
+        wp_die( 'No se encontró registro de empleado.' );
+    }
+
+    // Obtener fecha
+    $fecha_medio_dia = sanitize_text_field( $_POST['fecha_medio_dia'] ?? '' );
+    $periodo_ausencia = sanitize_text_field( $_POST['periodo_ausencia'] ?? 'mañana' );
+    $descripcion = sanitize_textarea_field( $_POST['descripcion'] ?? '' );
+
+    if ( empty( $fecha_medio_dia ) ) {
+        wp_die( 'Debe especificar una fecha.' );
+    }
+
+    // Validar formato de fecha
+    $fecha = DateTime::createFromFormat( 'Y-m-d', $fecha_medio_dia );
+    if ( ! $fecha ) {
+        wp_die( 'Formato de fecha inválido.' );
+    }
+
+    // Validar que no sea fin de semana
+    $dia_semana = $fecha->format( 'N' );
+    if ( $dia_semana >= 6 ) {
+        wp_die( 'No se puede solicitar medio día en fin de semana.' );
+    }
+
+    // Validar período
+    if ( ! in_array( $periodo_ausencia, [ 'mañana', 'tarde' ] ) ) {
+        $periodo_ausencia = 'mañana';
+    }
+
+    // ID de tipo: 3 para Vacaciones (reutilizamos)
+    $id_tipo = 3;
+
+    // Insertar solicitud en BD (inicio y fin son la misma fecha)
+    $resultado_insercion = $wpdb->insert(
+        $wpdb->prefix . 'rrhh_solicitudes_ausencia',
+        [
+            'id_empleado'       => $id_empleado,
+            'id_tipo'           => $id_tipo,
+            'fecha_inicio'      => $fecha_medio_dia,
+            'fecha_fin'         => $fecha_medio_dia,
+            'periodo_ausencia'  => $periodo_ausencia,
+            'comentario_empleado' => $descripcion,
+            'estado'            => 'PENDIENTE'
+        ],
+        [ '%d', '%d', '%s', '%s', '%s', '%s', '%s' ]
+    );
+
+    if ( ! $resultado_insercion ) {
+        wp_die( 'Error al crear la solicitud. Intenta de nuevo.' );
+    }
+
+    $id_solicitud = $wpdb->insert_id;
+
+    // Obtener datos del empleado
+    $empleado = hrm_obtener_datos_empleado( $id_empleado );
+    $gerente = hrm_obtener_gerente_departamento( $id_empleado );
+
+    // EMAILS
+    $to_emails = [];
+    $cc_emails = [];
+
+    // Email al empleado
+    $to_emails[] = $empleado->correo;
+
+    // Email al gerente directo
+    if ( $gerente ) {
+        $cc_emails[] = $gerente['correo_gerente'];
+    }
+
+    // Obtener editores de vacaciones
+    $editores = new WP_User_Query( [
+        'meta_key'  => $wpdb->get_blog_prefix() . 'capabilities',
+        'role'      => 'editor_vacaciones',
+    ] );
+
+    foreach ( $editores->get_results() as $editor ) {
+        $cc_emails[] = $editor->user_email;
+    }
+
+    // Construir email
+    $asunto = 'Nueva Solicitud de Medio Día - ' . $empleado->nombre . ' ' . $empleado->apellido;
+    
+    $fecha_formato = DateTime::createFromFormat( 'Y-m-d', $fecha_medio_dia )->format( 'd/m/Y' );
+    $periodo_texto = ucfirst( $periodo_ausencia );
+    
+    $cuerpo = "
+    <h2>Nueva Solicitud de Medio Día</h2>
+    <p><strong>Empleado:</strong> {$empleado->nombre} {$empleado->apellido}</p>
+    <p><strong>RUT:</strong> {$empleado->rut}</p>
+    <p><strong>Cargo:</strong> {$empleado->puesto}</p>
+    <p><strong>Departamento:</strong> {$empleado->departamento}</p>
+    
+    <hr>
+    
+    <h3>Detalles de la Solicitud</h3>
+    <p><strong>Fecha:</strong> {$fecha_formato}</p>
+    <p><strong>Período:</strong> {$periodo_texto}</p>
+    <p><strong>Días a descontar:</strong> 0.5</p>
+    <p><strong>Motivo:</strong> {$descripcion}</p>
+    
+    <hr>
+    
+    <p>Esta solicitud requiere aprobación del gerente directo y revisión del editor de vacaciones.</p>
+    ";
+
+    // Headers
+    $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
+    foreach ( $cc_emails as $cc_email ) {
+        $headers[] = 'Cc: ' . $cc_email;
+    }
+
+    // Enviar emails
+    wp_mail( $to_emails, $asunto, $cuerpo, $headers );
+
+    // Redirigir con éxito
+    $redirect = wp_get_referer() ?: home_url();
+    wp_safe_redirect( add_query_arg( 'solicitud_creada', '1', $redirect ) );
+    exit;
+}
+add_action( 'admin_post_hrm_enviar_medio_dia', 'hrm_enviar_medio_dia_handler' );
 
 /* =====================================================
  * PROCESO DE PRUEBA POST (DEBUG)

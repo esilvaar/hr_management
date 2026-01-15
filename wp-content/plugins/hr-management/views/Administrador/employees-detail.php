@@ -120,22 +120,10 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                 <div class="hrm-panel-header">
                     <h5 class="mb-0">
                         <span class="dashicons dashicons-media-document"></span>
-                        Mis Documentos
+                        Documentos
                     </h5>
                 </div>
                 <div class="hrm-panel-body hrm-doc-panel-body">
-                    <a href="<?= esc_url( add_query_arg( array( 'page' => 'hrm-mi-documentos-licencias', 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis licencias" data-icon-color="#c5cad3">
-                        <div class="hrm-doc-btn-icon">
-                            <span class="dashicons dashicons-id"></span>
-                        </div>
-                        <div class="hrm-doc-btn-content">
-                            <div class="hrm-doc-btn-title">Licencias</div>
-                            <div class="hrm-doc-btn-desc">Accede a tus licencias</div>
-                        </div>
-                        <div class="hrm-doc-btn-arrow">
-                            <span class="dashicons dashicons-arrow-right-alt2"></span>
-                        </div>
-                    </a>
                     <a href="<?= esc_url( add_query_arg( array( 'page' => 'hrm-mi-documentos-contratos', 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis contratos" data-icon-color="#b0b5bd">
                         <div class="hrm-doc-btn-icon">
                             <span class="dashicons dashicons-media-document"></span>
@@ -155,6 +143,18 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                         <div class="hrm-doc-btn-content">
                             <div class="hrm-doc-btn-title">Liquidaciones</div>
                             <div class="hrm-doc-btn-desc">Accede a tus liquidaciones</div>
+                        </div>
+                        <div class="hrm-doc-btn-arrow">
+                            <span class="dashicons dashicons-arrow-right-alt2"></span>
+                        </div>
+                    </a>
+                    <a href="<?= esc_url( admin_url('admin.php?page=hrm-convivencia') ); ?>" class="hrm-doc-btn" title="Ver reglamento interno" data-icon-color="#c5cad3">
+                        <div class="hrm-doc-btn-icon">
+                            <span class="dashicons dashicons-id"></span>
+                        </div>
+                        <div class="hrm-doc-btn-content">
+                            <div class="hrm-doc-btn-title">Reglamento interno</div>
+                            <div class="hrm-doc-btn-desc">Accede al reglamento interno</div>
                         </div>
                         <div class="hrm-doc-btn-arrow">
                             <span class="dashicons dashicons-arrow-right-alt2"></span>
@@ -390,12 +390,12 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                                     
                                     <?php if ( $is_admin && !$is_own_profile ) : ?>
                                         <?php if ( intval( $employee->estado ?? 1 ) === 1 ) : ?>
-                                            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalDesactivar">
+                                            <button type="button" class="btn btn-danger" id="btn-desactivar-empleado">
                                                 <span class="dashicons dashicons-lock"></span>
                                                 Desactivar
                                             </button>
                                         <?php else : ?>
-                                            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#modalActivar">
+                                            <button type="button" class="btn btn-warning" id="btn-activar-empleado">
                                                 <span class="dashicons dashicons-unlock"></span>
                                                 Activar
                                             </button>
@@ -410,139 +410,70 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
         </div>
     </div>
 
-<!-- MODAL DESACTIVAR EMPLEADO -->
-<?php if ( ($is_admin || $is_supervisor) && !$is_own_profile ) : ?>
-    <div class="modal fade hrm-detach-modal" id="modalDesactivar" tabindex="-1" aria-labelledby="modalDesactivarLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header bg-danger text-white">
-                        <h5 class="modal-title" id="modalDesactivarLabel">
-                            <span class="dashicons dashicons-warning"></span>
-                            Desactivar Empleado
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="alert alert-warning border-start border-4 border-warning">
-                            <div class="d-flex align-items-start gap-2">
-                                <span class="dashicons dashicons-info text-warning fs-4"></span>
-                                <div>
-                                    <strong>¿Estás seguro de desactivar a <?= esc_html( $employee->nombre ) ?> <?= esc_html( $employee->apellido ) ?>?</strong>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <h6 class="text-danger mb-3">Esta acción conlleva lo siguiente:</h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <span class="dashicons dashicons-lock text-danger"></span>
-                                <strong>Bloqueo de acceso inmediato:</strong> El empleado no podrá iniciar sesión en el sistema.
-                            </li>
-                            <li class="mb-2">
-                                <span class="dashicons dashicons-visibility-hidden text-danger"></span>
-                                <strong>Sesión cerrada:</strong> Si tiene una sesión activa, será cerrada automáticamente.
-                            </li>
-                            <li class="mb-2">
-                                <span class="dashicons dashicons-database text-warning"></span>
-                                <strong>Datos preservados:</strong> Toda la información del empleado se mantendrá guardada.
-                            </li>
-                            <li class="mb-2">
-                                <span class="dashicons dashicons-controls-repeat text-success"></span>
-                                <strong>Reversible:</strong> Puedes reactivar al empleado en cualquier momento.
-                            </li>
-                        </ul>
-                        
-                        <div class="alert alert-info border-start border-4 border-info mt-3">
-                            <small>
-                                <span class="dashicons dashicons-lightbulb"></span>
-                                <strong>Nota:</strong> Esta es la forma segura de suspender temporalmente el acceso sin eliminar datos.
-                            </small>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <span class="dashicons dashicons-no"></span>
-                            Cancelar
-                        </button>
-                        <form method="POST" class="d-inline">
-                            <?php wp_nonce_field( 'hrm_toggle_employee_status', 'hrm_toggle_status_nonce' ); ?>
-                            <input type="hidden" name="hrm_action" value="toggle_employee_status">
-                            <input type="hidden" name="employee_id" value="<?= absint( $employee->id ) ?>">
-                            <input type="hidden" name="current_estado" value="<?= intval( $employee->estado ?? 1 ) ?>">
-                            <button type="submit" class="btn btn-danger">
-                                <span class="dashicons dashicons-lock"></span>
-                                Confirmar Desactivación
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- MODAL ACTIVAR EMPLEADO -->
-        <div class="modal fade hrm-detach-modal" id="modalActivar" tabindex="-1" aria-labelledby="modalActivarLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header bg-success text-white">
-                        <h5 class="modal-title" id="modalActivarLabel">
-                            <span class="dashicons dashicons-yes"></span>
-                            Activar Empleado
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="alert alert-success border-start border-4 border-success">
-                            <div class="d-flex align-items-start gap-2">
-                                <span class="dashicons dashicons-info text-success fs-4"></span>
-                                <div>
-                                    <strong>¿Deseas activar a <?= esc_html( $employee->nombre ) ?> <?= esc_html( $employee->apellido ) ?>?</strong>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <h6 class="text-success mb-3">Al activar al empleado:</h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <span class="dashicons dashicons-unlock text-success"></span>
-                                <strong>Acceso restaurado:</strong> Podrá iniciar sesión normalmente en el sistema.
-                            </li>
-                            <li class="mb-2">
-                                <span class="dashicons dashicons-admin-users text-success"></span>
-                                <strong>Permisos activos:</strong> Recuperará todos sus permisos y accesos previos.
-                            </li>
-                            <li class="mb-2">
-                                <span class="dashicons dashicons-yes-alt text-success"></span>
-                                <strong>Operativo inmediatamente:</strong> El cambio se aplica al instante.
-                            </li>
-                        </ul>
-                        
-                        <div class="alert alert-info border-start border-4 border-info mt-3">
-                            <small>
-                                <span class="dashicons dashicons-lightbulb"></span>
-                                <strong>Nota:</strong> Asegúrate de que el empleado debe tener acceso al sistema nuevamente.
-                            </small>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <span class="dashicons dashicons-no"></span>
-                            Cancelar
-                        </button>
-                        <form method="POST" class="d-inline">
-                            <?php wp_nonce_field( 'hrm_toggle_employee_status', 'hrm_toggle_status_nonce' ); ?>
-                            <input type="hidden" name="hrm_action" value="toggle_employee_status">
-                            <input type="hidden" name="employee_id" value="<?= absint( $employee->id ) ?>">
-                            <input type="hidden" name="current_estado" value="<?= intval( $employee->estado ?? 1 ) ?>">
-                            <button type="submit" class="btn btn-success">
-                                <span class="dashicons dashicons-unlock"></span>
-                                Confirmar Activación
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
+<!-- Panel fijo para desactivar/activar empleado -->
+<?php if ( ($is_admin || $is_supervisor) && !$is_own_profile ) : ?>
+    <div id="hrm-toggle-panel" class="border rounded shadow p-4 mb-4 bg-white" style="max-width: 400px; margin: 0 auto; display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); z-index: 9999;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0" id="hrm-toggle-title"><span class="dashicons"></span> </h5>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-cerrar-toggle">Cerrar</button>
         </div>
-    <?php endif; ?>
+        <div id="hrm-toggle-msg" class="mb-3"></div>
+        <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-secondary" id="btn-cancelar-toggle">Cancelar</button>
+            <form method="POST" class="d-inline" id="form-toggle-estado">
+                <?php wp_nonce_field( 'hrm_toggle_employee_status', 'hrm_toggle_status_nonce' ); ?>
+                <input type="hidden" name="hrm_action" value="toggle_employee_status">
+                <input type="hidden" name="employee_id" value="<?= absint( $employee->id ) ?>">
+                <input type="hidden" name="current_estado" id="input-current-estado" value="<?= intval( $employee->estado ?? 1 ) ?>">
+                <button type="submit" class="btn" id="btn-confirmar-toggle">
+                    <span class="dashicons"></span>
+                    <span id="btn-confirmar-text"></span>
+                </button>
+            </form>
+        </div>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const panel = document.getElementById('hrm-toggle-panel');
+        const btnDesactivar = document.getElementById('btn-desactivar-empleado');
+        const btnActivar = document.getElementById('btn-activar-empleado');
+        const btnCerrar = document.getElementById('btn-cerrar-toggle');
+        const btnCancelar = document.getElementById('btn-cancelar-toggle');
+        const formToggle = document.getElementById('form-toggle-estado');
+        const inputEstado = document.getElementById('input-current-estado');
+        const title = document.getElementById('hrm-toggle-title');
+        const msg = document.getElementById('hrm-toggle-msg');
+        const btnConfirmar = document.getElementById('btn-confirmar-toggle');
+        const btnConfirmarText = document.getElementById('btn-confirmar-text');
+        if (btnDesactivar) {
+            btnDesactivar.onclick = function() {
+                inputEstado.value = '1';
+                title.innerHTML = '<span class="dashicons dashicons-warning text-danger"></span> Desactivar Empleado';
+                btnConfirmar.className = 'btn btn-danger';
+                btnConfirmar.querySelector('.dashicons').className = 'dashicons dashicons-lock';
+                btnConfirmarText.textContent = 'Confirmar Desactivación';
+                msg.innerHTML = `<strong>¿Estás seguro de desactivar a <span class='text-danger'><?= esc_html( $employee->nombre ) ?> <?= esc_html( $employee->apellido ) ?></span>?<br>Esta acción bloqueará su acceso.</strong>`;
+                panel.style.display = 'block';
+            };
+        }
+        if (btnActivar) {
+            btnActivar.onclick = function() {
+                inputEstado.value = '0';
+                title.innerHTML = '<span class="dashicons dashicons-yes text-success"></span> Activar Empleado';
+                btnConfirmar.className = 'btn btn-success';
+                btnConfirmar.querySelector('.dashicons').className = 'dashicons dashicons-unlock';
+                btnConfirmarText.textContent = 'Confirmar Activación';
+                msg.innerHTML = `<strong>¿Deseas activar a <span class='text-success'><?= esc_html( $employee->nombre ) ?> <?= esc_html( $employee->apellido ) ?></span>?<br>El acceso será restaurado inmediatamente.</strong>`;
+                panel.style.display = 'block';
+            };
+        }
+        btnCerrar.onclick = btnCancelar.onclick = function() {
+            panel.style.display = 'none';
+        };
+    });
+    </script>
+<?php endif; ?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

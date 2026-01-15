@@ -65,13 +65,6 @@ $logo_url = esc_url(
                         Liquidaciones
                     </a>
                 </li>
-                <li>
-                          <a class="nav-link px-3 py-2 <?= hrm_emp_is_active('hrm-mi-documentos-licencias'); ?>"
-                              href="<?= esc_url( admin_url('admin.php?page=hrm-mi-documentos-licencias') ); ?>"
-                       >
-                        Licencias
-                    </a>
-                </li>
             </ul>
         </details>
 

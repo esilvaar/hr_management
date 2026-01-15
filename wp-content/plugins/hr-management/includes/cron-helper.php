@@ -19,7 +19,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  * ?hrm_manual_sync=1
  */
 add_action( 'admin_init', function() {
-    if ( ! current_user_can( 'manage_options' ) ) {
+    // Permitir acceso a administradores, supervisores/gerentes y editores de vacaciones
+    if ( ! current_user_can( 'manage_options' ) && 
+         ! current_user_can( 'edit_hrm_employees' ) && 
+         ! current_user_can( 'manage_hrm_vacaciones' ) ) {
         return;
     }
     
@@ -36,8 +39,28 @@ add_action( 'admin_init', function() {
             
             $resultado = hrm_actualizar_personal_vigente_por_vacaciones();
             
+            // Determinar a qué página redirigir
+            // Primero, verificar si se pasó una página de retorno específica
+            $return_page = isset( $_GET['hrm_return_page'] ) ? sanitize_text_field( $_GET['hrm_return_page'] ) : '';
+            
+            if ( ! empty( $return_page ) && in_array( $return_page, [ 'hrm-empleados', 'hrm-vacaciones', 'hrm-mi-perfil' ], true ) ) {
+                // Usar la página de retorno especificada
+                $redirect_page = $return_page;
+            } else {
+                // Determinar según el rol del usuario
+                if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) ) {
+                    $redirect_page = 'hrm-empleados';
+                }
+                elseif ( current_user_can( 'manage_hrm_vacaciones' ) ) {
+                    $redirect_page = 'hrm-vacaciones';
+                }
+                else {
+                    $redirect_page = 'hrm-mi-perfil';
+                }
+            }
+            
             // Redirigir con mensaje
-            $redirect_url = admin_url( 'admin.php?page=hrm-empleados&hrm_sync_msg=1' );
+            $redirect_url = admin_url( 'admin.php?page=' . $redirect_page . '&hrm_sync_msg=1' );
             wp_safe_redirect( $redirect_url );
             exit;
         }
@@ -48,7 +71,10 @@ add_action( 'admin_init', function() {
  * Mostrar mensaje de confirmación después de sincronización manual.
  */
 add_action( 'admin_notices', function() {
-    if ( ! current_user_can( 'manage_options' ) ) {
+    // Permitir acceso a administradores, supervisores/gerentes y editores de vacaciones
+    if ( ! current_user_can( 'manage_options' ) && 
+         ! current_user_can( 'edit_hrm_employees' ) && 
+         ! current_user_can( 'manage_hrm_vacaciones' ) ) {
         return;
     }
     
@@ -64,7 +90,10 @@ add_action( 'admin_notices', function() {
  * Se muestra en la página principal de Empleados.
  */
 add_action( 'hrm_dashboard_actions', function() {
-    if ( ! current_user_can( 'manage_options' ) ) {
+    // Permitir acceso a administradores, supervisores/gerentes y editores de vacaciones
+    if ( ! current_user_can( 'manage_options' ) && 
+         ! current_user_can( 'edit_hrm_employees' ) && 
+         ! current_user_can( 'manage_hrm_vacaciones' ) ) {
         return;
     }
     
