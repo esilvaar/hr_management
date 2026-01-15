@@ -393,6 +393,18 @@ add_action( 'init', function() {
  * Renderizar página de vacaciones para admin.
  */
 function hrm_render_vacaciones_admin_page() {
+    // IMPORTANTE: Forzar actualización de capacidades del usuario actual
+    // Esto es necesario en caso de que se hayan agregado capacidades al rol
+    // después de que el usuario fue asignado al rol
+    $current_user = wp_get_current_user();
+    if ( $current_user && $current_user->ID ) {
+        // Recargar las capacidades del usuario desde la base de datos
+        $current_user->get_role_caps();
+        
+        // Log para debug
+        error_log( 'HRM: Capacidades del usuario ' . $current_user->ID . ' recargadas. Tiene manage_hrm_vacaciones: ' . ($current_user->has_cap('manage_hrm_vacaciones') ? 'YES' : 'NO') );
+    }
+    
     if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'view_hrm_admin_views' ) && ! current_user_can( 'manage_hrm_vacaciones' ) ) {
         wp_die( __( 'No tienes permisos para ver esta página.', 'hr-management' ), __( 'Acceso denegado', 'hr-management' ), array( 'response' => 403 ) );
     }
@@ -497,18 +509,21 @@ function hrm_render_profile_overview() {
 
     $hrm_puestos = apply_filters( 'hrm_puestos', array(
         'Gerente',
-        'Analista',
-        'Desarrollador',
-        'Diseñador',
-        'Asistente',
-        'Coordinador'
+        'Ingeniero en Sistemas',
+        'Ingeniero de Soporte',
+        'Administrativo(a) Contable',
+        'Asistente Comercial',
+        'Desarrollador de Software',
+        'Diseñador Gráfico'
     ));
 
     $hrm_tipos_contrato = apply_filters( 'hrm_tipos_contrato', array(
         'Indefinido',
         'Plazo Fijo',
         'Por Proyecto',
-        'Prácticas'
+        'Práctica',
+        'Part-time',
+        'Teletrabajo'
     ));
 
     echo '<div class="wrap">';
@@ -1002,11 +1017,18 @@ function hrm_render_mis_documentos_licencias_page() {
 }
 
 /**
- * Renderizar página para ver/editar solicitud de vacaciones (ADMIN y SUPERVISORES)
+ * Renderizar página para ver/editar solicitud de vacaciones (ADMIN, EDITORES DE VACACIONES y SUPERVISORES)
  */
 function hrm_render_formulario_solicitud_page() {
-    // Verificar permisos - Admins, o usuarios con view_hrm_admin_views pueden ver
+    // IMPORTANTE: Forzar actualización de capacidades del usuario actual
+    $current_user = wp_get_current_user();
+    if ( $current_user && $current_user->ID ) {
+        $current_user->get_role_caps();
+    }
+    
+    // Verificar permisos - Admins, editores de vacaciones, o usuarios con view_hrm_admin_views pueden ver
     $puede_ver = current_user_can( 'manage_options' ) 
+                 || current_user_can( 'manage_hrm_vacaciones' )
                  || current_user_can( 'view_hrm_admin_views' );
     
     if ( ! $puede_ver ) {

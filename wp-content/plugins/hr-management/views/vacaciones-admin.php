@@ -5,6 +5,12 @@ wp_enqueue_style( 'hrm-vacaciones-tabs', plugins_url( 'hr-management/assets/css/
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+// IMPORTANTE: Forzar actualización de capacidades del usuario actual
+$current_user = wp_get_current_user();
+if ( $current_user && $current_user->ID ) {
+    $current_user->get_role_caps();
+}
+
 $search_term = sanitize_text_field( $_GET['empleado'] ?? '' );
 $estado_filtro = sanitize_text_field( $_GET['estado'] ?? 'PENDIENTE' );
 
@@ -120,17 +126,7 @@ $total_solicitudes = count( $solicitudes );
                         <span class="fw-semibold">Resumen de Departamentos</span>
                     </button>
                 </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link d-flex align-items-center justify-content-center gap-2" 
-                            id="tab-calendario" 
-                            type="button" 
-                            role="tab" 
-                            aria-controls="contenido-calendario" 
-                            aria-selected="false">
-                        
-                        
-                    </button>
-                </li>
+                
             </ul>
 
             <!-- Tab Content Container -->
@@ -365,9 +361,6 @@ $total_solicitudes = count( $solicitudes );
                         <h2 class="fs-5 fw-bold text-dark mb-0 d-flex align-items-center gap-2">
                             <span></span> Resumen de Departamentos
                         </h2>
-                        <button type="button" class="btn btn-sm btn-outline-info" id="btnSincronizarPersonal" title="Sincronizar personal vigente manualmente">
-                            <span>🔄</span> Sincronizar Personal
-                        </button>
                     </div>
                     <div class="hrm-panel-body">
                         <div class="table-responsive">
@@ -421,10 +414,12 @@ $total_solicitudes = count( $solicitudes );
                                                     <?php echo esc_html( $nombre_depto ); ?>
                                                 </td>
                                                 <td class="py-3 px-4 text-center">
-                                                    <?php echo esc_html( $total ); ?>
+                                                    <span class="text-dark fw-bold" style="font-size: 1.1rem; font-weight: 700;">
+                                                        <?php echo esc_html( $total ); ?>
+                                                    </span>
                                                 </td>
                                                 <td class="py-3 px-4 text-center">
-                                                    <span class="text-<?php echo esc_attr( $estado_activo ); ?> fw-bold" style="font-size: 1.1rem;">
+                                                    <span class="text-dark" style="font-size: 1.2rem; font-weight: 800;">
                                                         <?php echo $icono_activo; ?> <?php echo esc_html( $activo_hoy ); ?>
                                                     </span>
                                                 </td>
@@ -439,7 +434,7 @@ $total_solicitudes = count( $solicitudes );
                                                             echo '<span class="tooltip-text">' . nl2br( esc_html( $tooltip_data ) ) . '</span>';
                                                             echo '</div>';
                                                         } else {
-                                                            echo '<span class="text-success">Sin empleados de vacaciones </span>';
+                                                            echo '<span style="color: #12171c;">Sin empleados de vacaciones </span>';
                                                         }
                                                         ?>
                                                     </span>
@@ -463,6 +458,63 @@ $total_solicitudes = count( $solicitudes );
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // =====================================================
+    // SINCRONIZACIÓN AUTOMÁTICA DE PERSONAL VIGENTE
+    // =====================================================
+    let ultimaSincronizacion = 0; // Timestamp de la última sincronización
+    const INTERVALO_MINIMO = 5000; // 5 segundos mínimo entre sincronizaciones
+    
+    function sincronizarPersonalAutomatico() {
+        const ahora = Date.now();
+        
+        // Evitar sincronizaciones muy frecuentes
+        if (ahora - ultimaSincronizacion < INTERVALO_MINIMO) {
+            console.log('Sincronización ignorada (demasiado frecuente)');
+            return;
+        }
+        
+        ultimaSincronizacion = ahora;
+        
+        // Obtener el nonce del botón
+        const btnSincronizar = document.getElementById('btnSincronizarPersonal');
+        if (!btnSincronizar) return;
+        
+        let nonce = btnSincronizar.getAttribute('data-nonce');
+        if (!nonce) {
+            nonce = '<?php echo esc_js( wp_create_nonce('hrm_sincronizar_personal') ); ?>';
+        }
+        
+        console.log('Sincronización automática de personal vigente...');
+        
+        // Realizar la solicitud AJAX silenciosamente
+        fetch('<?php echo esc_url( admin_url('admin-ajax.php') ); ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                action: 'hrm_sincronizar_personal_vigente',
+                nonce: nonce
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Sincronización automática completada:', data);
+            if (!data.success) {
+                console.warn('Error en sincronización automática:', data);
+            }
+        })
+        .catch(error => {
+            console.error('Error en sincronización automática:', error);
+        });
+    }
+    
+    // Sincronizar automáticamente al cargar la página
+    sincronizarPersonalAutomatico();
+    
+    // Sincronizar automáticamente cada 5 minutos (300000 ms)
+    setInterval(sincronizarPersonalAutomatico, 300000);
+    
     // =====================================================
     // LÓGICA DE NAVEGACIÓN DE TABS
     // =====================================================
@@ -703,67 +755,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // =====================================================
-    // LÓGICA DE SINCRONIZACIÓN MANUAL DE PERSONAL
+    // LÓGICA DE NOTIFICACIONES
     // =====================================================
-    const btnSincronizar = document.getElementById('btnSincronizarPersonal');
-    
-    if (btnSincronizar) {
-        btnSincronizar.addEventListener('click', function() {
-            // Cambiar estado del botón
-            const textoOriginal = btnSincronizar.innerHTML;
-            btnSincronizar.disabled = true;
-            btnSincronizar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sincronizando...';
-            
-            // Realizar la solicitud AJAX
-            fetch('<?php echo esc_url( admin_url('admin-ajax.php') ); ?>', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    action: 'hrm_sincronizar_personal_vigente',
-                    nonce: '<?php echo esc_js( wp_create_nonce('hrm_sincronizar_personal') ); ?>'
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Restaurar estado del botón
-                btnSincronizar.disabled = false;
-                btnSincronizar.innerHTML = textoOriginal;
-                
-                if (data.success) {
-                    // Mostrar notificación de éxito
-                    mostrarNotificacionExito(
-                        'Sincronización completada',
-                        `Se actualizaron ${data.data.departamentos_actualizados} departamento(s).`,
-                        data.data.detalles
-                    );
-                    
-                    // Recargar la tabla de departamentos
-                    location.reload();
-                } else {
-                    // Mostrar notificación de error
-                    mostrarNotificacionError(
-                        'Error en la sincronización',
-                        data.data.mensaje || 'Ocurrió un error al sincronizar el personal.',
-                        data.data.errores || []
-                    );
-                }
-            })
-            .catch(error => {
-                // Restaurar estado del botón
-                btnSincronizar.disabled = false;
-                btnSincronizar.innerHTML = textoOriginal;
-                
-                // Mostrar error de red
-                mostrarNotificacionError(
-                    'Error de conexión',
-                    'No se pudo conectar con el servidor.',
-                    [error.message]
-                );
-            });
-        });
-    }
     
     // Función para mostrar notificación de éxito
     function mostrarNotificacionExito(titulo, mensaje, detalles) {

@@ -366,8 +366,14 @@ function hrm_get_feriados_locales( $ano ) {
  * IMPORTANTE: Si el usuario actual es un gerente de departamento,
  * solo se mostrarán las solicitudes de empleados del departamento
  * que tiene a cargo. Los administradores verán todas las solicitudes.
- */function hrm_get_all_vacaciones( $search = '', $estado = '' ) {
+*/function hrm_get_all_vacaciones( $search = '', $estado = '' ) {
     global $wpdb;
+
+    // IMPORTANTE: Forzar actualización de capacidades del usuario actual
+    $current_user = wp_get_current_user();
+    if ( $current_user && $current_user->ID ) {
+        $current_user->get_role_caps();
+    }
 
     // Generar cache key incluyendo estado y usuario actual
     $current_user_id = get_current_user_id();
@@ -4235,12 +4241,13 @@ function hrm_render_saldo_vacaciones_chile( $saldo, $mostrar_detalle = true ) {
     $html .= '<div class="row g-3 mb-4">';
     
     // Card: Días Disponibles (de la BD)
-    $bg_disponibles = $saldo['dias_en_deficit'] ? '#dc3545' : '#27ae60';
     $html .= '<div class="col-md-4">';
     $html .= '<div class="card h-100 text-center" style="border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">';
-    $html .= '<div class="card-body" style="background: ' . $bg_disponibles . '; border-radius: 12px; color: white; padding: 1.5rem;">';
+    $html .= '<div class="card-body" style="background: #f5f5f5; border-radius: 12px; color: #333; padding: 1.5rem;">';
+    $html .= '<div style="border: 2px solid #ddd; border-radius: 8px; padding: 1rem; background: white; margin-bottom: 0.75rem;">';
     $html .= '<div style="font-size: 2.5rem; font-weight: 700; line-height: 1;">' . number_format( $saldo['dias_disponibles'], 1 ) . '</div>';
-    $html .= '<div style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.9;">Días Disponibles</div>';
+    $html .= '</div>';
+    $html .= '<div style="border: 1px solid #ddd; border-radius: 6px; padding: 0.5rem; background: white;">Días Disponibles</div>';
     if ( $saldo['dias_en_deficit'] ) {
         $html .= '<div style="font-size: 0.75rem; margin-top: 0.25rem; background: rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 4px;">⚠️ Déficit: ' . number_format( $saldo['deficit_dias'], 1 ) . ' días</div>';
     }
@@ -4249,17 +4256,21 @@ function hrm_render_saldo_vacaciones_chile( $saldo, $mostrar_detalle = true ) {
     // Card: Días Usados (de la BD)
     $html .= '<div class="col-md-4">';
     $html .= '<div class="card h-100 text-center" style="border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">';
-    $html .= '<div class="card-body" style="background: #e74c3c; border-radius: 12px; color: white; padding: 1.5rem;">';
+    $html .= '<div class="card-body" style="background: #f5f5f5; border-radius: 12px; color: #333; padding: 1.5rem;">';
+    $html .= '<div style="border: 2px solid #ddd; border-radius: 8px; padding: 1rem; background: white; margin-bottom: 0.75rem;">';
     $html .= '<div style="font-size: 2.5rem; font-weight: 700; line-height: 1;">' . number_format( $saldo['dias_usados'], 1 ) . '</div>';
-    $html .= '<div style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.9;">Días Usados</div>';
+    $html .= '</div>';
+    $html .= '<div style="border: 1px solid #ddd; border-radius: 6px; padding: 0.5rem; background: white;">Días Usados</div>';
     $html .= '</div></div></div>';
     
     // Card: Días del Período Actual (calculado)
     $html .= '<div class="col-md-4">';
     $html .= '<div class="card h-100 text-center" style="border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">';
-    $html .= '<div class="card-body" style="background: #2c3e50; border-radius: 12px; color: white; padding: 1.5rem;">';
+    $html .= '<div class="card-body" style="background: #f5f5f5; border-radius: 12px; color: #333; padding: 1.5rem;">';
+    $html .= '<div style="border: 2px solid #ddd; border-radius: 8px; padding: 1rem; background: white; margin-bottom: 0.75rem;">';
     $html .= '<div style="font-size: 2.5rem; font-weight: 700; line-height: 1;">' . number_format( $saldo['dias_periodo_actual'], 0 ) . '</div>';
-    $html .= '<div style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.9;">Días por Año</div>';
+    $html .= '</div>';
+    $html .= '<div style="border: 1px solid #ddd; border-radius: 6px; padding: 0.5rem; background: white;">Días por Año</div>';
     if ( $saldo['dias_progresivos_anuales'] > 0 ) {
         $html .= '<div style="font-size: 0.75rem; margin-top: 0.25rem; background: rgba(39,174,96,0.3); padding: 0.25rem 0.5rem; border-radius: 4px;">15 base + ' . $saldo['dias_progresivos_anuales'] . ' progresivos</div>';
     }
@@ -4296,10 +4307,10 @@ function hrm_render_saldo_vacaciones_chile( $saldo, $mostrar_detalle = true ) {
     
     // Próximo aniversario
     $dias_aniv = $saldo['dias_para_aniversario'];
-    $color_aniv = $dias_aniv <= 30 ? '#f39c12' : '#27ae60';
+    $color_aniv = $dias_aniv <= 30 ? '#f39c12' : '#0a130e';
     $html .= '<div class="col-md-6">';
     $html .= '<div class="alert mb-0" style="background: #f8f9fa; border-left: 4px solid ' . $color_aniv . '; border-radius: 8px;">';
-    $html .= '<strong>📅 Próxima Recarga:</strong><br>';
+    $html .= '<strong> Próxima Recarga:</strong><br>';
     $html .= '<span style="font-size: 1.1rem; color: ' . $color_aniv . ';">' . date_create( $saldo['proximo_aniversario'] )->format( 'd/m/Y' ) . '</span>';
     $html .= '<br><small class="text-muted">Faltan ' . $dias_aniv . ' días</small>';
     $html .= '</div></div>';

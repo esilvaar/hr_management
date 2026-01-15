@@ -134,7 +134,7 @@ if ( ! empty( $lista_empleados ) ) {
                                                title="Editar">
                                                 <span class="dashicons dashicons-edit"></span>
                                             </a>
-                                            <a href="<?= esc_url( admin_url( 'admin.php?page=hrm-mi-documentos-contratos&employee_id=' . absint( $emp_id ) ) ) ?>" 
+                                            <a href="<?= esc_url( admin_url( 'admin.php?page=hrm-empleados&tab=upload&id=' . absint( $emp_id ) ) ) ?>" 
                                                class="btn btn-sm btn-secondary" 
                                                title="Subir documentos">
                                                 <span class="dashicons dashicons-upload"></span>

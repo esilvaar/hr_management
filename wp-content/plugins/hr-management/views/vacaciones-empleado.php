@@ -129,7 +129,7 @@ $form_admin_url = add_query_arg( 'show', 'form' );
             
             <!-- Saldo de Vacaciones - Cálculo según Ley Chilena -->
             <div class="mb-4">
-                <h3 class="h5 mb-3" style="color: #27ae60; font-weight: 600;">
+                <h3 class="h5 mb-3" style="color: #1a1a1a; font-weight: 600;">
                     
                 </h3>
                 
@@ -159,12 +159,12 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                                 <tbody>
                                     <tr>
                                         <td class="py-3">
-                                            <span class="fw-bold fs-5" style="color: #27ae60;">
+                                            <span class="fw-bold fs-5" style="color: #1a1a1a;">
                                                 <?= esc_html( $saldo->dias_vacaciones_anuales ?? 0 ) ?>
                                             </span>
                                         </td>
                                         <td class="py-3">
-                                            <span class="fw-bold text-danger fs-5">
+                                            <span class="fw-bold text-secondary fs-5">
                                                 <?= esc_html( $saldo->dias_vacaciones_usados ?? 0 ) ?>
                                             </span>
                                         </td>
@@ -194,12 +194,12 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                             <tbody>
                                 <tr>
                                     <td class="py-3">
-                                        <span class="fw-bold fs-5" style="color: #27ae60;">
+                                        <span class="fw-bold fs-5" style="color: #1a1a1a;">
                                             <?= esc_html( $saldo->dias_vacaciones_anuales ?? 0 ) ?>
                                         </span>
                                     </td>
                                     <td class="py-3">
-                                        <span class="fw-bold text-danger fs-5">
+                                        <span class="fw-bold text-secondary fs-5">
                                             <?= esc_html( $saldo->dias_vacaciones_usados ?? 0 ) ?>
                                         </span>
                                     </td>
@@ -221,13 +221,13 @@ $form_admin_url = add_query_arg( 'show', 'form' );
             
             <!-- Mis Solicitudes -->
             <div class="mb-4">
-                <h3 class="h5 mb-3" style="color: #27ae60; font-weight: 600;">
+                <h3 class="h5 mb-3" style="color: #1a1a1a; font-weight: 600;">
                     <span class="dashicons dashicons-list-view me-2"></span> Mis Solicitudes
                 </h3>
                 
                 <?php if ( empty( $solicitudes ) ) : ?>
                     
-                    <div class="alert" style="background-color: #e8f5e9; border: 1px solid #27ae60; border-left: 4px solid #27ae60; color: #1b5e20; border-radius: 6px; padding: 2rem; text-align: center;" role="alert">
+                    <div class="alert" style="background-color: #f5f5f5; border: 1px solid #cccccc; border-left: 1px solid #cccccc; color: #333; border-radius: 0; padding: 2rem; text-align: center;" role="alert">
                         <span class="dashicons dashicons-info fs-1"></span>
                         <p class="lead mb-0 mt-2">No tienes solicitudes de vacaciones registradas.</p>
                     </div>
@@ -295,7 +295,7 @@ $form_admin_url = add_query_arg( 'show', 'form' );
             
             <!-- Botón Nueva Solicitud -->
             <div class="text-center mt-4 pt-3 border-top">
-                <a href="<?= esc_url( $form_admin_url ) ?>" class="btn btn-lg px-5" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%); color: white; border: none; font-weight: 600;">
+                <a href="<?= esc_url( $form_admin_url ) ?>" class="btn btn-lg px-5" style="background: #009929; color: white; border: none; font-weight: 600;">
                     <span class="dashicons dashicons-plus me-2"></span> Nueva solicitud de vacaciones
                 </a>
             </div>

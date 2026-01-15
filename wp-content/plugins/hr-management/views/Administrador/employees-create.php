@@ -300,21 +300,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function toggleAreaGerencia() {
-        const puestoValue = puestoSelect.value.toLowerCase().trim();
         const deptoValue = departamentoSelect.value.toLowerCase().trim();
         
-        // Mostrar área de gerencia y departamentos solo si:
-        // 1. El puesto es "Gerente" O
-        // 2. El departamento es "Gerencia"
-        const esGerente = puestoValue === 'gerente' || deptoValue === 'gerencia';
+        // Mostrar área de gerencia y departamentos a cargo SOLO si el departamento seleccionado es "Gerencia"
+        const esGerencia = deptoValue === 'gerencia';
         
-        if ( esGerente ) {
+        if ( esGerencia ) {
             areaGerenciaContainer.style.display = 'block';
-            // Si hay un área seleccionada, mostrar los checkboxes
-            if ( areaGerenciaSelect.value !== '' ) {
-                deptosCargoContainer.style.display = 'block';
-                loadDepartamentosCheckboxes();
-            }
+            deptosCargoContainer.style.display = 'block';
+            loadDepartamentosCheckboxes();
         } else {
             areaGerenciaContainer.style.display = 'none';
             deptosCargoContainer.style.display = 'none';
@@ -328,11 +322,9 @@ document.addEventListener('DOMContentLoaded', function() {
     puestoSelect.addEventListener('change', toggleAreaGerencia);
     
     areaGerenciaSelect.addEventListener('change', function() {
-        const puestoValue = puestoSelect.value.toLowerCase().trim();
         const deptoValue = departamentoSelect.value.toLowerCase().trim();
-        const esGerente = puestoValue === 'gerente' || deptoValue === 'gerencia';
         
-        if ( esGerente ) {
+        if ( deptoValue === 'gerencia' ) {
             if ( areaGerenciaSelect.value !== '' ) {
                 deptosCargoContainer.style.display = 'block';
                 loadDepartamentosCheckboxes();

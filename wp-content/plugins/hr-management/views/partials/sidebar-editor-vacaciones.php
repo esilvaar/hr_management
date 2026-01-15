@@ -42,7 +42,7 @@ $logo_url = esc_url(
                 <li>
                     <a class="nav-link px-3 py-2 <?= hrm_edvac_is_active('hrm-vacaciones'); ?>"
                        href="<?= esc_url( admin_url('admin.php?page=hrm-vacaciones') ); ?>">
-                        Todas las Solicitudes
+                        Solicitudes de Vacaciones
                     </a>
                 </li>
             </ul>
@@ -69,28 +69,28 @@ $logo_url = esc_url(
                         </a>
                     </li>
                     <li>
-                        <a class="nav-link px-3 py-2 <?= hrm_edvac_is_active('hrm-mi-documentos'); ?>"
-                           href="<?= esc_url( admin_url('admin.php?page=hrm-mi-documentos') ); ?>">
+                                <a class="nav-link px-3 py-2 <?= hrm_edvac_is_active('hrm-mi-documentos'); ?>"
+                                    href="<?= esc_url( admin_url('admin.php?page=hrm-mi-documentos') ); ?>">
                             Mis Documentos
                         </a>
                     </li>
                     <li>
-                        <a class="nav-link px-3 py-2 <?= hrm_edvac_is_active('hrm-mi-documentos-contratos'); ?>"
-                           href="<?= esc_url( admin_url('admin.php?page=hrm-mi-documentos-contratos') ); ?>"
+                                <a class="nav-link px-3 py-2 <?= hrm_edvac_is_active('hrm-mi-documentos-contratos'); ?>"
+                                    href="<?= esc_url( admin_url('admin.php?page=hrm-mi-documentos-contratos') ); ?>"
                            style="margin-left: 1rem; font-size: 0.9rem;">
                             Contratos
                         </a>
                     </li>
                     <li>
-                        <a class="nav-link px-3 py-2 <?= hrm_edvac_is_active('hrm-mi-documentos-liquidaciones'); ?>"
-                           href="<?= esc_url( admin_url('admin.php?page=hrm-mi-documentos-liquidaciones') ); ?>"
+                                <a class="nav-link px-3 py-2 <?= hrm_edvac_is_active('hrm-mi-documentos-liquidaciones'); ?>"
+                                    href="<?= esc_url( admin_url('admin.php?page=hrm-mi-documentos-liquidaciones') ); ?>"
                            style="margin-left: 1rem; font-size: 0.9rem;">
                             Liquidaciones
                         </a>
                     </li>
                     <li>
-                        <a class="nav-link px-3 py-2 <?= hrm_edvac_is_active('hrm-mi-documentos-licencias'); ?>"
-                           href="<?= esc_url( admin_url('admin.php?page=hrm-mi-documentos-licencias') ); ?>"
+                                <a class="nav-link px-3 py-2 <?= hrm_edvac_is_active('hrm-mi-documentos-licencias'); ?>"
+                                    href="<?= esc_url( admin_url('admin.php?page=hrm-mi-documentos-licencias') ); ?>"
                            style="margin-left: 1rem; font-size: 0.9rem;">
                             Licencias
                         </a>

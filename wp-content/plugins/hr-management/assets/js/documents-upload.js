@@ -95,6 +95,9 @@ function setupYearSearch() {
             itemsContainer.style.display = 'none';
         });
     });
+    // Año por defecto 2026
+    searchInput.value = '2026';
+    hiddenInput.value = '2026';
     
     // Cerrar al hacer click fuera
     document.addEventListener('click', function(e) {
@@ -134,6 +137,13 @@ function setupFormSubmit() {
         if ( ! filesInput.files.length ) {
             showUploadMessage('Por favor selecciona al menos un archivo', 'error');
             return;
+        }
+        // Validar solo PDF
+        for (let i = 0; i < filesInput.files.length; i++) {
+            if (filesInput.files[i].type !== 'application/pdf') {
+                showUploadMessage('Solo se permiten archivos PDF', 'error');
+                return;
+            }
         }
         
         // Enviar formulario

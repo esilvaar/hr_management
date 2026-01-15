@@ -124,7 +124,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                     </h5>
                 </div>
                 <div class="hrm-panel-body hrm-doc-panel-body">
-                    <a href="<?= esc_url( add_query_arg( array( 'page' => 'hrm-mis-documentos', 'tab' => 'licencias', 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis licencias" data-icon-color="#c5cad3">
+                    <a href="<?= esc_url( add_query_arg( array( 'page' => 'hrm-mi-documentos-licencias', 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis licencias" data-icon-color="#c5cad3">
                         <div class="hrm-doc-btn-icon">
                             <span class="dashicons dashicons-id"></span>
                         </div>
@@ -136,7 +136,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                             <span class="dashicons dashicons-arrow-right-alt2"></span>
                         </div>
                     </a>
-                    <a href="<?= esc_url( add_query_arg( array( 'page' => 'hrm-mis-documentos', 'tab' => 'contratos', 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis contratos" data-icon-color="#b0b5bd">
+                    <a href="<?= esc_url( add_query_arg( array( 'page' => 'hrm-mi-documentos-contratos', 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis contratos" data-icon-color="#b0b5bd">
                         <div class="hrm-doc-btn-icon">
                             <span class="dashicons dashicons-media-document"></span>
                         </div>
@@ -148,7 +148,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                             <span class="dashicons dashicons-arrow-right-alt2"></span>
                         </div>
                     </a>
-                    <a href="<?= esc_url( add_query_arg( array( 'page' => 'hrm-mis-documentos', 'tab' => 'liquidaciones', 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis liquidaciones" data-icon-color="#d0d5db">
+                    <a href="<?= esc_url( add_query_arg( array( 'page' => 'hrm-mi-documentos-liquidaciones', 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis liquidaciones" data-icon-color="#d0d5db">
                         <div class="hrm-doc-btn-icon">
                             <span class="dashicons dashicons-money-alt"></span>
                         </div>

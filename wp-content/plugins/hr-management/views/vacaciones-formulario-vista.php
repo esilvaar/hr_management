@@ -8,6 +8,19 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 global $wpdb;
 
+// IMPORTANTE: Forzar actualización de capacidades del usuario actual
+// Esto es necesario en caso de que se hayan agregado capacidades al rol
+// después de que el usuario fue asignado al rol
+$current_user = wp_get_current_user();
+if ( $current_user && $current_user->ID ) {
+    // Recargar las capacidades del usuario desde la base de datos
+    $current_user->get_role_caps();
+    
+    // Log para debug
+    error_log( 'HRM: Vacaciones Vista - Capacidades del usuario ' . $current_user->ID . ' recargadas' );
+    error_log( 'HRM: Usuario tiene manage_hrm_vacaciones: ' . ($current_user->has_cap('manage_hrm_vacaciones') ? 'YES' : 'NO') );
+}
+
 // Verificar permisos básicos
 $es_admin = current_user_can( 'manage_options' );
 $es_editor_vacaciones = current_user_can( 'manage_hrm_vacaciones' ) && ! current_user_can( 'edit_hrm_employees' );

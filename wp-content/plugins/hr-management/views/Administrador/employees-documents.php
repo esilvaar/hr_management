@@ -133,7 +133,7 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
                                name="archivos_subidos[]"
                                multiple
                                required
-                               accept=".pdf,.doc,.docx"
+                               accept=".pdf"
                                class="form-control">
                         <small class="text-muted d-block mt-1">Puedes seleccionar varios archivos a la vez</small>
                     </div>

@@ -68,9 +68,9 @@ $logo_url = esc_url(
                     </a>
                 </li>
                 <li>
-                    <a class="nav-link px-3 py-2 <?= hrm_sup_is_active('hrm-empleados', 'upload'); ?>"
-                       href="<?= esc_url( $upload_url ); ?>">
-                        Documentos
+                          <a class="nav-link px-3 py-2 <?= hrm_sup_is_active('hrm-empleados', 'upload'); ?>"
+                              href="<?= esc_url( $upload_url ); ?>">
+                                Documentos
                     </a>
                 </li>
             </ul>
@@ -80,21 +80,16 @@ $logo_url = esc_url(
         <details <?= in_array( $current_page, array( 'hrm-vacaciones', 'hrm-mi-perfil-vacaciones' ), true ) ? 'open' : ''; ?>>
             <summary class="d-flex align-items-center gap-2 px-3 py-2 fw-semibold">
                 <span class="dashicons dashicons-calendar-alt"></span>
-                <span class="flex-grow-1">Vacaciones</span>
+                <span class="flex-grow-1">Gestión de Vacaciones</span>
             </summary>
             <ul class="list-unstyled px-2 mb-2">
                 <li>
                     <a class="nav-link px-3 py-2 <?= in_array( $current_page, array( 'hrm-vacaciones' ), true ) ? 'active' : '' ?>"
                        href="<?= esc_url( admin_url('admin.php?page=hrm-vacaciones') ); ?>">
-                        Panel de Departamentos
+                        Solicitudes de Vacaciones
                     </a>
                 </li>
-                <li>
-                    <a class="nav-link px-3 py-2 <?= hrm_sup_is_active('hrm-mi-perfil-vacaciones'); ?>"
-                       href="<?= esc_url( admin_url('admin.php?page=hrm-mi-perfil-vacaciones') ); ?>">
-                        Mis Vacaciones
-                    </a>
-                </li>
+                
             </ul>
         </details>
 

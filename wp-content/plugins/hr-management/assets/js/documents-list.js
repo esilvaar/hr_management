@@ -203,12 +203,12 @@ function setupDeleteButtons() {
                 if ( data.success ) {
                     loadEmployeeDocuments();
                 } else {
-                    alert( 'Error: ' + data.data.message );
+                    alert( 'Error: ' + (data.data && data.data.message ? data.data.message : 'Error desconocido') );
                 }
             })
             .catch( error => {
                 console.error( 'Error:', error );
-                alert( 'Error al eliminar documento' );
+                alert( 'Error al eliminar documento. Puede que el documento ya se haya eliminado.' );
             });
         });
     });
