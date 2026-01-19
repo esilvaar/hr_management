@@ -115,19 +115,13 @@ $logo_url = esc_url(
                     <li>
                         <a class="nav-link px-3 py-2 <?= hrm_sup_is_active('hrm-mi-documentos-contratos'); ?>"
                            href="<?= esc_url( admin_url('admin.php?page=hrm-mi-documentos-contratos') ); ?>">
-                            Contratos
+                            Contrato
                         </a>
                     </li>
                     <li>
                         <a class="nav-link px-3 py-2 <?= hrm_sup_is_active('hrm-mi-documentos-liquidaciones'); ?>"
                            href="<?= esc_url( admin_url('admin.php?page=hrm-mi-documentos-liquidaciones') ); ?>">
                             Liquidaciones
-                        </a>
-                    </li>
-                    <li>
-                        <a class="nav-link px-3 py-2 <?= hrm_sup_is_active('hrm-mi-documentos-licencias'); ?>"
-                           href="<?= esc_url( admin_url('admin.php?page=hrm-mi-documentos-licencias') ); ?>">
-                            Licencias
                         </a>
                     </li>
                 </ul>

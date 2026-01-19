@@ -607,6 +607,10 @@ function hrm_register_admin_menus() {
     // Determinar si el usuario tiene acceso a vistas de administrador
     // Puede ser por manage_hrm_employees O por el rol administrador_anaconda con view_hrm_admin_views
     $has_admin_access = current_user_can( 'manage_hrm_employees' ) || current_user_can( 'view_hrm_admin_views' );
+    // Debug: registrar roles y capacidades al ejecutar el registro de menús
+    $_hrm_dbg_user = wp_get_current_user();
+    $hrm_dbg_is_anaconda = in_array( 'administrador_anaconda', (array) $_hrm_dbg_user->roles );
+    error_log( '[HRM-DEBUG] hrm_register_admin_menus user_id=' . intval( $_hrm_dbg_user->ID ) . ' roles=' . json_encode( $_hrm_dbg_user->roles ) . ' manage_options=' . ( current_user_can( 'manage_options' ) ? 'YES' : 'NO' ) . ' view_hrm_admin_views=' . ( current_user_can( 'view_hrm_admin_views' ) ? 'YES' : 'NO' ) . ' is_anaconda=' . ( $hrm_dbg_is_anaconda ? 'YES' : 'NO' ) );
     
     // MENÚ PRINCIPAL: HR Management (solo para admins con manage_hrm_employees o view_hrm_admin_views)
     if ( current_user_can( 'manage_options' ) || $has_admin_access ) {
@@ -650,25 +654,11 @@ function hrm_register_admin_menus() {
             'hrm_render_formulario_solicitud_page'
         );
 
-        // Submenú: Reglamento Interno eliminado para evitar confusión de permisos. Solo menú independiente.
-
-        // // Submenú: Roles y Usuarios (Opcional)
-        // if ( function_exists( 'rrhh_add_user_page' ) ) {
-        //     add_submenu_page(
-        //         'hrm-empleados',
-        //         'Roles y Usuarios',
-        //         'Roles y Usuarios',
-        //         'manage_options',
-        //         'hrm-reportes',
-        //         'rrhh_add_user_page'
-        //     );
-        // }
-
         // MENÚ DEBUG
         add_submenu_page(
             'hrm-empleados',
-            '[DEBUG] Vacaciones Empleado',
-            '[DEBUG] Vacaciones Empleado',
+            'Vacaciones Empleado',
+            'Vacaciones Empleado',
             'view_hrm_admin_views',
             'hrm-debug-vacaciones-empleado',
             function () {
@@ -713,8 +703,13 @@ function hrm_register_admin_menus() {
         $is_anaconda = in_array( 'administrador_anaconda', (array) $current_user->roles );
         
         // Si es administrador_anaconda, no mostrar menú de "Mi Perfil" (solo accede a vistas admin)
+        // No hacemos return; en su lugar marcamos una bandera para omitir sólo el
+        // bloque de "Mi Perfil" pero permitir registrar otras páginas como
+        // Convivencia (registrada más abajo).
         if ( $is_anaconda ) {
-            return;
+            $skip_my_profile_for_anaconda = true;
+        } else {
+            $skip_my_profile_for_anaconda = false;
         }
         // MENÚ PARA SUPERVISORES
         if ( current_user_can( 'edit_hrm_employees' ) ) {
@@ -779,86 +774,132 @@ function hrm_register_admin_menus() {
         }
 
         // MENÚ PRINCIPAL: Mi Perfil (posición 6 para que esté al inicio)
-        add_menu_page(
-            'Mi Perfil',
-            'Mi Perfil',
-            'read',
-            'hrm-mi-perfil',
-            'hrm_render_profile_overview',
-            'dashicons-admin-users',
-            6
-        );
+        if ( empty( $skip_my_profile_for_anaconda ) ) {
+            add_menu_page(
+                'Mi Perfil',
+                'Mi Perfil',
+                'read',
+                'hrm-mi-perfil',
+                'hrm_render_profile_overview',
+                'dashicons-admin-users',
+                6
+            );
 
-        // Submenú: Ver Información (bajo Mi Perfil)
-        add_submenu_page(
-            'hrm-mi-perfil',
-            'Ver Información',
-            'Ver Información',
-            'read',
-            'hrm-mi-perfil-info',
-            function() { hrm_render_profile_overview(); }
-        );
+            // Submenú: Ver Información (bajo Mi Perfil)
+            add_submenu_page(
+                'hrm-mi-perfil',
+                'Ver Información',
+                'Ver Información',
+                'read',
+                'hrm-mi-perfil-info',
+                function() { hrm_render_profile_overview(); }
+            );
 
-        // Submenú: Mis Vacaciones (bajo Mi Perfil)
-        add_submenu_page(
-            'hrm-mi-perfil',
-            'Mis Vacaciones',
-            'Mis Vacaciones',
-            'read',
-            'hrm-mi-perfil-vacaciones',
-            function() { hrm_render_vacaciones_empleado_page(); }
-        );
+            // Submenú: Mis Vacaciones (bajo Mi Perfil)
+            add_submenu_page(
+                'hrm-mi-perfil',
+                'Mis Vacaciones',
+                'Mis Vacaciones',
+                'read',
+                'hrm-mi-perfil-vacaciones',
+                function() { hrm_render_vacaciones_empleado_page(); }
+            );
 
-        // Submenú: Mis Documentos (bajo Mi Perfil)
-        add_submenu_page(
-            'hrm-mi-perfil',
-            'Mis Documentos',
-            'Mis Documentos',
-            'read',
-            'hrm-mi-documentos',
-            function() { hrm_render_mis_documentos_page(); }
-        );
+            // Submenú: Mis Documentos (bajo Mi Perfil)
+            add_submenu_page(
+                'hrm-mi-perfil',
+                'Mis Documentos',
+                'Mis Documentos',
+                'read',
+                'hrm-mi-documentos',
+                function() { hrm_render_mis_documentos_page(); }
+            );
 
-        // Submenú: Mis Contratos (bajo Mis Documentos)
-        add_submenu_page(
-            'hrm-mi-documentos',
-            'Mis Contratos',
-            'Contratos',
-            'read',
-            'hrm-mi-documentos-contratos',
-            function() { hrm_render_mis_documentos_contratos_page(); }
-        );
+            // Submenú: Mis Contratos (bajo Mis Documentos)
+            add_submenu_page(
+                'hrm-mi-documentos',
+                'Mis Contratos',
+                'Contratos',
+                'read',
+                'hrm-mi-documentos-contratos',
+                function() { hrm_render_mis_documentos_contratos_page(); }
+            );
 
-        // Submenú: Mis Liquidaciones (bajo Mis Documentos)
-        add_submenu_page(
-            'hrm-mi-documentos',
-            'Mis Liquidaciones',
-            'Liquidaciones',
-            'read',
-            'hrm-mi-documentos-liquidaciones',
-            function() { hrm_render_mis_documentos_liquidaciones_page(); }
-        );
+            // Submenú: Mis Liquidaciones (bajo Mis Documentos)
+            add_submenu_page(
+                'hrm-mi-documentos',
+                'Mis Liquidaciones',
+                'Liquidaciones',
+                'read',
+                'hrm-mi-documentos-liquidaciones',
+                function() { hrm_render_mis_documentos_liquidaciones_page(); }
+            );
 
-        // Submenú: Mis Licencias (bajo Mis Documentos)
-        add_submenu_page(
-            'hrm-mi-documentos',
-            'Mis Licencias',
-            'Licencias',
-            'read',
-            'hrm-mi-documentos-licencias',
-            function() { hrm_render_mis_documentos_licencias_page(); }
-        );
+            // Submenú: Mis Licencias (bajo Mis Documentos)
+            add_submenu_page(
+                'hrm-mi-documentos',
+                'Mis Licencias',
+                'Licencias',
+                'read',
+                'hrm-mi-documentos-licencias',
+                function() { hrm_render_mis_documentos_licencias_page(); }
+            );
+        }
 
         // MENÚ INDEPENDIENTE: Convivencia (posición normal 60)
-        add_menu_page(
-            'Convivencia',
-            'Convivencia',
-            'read',
-            'hrm-convivencia',
-            'hrm_render_reglamento_interno_page',
-            'dashicons-groups',
-            60
-        );
+        // Nota: originalmente este menú se añadía solo dentro del portal empleado
+        // (excluyendo administradores y administrador_anaconda). Lo registramos
+        // fuera del bloque para que también esté disponible a administradores
+        // y al rol administrador_anaconda cuando corresponda.
+    }
+
+    // Registrar la página de Convivencia para cualquier usuario logueado.
+    // Esto garantiza que `administrator` y `administrador_anaconda` puedan
+    // acceder a la vista mediante admin.php?page=hrm-convivencia.
+    // Registrar la página de Convivencia / Mis Vacaciones para administradores
+    // o para el rol `administrador_anaconda`. Para administradores los
+    // registramos como top-level; para administrador_anaconda los añadimos
+    // como submenús bajo 'hrm-empleados' para evitar duplicados.
+    $current_user = wp_get_current_user();
+    $is_anaconda = in_array( 'administrador_anaconda', (array) $current_user->roles );
+    if ( is_user_logged_in() ) {
+        if ( current_user_can( 'manage_options' ) ) {
+            add_menu_page(
+                'Convivencia',
+                'Convivencia',
+                'read',
+                'hrm-convivencia',
+                'hrm_render_reglamento_interno_page',
+                'dashicons-groups',
+                60
+            );
+
+            // NOTA: No registrar "Mis Vacaciones" como top-level para administradores
+            // para evitar duplicados; se registra más abajo como submenú bajo
+            // 'hrm-empleados' (mismo slug 'hrm-mi-perfil-vacaciones').
+            error_log( '[HRM-DEBUG] Registered top-level Convivencia for admin user_id=' . get_current_user_id() );
+        } elseif ( $is_anaconda ) {
+            // Intentar añadir como submenús bajo HR Management para mantener UI
+            add_submenu_page(
+                'hrm-empleados',
+                'Convivencia',
+                'Convivencia',
+                'read',
+                'hrm-convivencia',
+                'hrm_render_reglamento_interno_page'
+            );
+
+            add_submenu_page(
+                'hrm-empleados',
+                'Mis Vacaciones',
+                'Mis Vacaciones',
+                'read',
+                'hrm-mi-perfil-vacaciones',
+                'hrm_render_vacaciones_empleado_page'
+            );
+
+            error_log( '[HRM-DEBUG] Registered Convivencia and Mis Vacaciones as submenus for administrador_anaconda user_id=' . get_current_user_id() );
+        }
     }
 
     // ACCESO A MI PERFIL PARA ADMINISTRADORES (como submenú de HR Management)

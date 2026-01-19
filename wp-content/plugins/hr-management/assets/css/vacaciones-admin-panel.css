@@ -167,30 +167,8 @@
 }
 
 /* Contenido de tabs */
-.tab-content {
-    position: relative;
-}
-
-.tab-pane {
-    position: absolute;
-    width: 100%;
-    left: 0;
-    top: 0;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-}
-
-.tab-pane.active {
-    position: relative;
-    opacity: 1;
-    visibility: visible;
-}
-
-.tab-pane.show {
-    opacity: 1;
-    visibility: visible;
-}
+/* Tabs - Los estilos se manejan en vacaciones-tabs.css */
+/* No agregar conflictos aquí */
 
 /* Estilos para el calendario */
 .calendario {

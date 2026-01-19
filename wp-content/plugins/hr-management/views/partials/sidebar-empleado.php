@@ -55,7 +55,7 @@ $logo_url = esc_url(
                           <a class="nav-link px-3 py-2 <?= hrm_emp_is_active('hrm-mi-documentos-contratos'); ?>"
                               href="<?= esc_url( admin_url('admin.php?page=hrm-mi-documentos-contratos') ); ?>"
                        >
-                        Contratos
+                        Contrato
                     </a>
                 </li>
                 <li>

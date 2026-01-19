@@ -13,6 +13,10 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // Determinar qué sidebar cargar según las capabilities del usuario
+// DEBUG: registrar roles y capabilities del usuario actual para investigar accesos
+$current_user = wp_get_current_user();
+error_log( '[HRM-DEBUG] Sidebar loader: user_id=' . $current_user->ID . ', roles=' . json_encode( $current_user->roles ) . ', view_hrm_admin_views=' . ( current_user_can( 'view_hrm_admin_views' ) ? 'YES' : 'NO' ) . ', manage_hrm_vacaciones=' . ( current_user_can( 'manage_hrm_vacaciones' ) ? 'YES' : 'NO' ) );
+
 if ( current_user_can( 'manage_options' ) || current_user_can( 'manage_hrm_employees' ) || current_user_can( 'view_hrm_admin_views' ) ) {
     // Administrador, Administrador Anaconda o similar - Acceso a vistas admin
     require_once __DIR__ . '/sidebar-admin.php';

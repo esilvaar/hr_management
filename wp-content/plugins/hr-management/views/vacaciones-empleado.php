@@ -235,8 +235,73 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                 <h3 class="h5 mb-3" style="color: #1a1a1a; font-weight: 600;">
                     <span class="dashicons dashicons-list-view me-2"></span> Mis Solicitudes
                 </h3>
+
+                <?php
+                // Obtener estado del filtro (por defecto PENDIENTE)
+                $estado_filtro = sanitize_text_field( $_GET['estado'] ?? 'PENDIENTE' );
                 
-                <?php if ( empty( $solicitudes ) ) : ?>
+                // Filtrar solicitudes por estado
+                $solicitudes_filtradas = [];
+                if ( ! empty( $solicitudes ) ) {
+                    foreach ( $solicitudes as $solicitud ) {
+                        $estado_solicitud = strtoupper( $solicitud['estado'] ?? '' );
+                        if ( $estado_filtro === 'TODAS' || $estado_filtro === $estado_solicitud ) {
+                            $solicitudes_filtradas[] = $solicitud;
+                        }
+                    }
+                }
+                ?>
+
+                <!-- Selector de Estado -->
+                <div class="mb-3 d-flex gap-2 align-items-center">
+                    <label for="estado_filtro" class="form-label mb-0" style="font-weight: 600;">Filtrar por:</label>
+                    <select id="estado_filtro" class="form-select" style="max-width: 200px;" onchange="window.location.href = '<?php echo esc_url( remove_query_arg( 'estado' ) ); ?>' + (this.value ? '&estado=' + this.value : '');">
+                        <option value="PENDIENTE" <?php selected( $estado_filtro, 'PENDIENTE' ); ?>>
+                            ⏳ Pendiente (Por Revisar)
+                        </option>
+                        <option value="APROBADA" <?php selected( $estado_filtro, 'APROBADA' ); ?>>
+                            ✅ Aprobada
+                        </option>
+                        <option value="RECHAZADA" <?php selected( $estado_filtro, 'RECHAZADA' ); ?>>
+                            ❌ Rechazada
+                        </option>
+                        <option value="TODAS" <?php selected( $estado_filtro, 'TODAS' ); ?>>
+                            🔄 Ver todas
+                        </option>
+                    </select>
+                </div>
+
+                <!-- Panel Header con Indicador de Estado -->
+                <div class="hrm-panel-header bg-light border-bottom px-4 py-3 mb-3" style="border-radius: 4px 4px 0 0;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <?php
+                            $color_estado = '#999';
+                            $icono_estado = '🔵';
+                            
+                            if ( $estado_filtro === 'PENDIENTE' ) {
+                                $color_estado = '#0a0a0a';
+                                $icono_estado = '';
+                                $texto_estado = 'Solicitudes Pendientes';
+                            } elseif ( $estado_filtro === 'APROBADA' ) {
+                                $color_estado = '#0a0a0a';
+                                $icono_estado = '';
+                                $texto_estado = 'Solicitudes Aprobadas';
+                            } elseif ( $estado_filtro === 'RECHAZADA' ) {
+                                $color_estado = '#0b0b0b';
+                                $icono_estado = '';
+                                $texto_estado = 'Solicitudes Rechazadas';
+                            } else {
+                                $texto_estado = 'Todas las Solicitudes';
+                            }
+                            ?>
+                            <span style="color: <?php echo $color_estado; ?>;"><?php echo $icono_estado; ?> <?php echo esc_html( $texto_estado ); ?></span>
+                        </h5>
+                        <span >  :    <strong><?php echo count( $solicitudes_filtradas ); ?></strong></span>
+                    </div>
+                </div>
+                
+                <?php if ( empty( $solicitudes_filtradas ) ) : ?>
                     
                     <div class="alert" style="background-color: #f5f5f5; border: 1px solid #cccccc; border-left: 1px solid #cccccc; color: #333; border-radius: 0; padding: 2rem; text-align: center;" role="alert">
                         <span class="dashicons dashicons-info fs-1"></span>
@@ -256,7 +321,7 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ( $solicitudes as $s ) : ?>
+                                <?php foreach ( $solicitudes_filtradas as $s ) : ?>
                                     <?php 
                                     $estado = strtoupper( $s['estado'] ?? '' );
                                     $badge_class = 'bg-secondary';
@@ -272,6 +337,9 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                                     <tr>
                                         <td class="ps-4 fw-bold">
                                             <?= esc_html( $s['fecha_inicio'] ?? '' ) ?>
+                                            <?php if ( isset($s['fecha_inicio']) && isset($s['fecha_fin']) && $s['fecha_inicio'] === $s['fecha_fin'] && isset($s['total_dias']) && $s['total_dias'] == 0.5 ) : ?>
+                                                <br><small color="black" title="Solicitud de Medio Día">⏰ Medio Día</small>
+                                            <?php endif; ?>
                                         </td>
                                         <td class="fw-bold">
                                             <?= esc_html( $s['fecha_fin'] ?? '' ) ?>
@@ -283,10 +351,16 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                                         </td>
                                         <td class="pe-4">
                                             <?php if ( strtoupper( $s['estado'] ?? '' ) === 'PENDIENTE' ) : ?>
+                                                <?php 
+                                                // Determinar si es medio día o solicitud normal
+                                                $es_medio_dia = isset($s['fecha_inicio']) && isset($s['fecha_fin']) && $s['fecha_inicio'] === $s['fecha_fin'] && isset($s['total_dias']) && $s['total_dias'] == 0.5;
+                                                $action = $es_medio_dia ? 'hrm_cancelar_solicitud_medio_dia' : 'hrm_cancelar_solicitud_vacaciones';
+                                                $nonce_action = $es_medio_dia ? 'hrm_cancelar_solicitud_medio_dia' : 'hrm_cancelar_solicitud';
+                                                ?>
                                                 <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" style="display: inline;" onsubmit="return confirm('¿Deseas cancelar esta solicitud? Esta acción no se puede deshacer.');">
-                                                    <input type="hidden" name="action" value="hrm_cancelar_solicitud_vacaciones">
+                                                    <input type="hidden" name="action" value="<?= esc_attr( $action ) ?>">
                                                     <input type="hidden" name="id_solicitud" value="<?= esc_attr( $s['id_solicitud'] ?? '' ) ?>">
-                                                    <?php wp_nonce_field( 'hrm_cancelar_solicitud', 'hrm_nonce' ); ?>
+                                                    <?php wp_nonce_field( $nonce_action, 'hrm_nonce' ); ?>
                                                     <button type="submit" class="btn btn-sm btn-danger" title="Cancelar solicitud">
                                                         <span class="dashicons dashicons-trash"></span> Cancelar
                                                     </button>

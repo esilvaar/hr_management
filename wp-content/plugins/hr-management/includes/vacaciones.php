@@ -526,6 +526,70 @@ function hrm_get_feriados_locales( $ano ) {
 
     return $results;
 }
+
+/* =====================================================
+ * OBTENER SOLICITUDES DE MEDIO DÍA (Panel Admin)
+ * =====================================================
+ * Retorna todas las solicitudes de medio día 
+ * para el panel de administración.
+ */
+function hrm_get_solicitudes_medio_dia( $search = '', $estado = '' ) {
+    global $wpdb;
+
+    $table_solicitudes = $wpdb->prefix . 'rrhh_solicitudes_medio_dia';
+    $table_empleados = $wpdb->prefix . 'rrhh_empleados';
+
+    // Condiciones WHERE
+    $where_conditions = [];
+    $params = [];
+
+    // Las solicitudes de medio día tienen fecha_inicio = fecha_fin
+    $where_conditions[] = "s.fecha_inicio = s.fecha_fin";
+    $where_conditions[] = "s.periodo_ausencia IN ('mañana', 'tarde')";
+
+    // Filtro por búsqueda de empleado
+    if ( ! empty( $search ) ) {
+        $where_conditions[] = "(e.nombre LIKE %s OR e.apellido LIKE %s)";
+        $like = '%' . $wpdb->esc_like( $search ) . '%';
+        $params[] = $like;
+        $params[] = $like;
+    }
+
+    // Filtro por estado
+    if ( ! empty( $estado ) ) {
+        $where_conditions[] = "s.estado = %s";
+        $params[] = $estado;
+    }
+
+    $where = ! empty( $where_conditions ) ? 'WHERE ' . implode( ' AND ', $where_conditions ) : '';
+
+    // Construir consulta
+    $sql = "
+        SELECT 
+            s.id_solicitud,
+            s.id_empleado,
+            e.nombre,
+            e.apellido,
+            e.correo,
+            s.fecha_inicio,
+            s.fecha_fin,
+            s.periodo_ausencia,
+            s.estado,
+            s.fecha_respuesta
+        FROM {$table_solicitudes} s
+        INNER JOIN {$table_empleados} e ON s.id_empleado = e.id_empleado
+        {$where}
+        ORDER BY s.fecha_inicio DESC, s.id_solicitud DESC
+    ";
+
+    if ( ! empty( $params ) ) {
+        $sql = $wpdb->prepare( $sql, $params );
+    }
+
+    $results = $wpdb->get_results( $sql, ARRAY_A );
+    return $results ?: [];
+}
+
 /* =====================================================
  * OBTENER SOLICITUDES DEL EMPLEADO
  * =====================================================
@@ -656,17 +720,6 @@ $fin    = DateTime::createFromFormat( 'Y-m-d', $fecha_fin );
 
 if ( ! $inicio || ! $fin ) {
     wp_die( 'Formato de fecha inválido.' );
-}
-
-// Calcular la fecha mínima: un mes después de hoy
-$hoy_datetime = DateTime::createFromFormat( 'Y-m-d', $hoy );
-$fecha_minima = clone $hoy_datetime;
-$fecha_minima->modify( '+1 month' );
-$fecha_minima_str = $fecha_minima->format( 'Y-m-d' );
-
-// No permitir fechas antes de un mes
-if ( $fecha_inicio < $fecha_minima_str ) {
-    wp_die( 'La fecha de inicio debe ser al menos un mes después de hoy (' . $fecha_minima_str . ').' );
 }
 
 // Fin no puede ser menor al inicio
@@ -1049,21 +1102,23 @@ function hrm_enviar_medio_dia_handler() {
     }
 
     // ID de tipo: 3 para Vacaciones (reutilizamos)
-    $id_tipo = 3;
+    $id_tipo = 2;
+
+    // ★ CORRECCIÓN: Guardar total_dias = 0.5 para medio día
 
     // Insertar solicitud en BD (inicio y fin son la misma fecha)
     $resultado_insercion = $wpdb->insert(
-        $wpdb->prefix . 'rrhh_solicitudes_ausencia',
+        $wpdb->prefix . 'rrhh_solicitudes_medio_dia',
         [
-            'id_empleado'       => $id_empleado,
-            'id_tipo'           => $id_tipo,
-            'fecha_inicio'      => $fecha_medio_dia,
-            'fecha_fin'         => $fecha_medio_dia,
-            'periodo_ausencia'  => $periodo_ausencia,
-            'comentario_empleado' => $descripcion,
-            'estado'            => 'PENDIENTE'
+            'id_empleado'         => $id_empleado,
+            'id_tipo'             => $id_tipo,
+            'fecha_inicio'        => $fecha_medio_dia,
+            'fecha_fin'           => $fecha_medio_dia,
+            'periodo_ausencia'    => $periodo_ausencia,
+            'total_dias'          => 0.5,
+            'comentario_empleado' => $descripcion
         ],
-        [ '%d', '%d', '%s', '%s', '%s', '%s', '%s' ]
+        [ '%d', '%d', '%s', '%s', '%s', '%f', '%s' ]
     );
 
     if ( ! $resultado_insercion ) {
@@ -1072,66 +1127,8 @@ function hrm_enviar_medio_dia_handler() {
 
     $id_solicitud = $wpdb->insert_id;
 
-    // Obtener datos del empleado
-    $empleado = hrm_obtener_datos_empleado( $id_empleado );
-    $gerente = hrm_obtener_gerente_departamento( $id_empleado );
-
-    // EMAILS
-    $to_emails = [];
-    $cc_emails = [];
-
-    // Email al empleado
-    $to_emails[] = $empleado->correo;
-
-    // Email al gerente directo
-    if ( $gerente ) {
-        $cc_emails[] = $gerente['correo_gerente'];
-    }
-
-    // Obtener editores de vacaciones
-    $editores = new WP_User_Query( [
-        'meta_key'  => $wpdb->get_blog_prefix() . 'capabilities',
-        'role'      => 'editor_vacaciones',
-    ] );
-
-    foreach ( $editores->get_results() as $editor ) {
-        $cc_emails[] = $editor->user_email;
-    }
-
-    // Construir email
-    $asunto = 'Nueva Solicitud de Medio Día - ' . $empleado->nombre . ' ' . $empleado->apellido;
-    
-    $fecha_formato = DateTime::createFromFormat( 'Y-m-d', $fecha_medio_dia )->format( 'd/m/Y' );
-    $periodo_texto = ucfirst( $periodo_ausencia );
-    
-    $cuerpo = "
-    <h2>Nueva Solicitud de Medio Día</h2>
-    <p><strong>Empleado:</strong> {$empleado->nombre} {$empleado->apellido}</p>
-    <p><strong>RUT:</strong> {$empleado->rut}</p>
-    <p><strong>Cargo:</strong> {$empleado->puesto}</p>
-    <p><strong>Departamento:</strong> {$empleado->departamento}</p>
-    
-    <hr>
-    
-    <h3>Detalles de la Solicitud</h3>
-    <p><strong>Fecha:</strong> {$fecha_formato}</p>
-    <p><strong>Período:</strong> {$periodo_texto}</p>
-    <p><strong>Días a descontar:</strong> 0.5</p>
-    <p><strong>Motivo:</strong> {$descripcion}</p>
-    
-    <hr>
-    
-    <p>Esta solicitud requiere aprobación del gerente directo y revisión del editor de vacaciones.</p>
-    ";
-
-    // Headers
-    $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
-    foreach ( $cc_emails as $cc_email ) {
-        $headers[] = 'Cc: ' . $cc_email;
-    }
-
-    // Enviar emails
-    wp_mail( $to_emails, $asunto, $cuerpo, $headers );
+    // Enviar correo de confirmación al empleado
+    hrm_enviar_notificacion_confirmacion_medio_dia( $id_solicitud );
 
     // Redirigir con éxito
     $redirect = wp_get_referer() ?: home_url();
@@ -1272,17 +1269,19 @@ function hrm_handle_aprobar_rechazar_solicitud() {
         }
     }
 
-    // Preparar datos de actualización
-    $update_data = [ 'estado' => $estado ];
-    $update_format = [ '%s' ];
+    // Preparar datos de actualización usando la MISMA LÓGICA que hrm_guardar_respuesta_rrhh_handler
+    $update_data = [
+        'estado' => $estado,
+        'nombre_jefe' => sanitize_text_field( $_POST['nombre_jefe'] ?? wp_get_current_user()->display_name ),
+        'fecha_respuesta' => sanitize_text_field( $_POST['fecha_respuesta'] ?? current_time( 'Y-m-d' ) ),
+    ];
+    $update_format = [ '%s', '%s', '%s' ];
 
-    // Si es rechazo, agregar motivo si se proporciona
+    // Si es rechazo, agregar motivo
     if ( $accion === 'rechazar' ) {
         $motivo_rechazo = isset( $_POST['motivo_rechazo'] ) ? sanitize_textarea_field( $_POST['motivo_rechazo'] ) : '';
-        if ( ! empty( $motivo_rechazo ) ) {
-            $update_data['motivo_rechazo'] = $motivo_rechazo;
-            $update_format[] = '%s';
-        }
+        $update_data['motivo_rechazo'] = $motivo_rechazo;
+        $update_format[] = '%s';
     }
 
     $updated = $wpdb->update(
@@ -1383,7 +1382,75 @@ function hrm_cancelar_solicitud_vacaciones() {
 }
 add_action( 'admin_post_hrm_cancelar_solicitud_vacaciones', 'hrm_cancelar_solicitud_vacaciones' );
 
+/* =====================================================
+ * CANCELAR SOLICITUD DE MEDIO DÍA (EMPLEADO)
+ * ===================================================== */
+function hrm_cancelar_solicitud_medio_dia() {
+    
+    if ( ! is_user_logged_in() ) {
+        wp_die( 'Debes estar autenticado para cancelar solicitudes.' );
+    }
 
+    if ( empty( $_POST['id_solicitud'] ) ) {
+        wp_die( 'ID de solicitud no especificado.' );
+    }
+
+    if ( empty( $_POST['hrm_nonce'] ) || ! wp_verify_nonce( $_POST['hrm_nonce'], 'hrm_cancelar_solicitud_medio_dia' ) ) {
+        wp_die( 'Verificación de seguridad fallida.' );
+    }
+
+    global $wpdb;
+
+    $id_solicitud = intval( $_POST['id_solicitud'] );
+    $user_id = get_current_user_id();
+    
+    $table_solicitudes = $wpdb->prefix . 'rrhh_solicitudes_ausencia';
+    $table_empleados = $wpdb->prefix . 'rrhh_empleados';
+
+    // Verificar que la solicitud pertenece al usuario actual y está en estado PENDIENTE
+    // (Las solicitudes de medio día tienen fecha_inicio = fecha_fin)
+    $solicitud = $wpdb->get_row(
+        $wpdb->prepare(
+            "SELECT s.*, e.rut, e.nombre, e.apellido, e.puesto, e.departamento, e.correo, ta.nombre as tipo_ausencia_nombre
+             FROM $table_solicitudes s
+             JOIN $table_empleados e ON s.id_empleado = e.id_empleado
+             LEFT JOIN {$wpdb->prefix}rrhh_tipo_ausencia ta ON s.id_tipo = ta.id_tipo
+             WHERE s.id_solicitud = %d
+             AND e.user_id = %d
+             AND s.estado = 'PENDIENTE'
+             AND s.fecha_inicio = s.fecha_fin",
+            $id_solicitud,
+            $user_id
+        )
+    );
+
+    if ( ! $solicitud ) {
+        wp_die( 'Solicitud no encontrada, no te pertenece, no está en estado pendiente, o no es una solicitud de medio día.' );
+    }
+
+    // Eliminar la solicitud
+    $deleted = $wpdb->delete(
+        $table_solicitudes,
+        [ 'id_solicitud' => $id_solicitud ],
+        [ '%d' ]
+    );
+
+    if ( $deleted === false ) {
+        error_log( 'HRM ERROR SQL al cancelar solicitud de medio día: ' . $wpdb->last_error );
+        wp_die( 'Error al cancelar la solicitud. Intenta de nuevo.' );
+    }
+
+    error_log( "HRM: Solicitud de medio día {$id_solicitud} cancelada por empleado {$user_id}" );
+
+    // Enviar notificación de cancelación de medio día
+    hrm_enviar_notificacion_cancelacion_medio_dia( $solicitud );
+
+    // Redireccionar con mensaje de éxito
+    $redirect = wp_get_referer() ?: home_url();
+    wp_safe_redirect( add_query_arg( 'hrm_msg', 'cancelled_md', $redirect ) );
+    exit;
+}
+add_action( 'admin_post_hrm_cancelar_solicitud_medio_dia', 'hrm_cancelar_solicitud_medio_dia' );
 
 /* =====================================================
  * ENVÍO DE NOTIFICACIÓN POR CORREO
@@ -1710,6 +1777,296 @@ function hrm_enviar_notificacion_cancelacion_vacaciones( $solicitud ) {
     }
 }
 
+/* =====================================================
+ * ENVIAR NOTIFICACIÓN: CONFIRMACIÓN DE CREACIÓN DE MEDIO DÍA
+ * ===================================================== */
+/**
+ * Envía un correo de confirmación al empleado cuando crea exitosamente una solicitud de medio día
+ * 
+ * @param int $id_solicitud ID de la solicitud creada
+ */
+function hrm_enviar_notificacion_confirmacion_medio_dia( $id_solicitud ) {
+    global $wpdb;
+
+    // Obtener datos completos de la solicitud
+    $solicitud = $wpdb->get_row(
+        $wpdb->prepare(
+            "SELECT s.*, e.nombre, e.apellido, e.rut, e.correo, e.puesto, e.departamento
+             FROM {$wpdb->prefix}rrhh_solicitudes_ausencia s
+             JOIN {$wpdb->prefix}rrhh_empleados e ON s.id_empleado = e.id_empleado
+             WHERE s.id_solicitud = %d",
+            $id_solicitud
+        )
+    );
+
+    if ( ! $solicitud || empty( $solicitud->correo ) ) {
+        error_log( 'HRM: Datos insuficientes para enviar confirmación de solicitud de medio día' );
+        return;
+    }
+
+    // Formatear fecha
+    $fecha_formateada = date_i18n( 'd/m/Y', strtotime( $solicitud->fecha_inicio ) );
+    $periodo_texto = ucfirst( $solicitud->periodo_ausencia );
+
+    // Construir asunto
+    $asunto = "✅ Solicitud de Medio Día Creada Exitosamente";
+
+    // Construir mensaje HTML
+    $mensaje = "
+        <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px; border-radius: 8px;\">
+            
+            <h2 style=\"color: #4caf50; margin-bottom: 20px;\">
+                <span style=\"font-size: 24px;\">✅</span> Solicitud de Medio Día Creada Exitosamente
+            </h2>
+            
+            <p style=\"color: #333; font-size: 16px; line-height: 1.6;\">
+                Estimado/a <strong>{$solicitud->nombre} {$solicitud->apellido}</strong>,
+            </p>
+            
+            <p style=\"color: #333; font-size: 16px; line-height: 1.6;\">
+                Tu solicitud de medio día ha sido creada exitosamente y ha sido enviada para revisión. 
+                A continuación se muestran los detalles de tu solicitud:
+            </p>
+            
+            <!-- Detalles de la Solicitud -->
+            <div style=\"background: white; padding: 20px; border-radius: 6px; border-left: 4px solid #4caf50; margin: 20px 0;\">
+                <h3 style=\"color: #1a1a1a; margin-top: 0; font-size: 18px; margin-bottom: 15px;\">
+                    📋 Detalles de tu Solicitud
+                </h3>
+                
+                <table style=\"width: 100%; border-collapse: collapse; font-size: 15px;\">
+                    <tr>
+                        <td style=\"padding: 10px 0; border-bottom: 1px solid #eee; color: #666;\">
+                            <strong>Fecha:</strong>
+                        </td>
+                        <td style=\"padding: 10px 0; border-bottom: 1px solid #eee; text-align: right; color: #333;\">
+                            {$fecha_formateada}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style=\"padding: 10px 0; border-bottom: 1px solid #eee; color: #666;\">
+                            <strong>Período:</strong>
+                        </td>
+                        <td style=\"padding: 10px 0; border-bottom: 1px solid #eee; text-align: right; color: #333;\">
+                            {$periodo_texto}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style=\"padding: 10px 0; border-bottom: 1px solid #eee; color: #666;\">
+                            <strong>Días a descontar:</strong>
+                        </td>
+                        <td style=\"padding: 10px 0; border-bottom: 1px solid #eee; text-align: right; color: #333;\">
+                            0.5 días
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style=\"padding: 10px 0; color: #666;\">
+                            <strong>Estado:</strong>
+                        </td>
+                        <td style=\"padding: 10px 0; text-align: right;\">
+                            <span style=\"background: #ff9800; color: white; padding: 4px 12px; border-radius: 4px; font-weight: bold;\">
+                                PENDIENTE DE APROBACIÓN
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Datos del Empleado -->
+            <div style=\"background: white; padding: 20px; border-radius: 6px; margin: 20px 0; border: 1px solid #ddd;\">
+                <h3 style=\"color: #1a1a1a; margin-top: 0; font-size: 18px; margin-bottom: 15px;\">
+                    👤 Información del Empleado
+                </h3>
+                
+                <table style=\"width: 100%; font-size: 15px;\">
+                    <tr>
+                        <td style=\"padding: 8px 0; color: #666;\"><strong>RUT:</strong></td>
+                        <td style=\"padding: 8px 0; color: #333;\">{$solicitud->rut}</td>
+                    </tr>
+                    <tr>
+                        <td style=\"padding: 8px 0; color: #666;\"><strong>Cargo:</strong></td>
+                        <td style=\"padding: 8px 0; color: #333;\">{$solicitud->puesto}</td>
+                    </tr>
+                    <tr>
+                        <td style=\"padding: 8px 0; color: #666;\"><strong>Departamento:</strong></td>
+                        <td style=\"padding: 8px 0; color: #333;\">{$solicitud->departamento}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            " . ( ! empty( $solicitud->comentario_empleado ) ? "
+            <!-- Observaciones del Empleado -->
+            <div style=\"background: #f5f5f5; padding: 15px; border-radius: 6px; border-left: 4px solid #2196F3; margin: 20px 0;\">
+                <h3 style=\"color: #1a1a1a; margin-top: 0; font-size: 16px; margin-bottom: 10px;\">
+                    📝 Observaciones
+                </h3>
+                <p style=\"color: #333; margin: 0; line-height: 1.6;\">
+                    {$solicitud->comentario_empleado}
+                </p>
+            </div>
+            " : "" ) . "
+            
+            <!-- Siguiente Paso -->
+            <div style=\"background: #e8f5e9; padding: 15px; border-radius: 6px; border-left: 4px solid #4caf50; margin: 20px 0;\">
+                <h3 style=\"color: #2e7d32; margin-top: 0; font-size: 16px; margin-bottom: 10px;\">
+                    ⏭️ ¿Qué ocurre ahora?
+                </h3>
+                <ul style=\"color: #333; margin: 0; padding-left: 20px; line-height: 1.8;\">
+                    <li>Tu solicitud ha sido enviada a tu gerente directo para revisión</li>
+                    <li>También ha sido notificado el equipo de Recursos Humanos</li>
+                    <li>Recibirás un correo de confirmación cuando tu solicitud sea aprobada o rechazada</li>
+                    <li>Este proceso generalmente toma entre 1 a 2 días hábiles</li>
+                </ul>
+            </div>
+            
+            <!-- Pie de Página -->
+            <div style=\"text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #999; font-size: 12px;\">
+                <p style=\"margin: 0;\">
+                    Este es un correo automático del sistema de gestión de vacaciones.
+                </p>
+                <p style=\"margin: 10px 0 0 0;\">
+                    Si tienes preguntas, contacta con tu gerente directo o con el equipo de Recursos Humanos.
+                </p>
+            </div>
+            
+        </div>
+    ";
+
+    // Configurar headers para HTML
+    $headers = array( 'Content-Type: text/html; charset=UTF-8' );
+
+    // Enviar email al empleado
+    error_log( "HRM: Enviando confirmación de solicitud de medio día a {$solicitud->nombre} {$solicitud->apellido} ({$solicitud->correo})" );
+    $enviado = wp_mail( $solicitud->correo, $asunto, $mensaje, $headers );
+
+    if ( $enviado ) {
+        error_log( "HRM: Confirmación de solicitud de medio día enviada a {$solicitud->correo}" );
+    } else {
+        error_log( "HRM Error: Fallo al enviar confirmación de solicitud de medio día a {$solicitud->correo}" );
+    }
+}
+
+/* =====================================================
+ * ENVIAR NOTIFICACIÓN: CANCELACIÓN DE SOLICITUD DE MEDIO DÍA
+ * ===================================================== */
+function hrm_enviar_notificacion_cancelacion_medio_dia( $solicitud ) {
+    global $wpdb;
+
+    // Validar que la solicitud tenga datos necesarios
+    if ( ! $solicitud || empty( $solicitud->nombre ) || empty( $solicitud->apellido ) ) {
+        error_log( 'HRM: Datos insuficientes para enviar notificación de cancelación de medio día' );
+        return;
+    }
+
+    // Obtener el gerente a cargo del departamento del empleado
+    $gerente = hrm_obtener_gerente_departamento( $solicitud->id_empleado );
+
+    // Obtener TODOS los editores de vacaciones
+    $editores_vacaciones_emails = array();
+    $editores_result = $wpdb->get_col(
+        "SELECT DISTINCT user_email FROM {$wpdb->users} u
+         INNER JOIN {$wpdb->usermeta} um ON u.ID = um.user_id
+         WHERE um.meta_key = '{$wpdb->prefix}capabilities'
+         AND um.meta_value LIKE '%editor_vacaciones%'
+         ORDER BY u.ID"
+    );
+
+    if ( ! empty( $editores_result ) ) {
+        $editores_vacaciones_emails = $editores_result;
+    } else {
+        // Fallback si no se encuentra por meta_key
+        $users_editor = get_users( array( 'role' => 'editor_vacaciones' ) );
+        if ( ! empty( $users_editor ) ) {
+            foreach ( $users_editor as $user ) {
+                $editores_vacaciones_emails[] = $user->user_email;
+            }
+        }
+    }
+
+    // Información del sitio
+    $nombre_sitio = get_bloginfo( 'name' );
+    $url_sitio = home_url();
+
+    // Formatear fecha
+    $fecha_formateada = date_i18n( 'd/m/Y', strtotime( $solicitud->fecha_inicio ) );
+    $periodo_texto = ucfirst( $solicitud->periodo_ausencia );
+
+    // Construir mensaje para gerente y editor de vacaciones
+    $asunto = "Solicitud de Medio Día CANCELADA - {$solicitud->nombre} {$solicitud->apellido}";
+
+    $mensaje = "
+        <h2>Notificación de Cancelación de Solicitud de Medio Día</h2>
+        
+        <p>Un empleado ha cancelado su solicitud de medio día que se encontraba pendiente de revisión.</p>
+        
+        <h3>Datos del Empleado:</h3>
+        <ul>
+            <li><strong>Nombre:</strong> {$solicitud->nombre} {$solicitud->apellido}</li>
+            <li><strong>RUT:</strong> {$solicitud->rut}</li>
+            <li><strong>Departamento:</strong> {$solicitud->departamento}</li>
+            <li><strong>Puesto:</strong> {$solicitud->puesto}</li>
+            <li><strong>Correo:</strong> {$solicitud->correo}</li>
+        </ul>
+        
+        <h3>Solicitud Cancelada:</h3>
+        <ul>
+            <li><strong>Tipo:</strong> Medio Día</li>
+            <li><strong>Fecha:</strong> {$fecha_formateada}</li>
+            <li><strong>Período:</strong> {$periodo_texto}</li>
+            <li><strong>Días a descontar:</strong> 0.5</li>
+            <li><strong>Estado:</strong> CANCELADA</li>
+        </ul>
+        
+        <p style=\"color: #666; font-style: italic; margin-top: 20px;\">
+            Esta es una notificación automática. No es necesario tomar acción alguna.
+        </p>
+        
+        <p><em>$nombre_sitio</em></p>
+    ";
+
+    // Configurar headers para HTML
+    $headers = array( 'Content-Type: text/html; charset=UTF-8' );
+
+    // Construir lista de destinatarios
+    $destinatarios = array();
+
+    // Agregar gerente si existe
+    if ( $gerente && ! empty( $gerente['correo_gerente'] ) ) {
+        $destinatarios[] = array(
+            'email' => $gerente['correo_gerente'],
+            'nombre' => $gerente['nombre_gerente'] ?? 'Gerente'
+        );
+    }
+
+    // Agregar TODOS los editores de vacaciones (evitando duplicados con gerente)
+    if ( ! empty( $editores_vacaciones_emails ) ) {
+        foreach ( $editores_vacaciones_emails as $editor_email ) {
+            if ( empty( $gerente ) || $editor_email !== $gerente['correo_gerente'] ) {
+                $destinatarios[] = array(
+                    'email' => $editor_email,
+                    'nombre' => 'Editor de Vacaciones'
+                );
+            }
+        }
+    }
+
+    // Enviar email a todos los destinatarios
+    if ( ! empty( $destinatarios ) ) {
+        foreach ( $destinatarios as $dest ) {
+            error_log( "HRM: Enviando notificación de cancelación de medio día a {$dest['nombre']} ({$dest['email']})" );
+            $enviado = wp_mail( $dest['email'], $asunto, $mensaje, $headers );
+
+            if ( $enviado ) {
+                error_log( "HRM: Notificación de cancelación de medio día enviada a {$dest['nombre']} ({$dest['email']})" );
+            } else {
+                error_log( "HRM Error: Fallo al enviar notificación de cancelación de medio día a {$dest['email']}" );
+            }
+        }
+    } else {
+        error_log( "HRM: No se encontró gerente ni editor de vacaciones para enviar notificación de cancelación de medio día" );
+    }
+}
+
 
 function hrm_get_documentos_por_solicitud( $id_solicitud ) {
     global $wpdb;
@@ -1758,9 +2115,10 @@ function hrm_descontar_dias_vacaciones_empleado( $id_solicitud ) {
     $table_vacaciones_anual = $wpdb->prefix . 'rrhh_vacaciones_anual';
     
     // 1. Obtener datos de la solicitud APROBADA
+    // ★ CORRECCIÓN: Obtener el total_dias guardado en la solicitud
     $sol = $wpdb->get_row(
         $wpdb->prepare(
-            "SELECT id_empleado, fecha_inicio, fecha_fin
+            "SELECT id_empleado, fecha_inicio, fecha_fin, total_dias
              FROM $table_solicitudes
              WHERE id_solicitud = %d
              AND estado = 'APROBADA'",
@@ -1773,13 +2131,16 @@ function hrm_descontar_dias_vacaciones_empleado( $id_solicitud ) {
         return false;
     }
 
-    // 2. Calcular días hábiles
-    $dias = hrm_calcular_dias_habiles( $sol->fecha_inicio, $sol->fecha_fin );
+    // ★ CORRECCIÓN: Usar el total_dias guardado en la solicitud
+    // Esto asegura que se descuenten 0.5 días para medio día
+    $dias = floatval( $sol->total_dias );
     
     if ( $dias <= 0 ) {
-        error_log( "HRM: Días calculados <= 0 para solicitud: $id_solicitud" );
+        error_log( "HRM: Días calculados <= 0 para solicitud: $id_solicitud (total_dias: {$sol->total_dias})" );
         return false;
     }
+
+    error_log( "HRM: Descontando {$dias} días de la solicitud $id_solicitud" );
 
     // 3. Verificar si el empleado tiene días suficientes
     $saldo = $wpdb->get_row(
@@ -1803,12 +2164,13 @@ function hrm_descontar_dias_vacaciones_empleado( $id_solicitud ) {
     }
 
     // 4. Actualizar saldo de vacaciones en Bu6K9_rrhh_empleados
+    // ★ CORRECCIÓN: Usar %f para floats (soporta 0.5 para medio día)
     $resultado_empleados = $wpdb->query(
         $wpdb->prepare(
             "UPDATE $table_empleados
              SET
-                dias_vacaciones_usados = dias_vacaciones_usados + %d,
-                dias_vacaciones_disponibles = dias_vacaciones_disponibles - %d
+                dias_vacaciones_usados = dias_vacaciones_usados + %f,
+                dias_vacaciones_disponibles = dias_vacaciones_disponibles - %f
              WHERE id_empleado = %d",
             $dias,
             $dias,
@@ -1836,12 +2198,13 @@ function hrm_descontar_dias_vacaciones_empleado( $id_solicitud ) {
 
     if ( $vacacion_anual ) {
         // Actualizar registro existente
+        // ★ CORRECCIÓN: Usar %f para soportar floats (0.5 para medio día)
         $resultado_anual = $wpdb->query(
             $wpdb->prepare(
                 "UPDATE $table_vacaciones_anual
                  SET
-                    dias_usados = dias_usados + %d,
-                    dias_disponibles = dias_disponibles - %d
+                    dias_usados = dias_usados + %f,
+                    dias_disponibles = dias_disponibles - %f
                  WHERE id_empleado = %d AND ano = %d",
                 $dias,
                 $dias,
@@ -1856,6 +2219,7 @@ function hrm_descontar_dias_vacaciones_empleado( $id_solicitud ) {
         }
     } else {
         // Si no existe, crear registro nuevo
+        // ★ CORRECCIÓN: Usar %f para soportar floats (0.5 para medio día)
         $wpdb->insert(
             $table_vacaciones_anual,
             [
@@ -1866,11 +2230,11 @@ function hrm_descontar_dias_vacaciones_empleado( $id_solicitud ) {
                 'dias_disponibles' => 15 - $dias,
                 'dias_carryover_anterior' => 0
             ],
-            [ '%d', '%d', '%d', '%d', '%d', '%d' ]
+            [ '%d', '%d', '%d', '%f', '%f', '%d' ]
         );
     }
     
-    error_log( "HRM: Descontados $dias días al empleado ID: " . $sol->id_empleado );
+    error_log( "HRM: Descontados {$dias} días al empleado ID: " . $sol->id_empleado );
     return true;
 }
 
@@ -2663,13 +3027,13 @@ function hrm_actualizar_personal_vigente_por_vacaciones() {
 
     $hoy = current_time( 'Y-m-d' );
 
-    $resultado = [
+    $resultado = array(
         'exitoso' => true,
         'departamentos_actualizados' => 0,
-        'detalles' => [],
-        'errores' => [],
-        'advertencias' => []
-    ];
+        'detalles' => array(),
+        'errores' => array(),
+        'advertencias' => array()
+    );
 
     // 1. Obtener todos los departamentos
     $departamentos = $wpdb->get_results(
@@ -2682,8 +3046,11 @@ function hrm_actualizar_personal_vigente_por_vacaciones() {
     if ( empty( $departamentos ) ) {
         error_log( "HRM: No hay departamentos para actualizar" );
         $resultado['exitoso'] = false;
+        $resultado['errores'][] = 'No se encontraron departamentos en la base de datos';
         return $resultado;
     }
+
+    error_log( "HRM: Sincronización iniciada - Procesando " . count( $departamentos ) . " departamentos" );
 
     // 2. Procesar cada departamento
     foreach ( $departamentos as $depto ) {
@@ -2705,6 +3072,8 @@ function hrm_actualizar_personal_vigente_por_vacaciones() {
 
         $total_real = (int) $total_real;
 
+        error_log( "HRM: Procesando departamento '$nombre' - Total registrado: {$total_registrado}, Total real: {$total_real}" );
+
         // VERIFICAR DISCREPANCIA
         if ( $total_real !== $total_registrado ) {
             $advertencia = "Departamento '$nombre': Total registrado ({$total_registrado}) ≠ Total real ({$total_real}). Usando total real.";
@@ -2714,10 +3083,10 @@ function hrm_actualizar_personal_vigente_por_vacaciones() {
             // Actualizar tabla departamentos con el total correcto
             $wpdb->update(
                 $table_departamentos,
-                [ 'total_empleados' => $total_real ],
-                [ 'id_departamento' => $id_depto ],
-                [ '%d' ],
-                [ '%d' ]
+                array( 'total_empleados' => $total_real ),
+                array( 'id_departamento' => $id_depto ),
+                array( '%d' ),
+                array( '%d' )
             );
         }
 
@@ -2729,13 +3098,16 @@ function hrm_actualizar_personal_vigente_por_vacaciones() {
                  JOIN {$table_empleados} e ON s.id_empleado = e.id_empleado
                  WHERE e.departamento = %s
                  AND s.estado = 'APROBADA'
-                 AND %s BETWEEN s.fecha_inicio AND s.fecha_fin",
+                 AND %s BETWEEN s.fecha_inicio AND s.fecha_fin
+                 AND e.estado = 1",
                 $nombre,
                 $hoy
             )
         );
 
         $personas_vacaciones = (int) $personas_vacaciones;
+
+        error_log( "HRM: Departamento '$nombre' - Personas en vacaciones hoy: {$personas_vacaciones}" );
 
         // VALIDACIÓN: no puede haber más personas en vacaciones que el total real
         if ( $personas_vacaciones > $total_real ) {
@@ -2757,26 +3129,26 @@ function hrm_actualizar_personal_vigente_por_vacaciones() {
         // ACTUALIZAR EN BASE DE DATOS
         $actualizado = $wpdb->update(
             $table_departamentos,
-            [ 'personal_vigente' => $personal_vigente ],
-            [ 'id_departamento' => $id_depto ],
-            [ '%d' ],
-            [ '%d' ]
+            array( 'personal_vigente' => $personal_vigente ),
+            array( 'id_departamento' => $id_depto ),
+            array( '%d' ),
+            array( '%d' )
         );
 
         if ( false !== $actualizado ) {
             $resultado['departamentos_actualizados']++;
-            $resultado['detalles'][] = [
+            $resultado['detalles'][] = array(
                 'id_departamento' => $id_depto,
                 'nombre' => $nombre,
-                'total_empleados_real' => $total_real,
-                'total_registrado' => $total_registrado,
-                'discrepancia' => ( $total_real !== $total_registrado ),
+                'total_empleados' => $total_real,
+                'total_empleados_activos' => $total_real,
                 'personas_en_vacaciones' => $personas_vacaciones,
                 'personal_vigente' => $personal_vigente,
-                'verificacion' => ( $personal_vigente + $personas_vacaciones === $total_real ) ? 'OK' : 'ERROR'
-            ];
+                'verificacion' => ( $personal_vigente + $personas_vacaciones === $total_real ) ? 'OK' : 'ERROR',
+                'timestamp' => current_time( 'mysql' )
+            );
 
-            error_log( "HRM: Actualizado '$nombre' → Total real: $total_real, Vacaciones: $personas_vacaciones, Vigente: $personal_vigente (verificado)" );
+            error_log( "HRM: ✓ Actualizado '$nombre' → Activos: {$total_real}, Vacaciones: {$personas_vacaciones}, Vigente: {$personal_vigente}" );
         } else {
             $error_msg = "No se pudo actualizar departamento '$nombre'";
             error_log( "HRM Error: {$error_msg}" );
@@ -2785,9 +3157,12 @@ function hrm_actualizar_personal_vigente_por_vacaciones() {
         }
     }
 
-    error_log( "HRM: Sincronización completada - {$resultado['departamentos_actualizados']} departamentos actualizados" );
+    error_log( "HRM: ✓ Sincronización completada - {$resultado['departamentos_actualizados']} departamentos actualizados" );
     if ( ! empty( $resultado['advertencias'] ) ) {
         error_log( "HRM: Advertencias detectadas - " . count( $resultado['advertencias'] ) . " discrepancias encontradas" );
+    }
+    if ( ! empty( $resultado['errores'] ) ) {
+        error_log( "HRM: Errores detectados - " . count( $resultado['errores'] ) . " errores encontrados" );
     }
 
     // Limpiar caché de departamentos para que se obtengan datos frescos
@@ -2953,43 +3328,45 @@ function hrm_get_gerentes_activos_hoy() {
  * Handler que permite al administrador ejecutar manualmente
  * la sincronización de personal vigente por vacaciones.
  *
- * Se ejecuta vía admin_post y retorna JSON con el resultado.
+ * Se ejecuta vía AJAX y retorna JSON con el resultado.
  */
 function hrm_manual_sincronizar_personal_vigente() {
     // Verificar permisos
-    if ( ! is_admin() || ! ( current_user_can( 'manage_options' ) || current_user_can( 'manage_hrm_vacaciones' ) ) ) {
-        wp_send_json_error( [
+    if ( ! ( current_user_can( 'manage_options' ) || current_user_can( 'manage_hrm_vacaciones' ) ) ) {
+        wp_send_json_error( array(
             'mensaje' => 'No tienes permisos para ejecutar esta acción.',
             'code' => 'permission_denied'
-        ], 403 );
+        ), 403 );
     }
 
     // Verificar nonce
     if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'hrm_sincronizar_personal' ) ) {
-        wp_send_json_error( [
+        wp_send_json_error( array(
             'mensaje' => 'Verificación de seguridad fallida.',
             'code' => 'invalid_nonce'
-        ], 403 );
+        ), 403 );
     }
 
     // Ejecutar la sincronización
     $resultado = hrm_actualizar_personal_vigente_por_vacaciones();
 
     if ( $resultado['exitoso'] ) {
-        wp_send_json_success( [
+        wp_send_json_success( array(
             'mensaje' => 'Personal vigente sincronizado correctamente.',
             'departamentos_actualizados' => $resultado['departamentos_actualizados'],
-            'detalles' => $resultado['detalles']
-        ] );
+            'detalles' => $resultado['detalles'],
+            'advertencias' => $resultado['advertencias']
+        ) );
     } else {
-        wp_send_json_error( [
+        wp_send_json_error( array(
             'mensaje' => 'Error durante la sincronización.',
             'errores' => $resultado['errores']
-        ] );
+        ) );
     }
 }
 
 add_action( 'wp_ajax_hrm_sincronizar_personal_vigente', 'hrm_manual_sincronizar_personal_vigente' );
+add_action( 'wp_ajax_nopriv_hrm_sincronizar_personal_vigente', 'hrm_manual_sincronizar_personal_vigente' );
 
 /**
  * =====================================================
@@ -4525,3 +4902,830 @@ function hrm_render_saldo_vacaciones_chile( $saldo, $mostrar_detalle = true ) {
     
     return $html;
 }
+/* =====================================================
+ * APROBAR SOLICITUD DE MEDIO DÍA (AJAX)
+ * ===================================================== */
+function hrm_aprobar_medio_dia_ajax() {
+    // Verificar permisos
+    if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_hrm_vacaciones' ) ) {
+        wp_send_json_error( [ 'message' => 'No tienes permisos para realizar esta acción.' ] );
+    }
+
+    // Verificar nonce
+    if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'hrm_aprobar_medio_dia' ) ) {
+        wp_send_json_error( [ 'message' => 'Error de seguridad: nonce inválido.' ] );
+    }
+
+    // Obtener datos
+    $solicitud_id = intval( $_POST['solicitud_id'] ?? 0 );
+    
+    if ( ! $solicitud_id ) {
+        wp_send_json_error( [ 'message' => 'ID de solicitud no especificado.' ] );
+    }
+
+    global $wpdb;
+    $table = $wpdb->prefix . 'rrhh_solicitudes_medio_dia';
+
+    // Obtener datos de la solicitud
+    $solicitud = $wpdb->get_row(
+        $wpdb->prepare( "SELECT * FROM {$table} WHERE id_solicitud = %d", $solicitud_id ),
+        ARRAY_A
+    );
+
+    if ( ! $solicitud ) {
+        wp_send_json_error( [ 'message' => 'Solicitud no encontrada.' ] );
+    }
+
+    // Obtener datos del usuario actual (quien aprueba)
+    $current_user = wp_get_current_user();
+    $nombre_jefe = $current_user->first_name . ' ' . $current_user->last_name;
+    if ( trim( $nombre_jefe ) === '' ) {
+        $nombre_jefe = $current_user->user_login;
+    }
+    $fecha_respuesta = current_time( 'Y-m-d H:i:s' );
+
+    // Actualizar estado a APROBADA con nombre del jefe y fecha de respuesta
+    $updated = $wpdb->update(
+        $table,
+        [ 
+            'estado' => 'APROBADA',
+            'nombre_jefe' => $nombre_jefe,
+            'fecha_respuesta' => $fecha_respuesta
+        ],
+        [ 'id_solicitud' => $solicitud_id ],
+        [ '%s', '%s', '%s' ],
+        [ '%d' ]
+    );
+
+    if ( $updated === false ) {
+        wp_send_json_error( [ 'message' => 'Error al actualizar la solicitud.' ] );
+    }
+
+    // Obtener datos del empleado para enviar email
+    $table_empleados = $wpdb->prefix . 'rrhh_empleados';
+    $empleado = $wpdb->get_row(
+        $wpdb->prepare( "SELECT * FROM {$table_empleados} WHERE id_empleado = %d", $solicitud['id_empleado'] ),
+        ARRAY_A
+    );
+
+    if ( $empleado ) {
+        // Enviar email al empleado
+        $fecha_formato = date_create( $solicitud['fecha_inicio'] )->format( 'd/m/Y' );
+        $periodo = ucfirst( $solicitud['periodo_ausencia'] );
+        $nombre_completo = $empleado['nombre'] . ' ' . $empleado['apellido'];
+        $nombre_jefe_display = $nombre_jefe !== '' ? $nombre_jefe : 'Recursos Humanos';
+        
+        $asunto = '✅ Tu solicitud de medio día ha sido aprobada';
+        $cuerpo = "
+        <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px; border-radius: 8px;\">
+            
+            <h2 style=\"color: #4caf50; margin-bottom: 20px;\">
+                <span style=\"font-size: 28px;\">✅</span> ¡Solicitud Aprobada!
+            </h2>
+            
+            <p style=\"color: #333; font-size: 16px; line-height: 1.6;\">
+                Estimado/a <strong>{$nombre_completo}</strong>,
+            </p>
+            
+            <p style=\"color: #333; font-size: 16px; line-height: 1.6;\">
+                Nos complace informarte que tu solicitud de medio día ha sido <strong style=\"color: #28a745;\">APROBADA</strong>. 
+                A continuación se muestran los detalles de tu solicitud:
+            </p>
+            
+            <!-- Detalles de la Solicitud -->
+            <div style=\"background: white; padding: 20px; border-radius: 6px; border-left: 4px solid #4caf50; margin: 20px 0;\">
+                <h3 style=\"color: #1a1a1a; margin-top: 0; font-size: 18px; margin-bottom: 15px;\">
+                    📋 Detalles de tu Solicitud
+                </h3>
+                
+                <table style=\"width: 100%; border-collapse: collapse; font-size: 15px;\">
+                    <tr>
+                        <td style=\"padding: 10px 0; border-bottom: 1px solid #eee; color: #666;\">
+                            <strong>📅 Fecha:</strong>
+                        </td>
+                        <td style=\"padding: 10px 0; border-bottom: 1px solid #eee; text-align: right; color: #333;\">
+                            {$fecha_formato}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style=\"padding: 10px 0; border-bottom: 1px solid #eee; color: #666;\">
+                            <strong>⏰ Período:</strong>
+                        </td>
+                        <td style=\"padding: 10px 0; border-bottom: 1px solid #eee; text-align: right; color: #333;\">
+                            {$periodo}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style=\"padding: 10px 0; border-bottom: 1px solid #eee; color: #666;\">
+                            <strong>📊 Descuento:</strong>
+                        </td>
+                        <td style=\"padding: 10px 0; border-bottom: 1px solid #eee; text-align: right; color: #333;\">
+                            0.5 días de vacaciones
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style=\"padding: 10px 0; color: #666;\">
+                            <strong>👤 Aprobado por:</strong>
+                        </td>
+                        <td style=\"padding: 10px 0; text-align: right; color: #333;\">
+                            {$nombre_jefe_display}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Próximos Pasos -->
+            <div style=\"background: #e8f5e9; padding: 15px; border-radius: 6px; border-left: 4px solid #4caf50; margin: 20px 0;\">
+                <h3 style=\"color: #2e7d32; margin-top: 0; font-size: 16px; margin-bottom: 10px;\">
+                    ⏭️ ¿Qué ocurre ahora?
+                </h3>
+                <ul style=\"color: #333; margin: 0; padding-left: 20px; line-height: 1.8;\">
+                    <li>Tu ausencia de medio día ha sido registrada en el sistema</li>
+                    <li>Se ha descontado 0.5 días de tu saldo de vacaciones</li>
+                    <li>Por favor asegúrate de registrar tu asistencia correctamente en el sistema</li>
+                    <li>Si tienes dudas, contacta con tu gerente directo</li>
+                </ul>
+            </div>
+            
+            <!-- Footer -->
+            <div style=\"background: #f5f5f5; padding: 15px; border-radius: 6px; margin-top: 20px; text-align: center; border-top: 1px solid #ddd;\">
+                <p style=\"color: #999; margin: 0; font-size: 12px;\">
+                    Este es un correo automático. Por favor no respondas directamente a este mensaje.
+                </p>
+                <p style=\"color: #999; margin: 5px 0 0 0; font-size: 12px;\">
+                    &copy; 2026 Departamento de Recursos Humanos. Todos los derechos reservados.
+                </p>
+            </div>
+        </div>
+        ";
+        
+        $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
+        wp_mail( $empleado['correo'], $asunto, $cuerpo, $headers );
+    }
+
+    wp_send_json_success( [ 'message' => 'Solicitud aprobada exitosamente.' ] );
+}
+add_action( 'wp_ajax_hrm_aprobar_medio_dia', 'hrm_aprobar_medio_dia_ajax' );
+
+/* =====================================================
+ * RECHAZAR SOLICITUD DE MEDIO DÍA (AJAX)
+ * ===================================================== */
+function hrm_rechazar_medio_dia_ajax() {
+    // Verificar permisos
+    if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_hrm_vacaciones' ) ) {
+        wp_send_json_error( [ 'message' => 'No tienes permisos para realizar esta acción.' ] );
+    }
+
+    // Verificar nonce
+    if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'hrm_rechazar_medio_dia' ) ) {
+        wp_send_json_error( [ 'message' => 'Error de seguridad: nonce inválido.' ] );
+    }
+
+    // Obtener datos
+    $solicitud_id = intval( $_POST['solicitud_id'] ?? 0 );
+    $motivo = sanitize_textarea_field( $_POST['motivo'] ?? '' );
+    
+    if ( ! $solicitud_id ) {
+        wp_send_json_error( [ 'message' => 'ID de solicitud no especificado.' ] );
+    }
+
+    global $wpdb;
+    $table = $wpdb->prefix . 'rrhh_solicitudes_medio_dia';
+
+    // Obtener datos de la solicitud
+    $solicitud = $wpdb->get_row(
+        $wpdb->prepare( "SELECT * FROM {$table} WHERE id_solicitud = %d", $solicitud_id ),
+        ARRAY_A
+    );
+
+    if ( ! $solicitud ) {
+        wp_send_json_error( [ 'message' => 'Solicitud no encontrada.' ] );
+    }
+
+    // Obtener datos del usuario actual (quien rechaza)
+    $current_user = wp_get_current_user();
+    $nombre_jefe = $current_user->first_name . ' ' . $current_user->last_name;
+    if ( trim( $nombre_jefe ) === '' ) {
+        $nombre_jefe = $current_user->user_login;
+    }
+    $fecha_respuesta = current_time( 'Y-m-d H:i:s' );
+
+    // Actualizar estado a RECHAZADA con motivo, nombre del jefe y fecha de respuesta
+    $updated = $wpdb->update(
+        $table,
+        [ 
+            'estado' => 'RECHAZADA',
+            'motivo_rechazo' => $motivo,
+            'nombre_jefe' => $nombre_jefe,
+            'fecha_respuesta' => $fecha_respuesta
+        ],
+        [ 'id_solicitud' => $solicitud_id ],
+        [ '%s', '%s', '%s', '%s' ],
+        [ '%d' ]
+    );
+
+    if ( $updated === false ) {
+        wp_send_json_error( [ 'message' => 'Error al actualizar la solicitud.' ] );
+    }
+
+    // Obtener datos del empleado para enviar email
+    $table_empleados = $wpdb->prefix . 'rrhh_empleados';
+    $empleado = $wpdb->get_row(
+        $wpdb->prepare( "SELECT * FROM {$table_empleados} WHERE id_empleado = %d", $solicitud['id_empleado'] ),
+        ARRAY_A
+    );
+
+    if ( $empleado ) {
+        // Enviar email al empleado
+        $fecha_formato = date_create( $solicitud['fecha_inicio'] )->format( 'd/m/Y' );
+        $periodo = ucfirst( $solicitud['periodo_ausencia'] );
+        $nombre_completo = $empleado['nombre'] . ' ' . $empleado['apellido'];
+        $nombre_jefe_display = $nombre_jefe !== '' ? $nombre_jefe : 'Recursos Humanos';
+        
+        $asunto = '📋 Tu solicitud de medio día requiere atención';
+        $cuerpo = "
+        <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px; border-radius: 8px;\">
+            
+            <h2 style=\"color: #ff9800; margin-bottom: 20px;\">
+                <span style=\"font-size: 28px;\">⚠️</span> Solicitud No Aprobada
+            </h2>
+            
+            <p style=\"color: #333; font-size: 16px; line-height: 1.6;\">
+                Estimado/a <strong>{$nombre_completo}</strong>,
+            </p>
+            
+            <p style=\"color: #333; font-size: 16px; line-height: 1.6;\">
+                Hemos revisado tu solicitud de medio día y, lamentablemente, en esta ocasión no ha sido posible aprobarla. 
+                A continuación encontrarás los detalles y motivos del rechazo:
+            </p>
+            
+            <!-- Detalles de la Solicitud -->
+            <div style=\"background: white; padding: 20px; border-radius: 6px; border-left: 4px solid #ff9800; margin: 20px 0;\">
+                <h3 style=\"color: #1a1a1a; margin-top: 0; font-size: 18px; margin-bottom: 15px;\">
+                    📋 Detalles de tu Solicitud
+                </h3>
+                
+                <table style=\"width: 100%; border-collapse: collapse; font-size: 15px;\">
+                    <tr>
+                        <td style=\"padding: 10px 0; border-bottom: 1px solid #eee; color: #666;\">
+                            <strong>📅 Fecha:</strong>
+                        </td>
+                        <td style=\"padding: 10px 0; border-bottom: 1px solid #eee; text-align: right; color: #333;\">
+                            {$fecha_formato}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style=\"padding: 10px 0; border-bottom: 1px solid #eee; color: #666;\">
+                            <strong>⏰ Período:</strong>
+                        </td>
+                        <td style=\"padding: 10px 0; border-bottom: 1px solid #eee; text-align: right; color: #333;\">
+                            {$periodo}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style=\"padding: 10px 0; border-bottom: 1px solid #eee; color: #666;\">
+                            <strong>👤 Revisado por:</strong>
+                        </td>
+                        <td style=\"padding: 10px 0; border-bottom: 1px solid #eee; text-align: right; color: #333;\">
+                            {$nombre_jefe_display}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style=\"padding: 10px 0; color: #666;\">
+                            <strong>Estado:</strong>
+                        </td>
+                        <td style=\"padding: 10px 0; text-align: right;\">
+                            <span style=\"background: #ff9800; color: white; padding: 4px 12px; border-radius: 4px; font-weight: bold;\">
+                                NO APROBADA
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Motivo del Rechazo -->
+            <div style=\"background: #fff3e0; padding: 20px; border-radius: 6px; border-left: 4px solid #e91e63; margin: 20px 0;\">
+                <h3 style=\"color: #c2185b; margin-top: 0; font-size: 18px; margin-bottom: 15px;\">
+                    📝 Motivo del Rechazo
+                </h3>
+                <p style=\"color: #555; margin: 0; padding: 10px; background: white; border-radius: 4px; border-left: 4px solid #e91e63;\">
+                    {$motivo}
+                </p>
+            </div>
+            
+            <!-- Próximos Pasos -->
+            <div style=\"background: #e3f2fd; padding: 15px; border-radius: 6px; border-left: 4px solid #2196f3; margin: 20px 0;\">
+                <h3 style=\"color: #1565c0; margin-top: 0; font-size: 16px; margin-bottom: 10px;\">
+                    💡 ¿Qué puedes hacer?
+                </h3>
+                <ul style=\"color: #333; margin: 0; padding-left: 20px; line-height: 1.8;\">
+                    <li>Revisa cuidadosamente los motivos del rechazo</li>
+                    <li>Contacta con tu gerente directo para aclarar dudas</li>
+                    <li>Solicita asesoramiento para resolver la situación</li>
+                    <li>Puedes presentar una nueva solicitud cuando lo consideres oportuno</li>
+                </ul>
+            </div>
+            
+            <!-- Footer -->
+            <div style=\"background: #f5f5f5; padding: 15px; border-radius: 6px; margin-top: 20px; text-align: center; border-top: 1px solid #ddd;\">
+                <p style=\"color: #999; margin: 0; font-size: 12px;\">
+                    Este es un correo automático. Por favor no respondas directamente a este mensaje.
+                </p>
+                <p style=\"color: #999; margin: 5px 0 0 0; font-size: 12px;\">
+                    &copy; 2026 Departamento de Recursos Humanos. Todos los derechos reservados.
+                </p>
+            </div>
+        </div>
+        ";
+        
+        $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
+        wp_mail( $empleado['correo'], $asunto, $cuerpo, $headers );
+    }
+
+    wp_send_json_success( [ 'message' => 'Solicitud rechazada exitosamente.' ] );
+}
+add_action( 'wp_ajax_hrm_rechazar_medio_dia', 'hrm_rechazar_medio_dia_ajax' );
+
+/* =====================================================
+ * HANDLER POST: APROBAR/RECHAZAR SOLICITUD DE MEDIO DÍA
+ * ===================================================== */
+function hrm_handle_aprobar_rechazar_medio_dia() {
+
+    if ( ! is_admin() || ! ( current_user_can( 'manage_options' ) || current_user_can( 'manage_hrm_vacaciones' ) ) ) {
+        return;
+    }
+
+    if ( empty( $_POST['accion'] ) || empty( $_POST['solicitud_id'] ) ) {
+        return;
+    }
+
+    // Verificar nonce
+    $nonce_action = $_POST['accion'] === 'aprobar' ? 'hrm_aprobar_medio_dia_form' : 'hrm_rechazar_medio_dia_form';
+    if ( empty( $_POST['hrm_nonce'] ) || ! wp_verify_nonce( $_POST['hrm_nonce'], $nonce_action ) ) {
+        wp_die( 'Error de seguridad: Nonce inválido.' );
+    }
+
+    $id_solicitud = intval( $_POST['solicitud_id'] );
+    $accion       = sanitize_key( $_POST['accion'] );
+
+    if ( ! in_array( $accion, [ 'aprobar', 'rechazar' ], true ) ) {
+        return;
+    }
+
+    global $wpdb;
+
+    $table_solicitudes = $wpdb->prefix . 'rrhh_solicitudes_medio_dia';
+    $table_empleados = $wpdb->prefix . 'rrhh_empleados';
+
+    // Obtener solicitud actual
+    $solicitud = $wpdb->get_row(
+        $wpdb->prepare(
+            "SELECT * FROM {$table_solicitudes} WHERE id_solicitud = %d",
+            $id_solicitud
+        ),
+        ARRAY_A
+    );
+
+    if ( ! $solicitud ) {
+        wp_die( 'Solicitud no encontrada.' );
+    }
+
+    // Validar que la solicitud esté en estado PENDIENTE
+    if ( $solicitud['estado'] !== 'PENDIENTE' ) {
+        wp_die( '❌ No se puede cambiar el estado de una solicitud que ya ha sido ' . strtolower( $solicitud['estado'] ) . '.' );
+    }
+
+    // SI ES APROBACIÓN: Validar que tenga saldo suficiente
+    if ( $accion === 'aprobar' ) {
+        $saldo = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT dias_vacaciones_disponibles FROM {$table_empleados} WHERE id_empleado = %d",
+                $solicitud['id_empleado']
+            )
+        );
+
+        if ( ! $saldo || $saldo->dias_vacaciones_disponibles < 0.5 ) {
+            wp_die( '❌ No se puede aprobar: El empleado no tiene 0.5 días disponibles en su saldo de vacaciones.' );
+        }
+    }
+
+    // Determinar nuevo estado
+    $nuevo_estado = $accion === 'aprobar' ? 'APROBADA' : 'RECHAZADA';
+
+    // Obtener datos del usuario actual (quien aprueba/rechaza)
+    $current_user = wp_get_current_user();
+    $nombre_jefe = $current_user->first_name . ' ' . $current_user->last_name;
+    if ( trim( $nombre_jefe ) === '' ) {
+        $nombre_jefe = $current_user->user_login;
+    }
+    $fecha_respuesta = current_time( 'Y-m-d H:i:s' );
+
+    // Preparar datos de actualización
+    $update_data = [ 
+        'estado' => $nuevo_estado,
+        'nombre_jefe' => $nombre_jefe,
+        'fecha_respuesta' => $fecha_respuesta
+    ];
+    $update_format = [ '%s', '%s', '%s' ];
+
+    // Si es rechazo, agregar motivo
+    if ( $accion === 'rechazar' ) {
+        $motivo_rechazo = isset( $_POST['motivo_rechazo'] ) ? sanitize_textarea_field( $_POST['motivo_rechazo'] ) : '';
+        if ( ! empty( $motivo_rechazo ) ) {
+            $update_data['motivo_rechazo'] = $motivo_rechazo;
+            $update_format[] = '%s';
+        }
+    }
+
+    // Actualizar solicitud
+    $updated = $wpdb->update(
+        $table_solicitudes,
+        $update_data,
+        [ 'id_solicitud' => $id_solicitud ],
+        $update_format,
+        [ '%d' ]
+    );
+
+    if ( $updated === false ) {
+        wp_die( 'Error al actualizar la solicitud: ' . $wpdb->last_error );
+    }
+
+    // Si es aprobación, descontar 0.5 días
+    if ( $accion === 'aprobar' ) {
+        hrm_descontar_dias_medio_dia( $id_solicitud );
+    }
+
+    // Obtener datos del empleado para enviar email
+    $empleado = $wpdb->get_row(
+        $wpdb->prepare(
+            "SELECT * FROM {$table_empleados} WHERE id_empleado = %d",
+            $solicitud['id_empleado']
+        ),
+        ARRAY_A
+    );
+
+    // Enviar notificación por email
+    if ( $empleado ) {
+        $fecha_formato = date_create( $solicitud['fecha_inicio'] )->format( 'd/m/Y' );
+        $periodo = ucfirst( $solicitud['periodo_ausencia'] );
+        $nombre_completo = $empleado['nombre'] . ' ' . $empleado['apellido'];
+        
+        // Obtener nombre del usuario actual
+        $current_user = wp_get_current_user();
+        $nombre_jefe = $current_user->first_name . ' ' . $current_user->last_name;
+        if ( trim( $nombre_jefe ) === '' ) {
+            $nombre_jefe = $current_user->user_login;
+        }
+        $nombre_jefe_display = $nombre_jefe !== '' ? $nombre_jefe : 'Recursos Humanos';
+        
+        if ( $accion === 'aprobar' ) {
+            $asunto = '✅ Tu solicitud de medio día ha sido aprobada';
+            $cuerpo = "
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
+        .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 600; }
+        .header p { margin: 5px 0 0 0; font-size: 14px; opacity: 0.95; }
+        .content { background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .greeting { font-size: 16px; color: #333; margin-bottom: 20px; }
+        .details-box { background-color: #f0f8f5; border-left: 5px solid #28a745; padding: 20px; margin: 20px 0; border-radius: 4px; }
+        .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e0e0e0; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { font-weight: 600; color: #28a745; }
+        .detail-value { color: #555; }
+        .info-box { background-color: #e8f5e9; border-left: 5px solid #4caf50; padding: 15px; margin: 20px 0; border-radius: 4px; }
+        .info-box p { margin: 0; color: #2e7d32; font-size: 14px; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #999; border-top: 1px solid #eee; margin-top: 20px; }
+        .status-badge { display: inline-block; background-color: #28a745; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1>🎉 ¡Solicitud Aprobada!</h1>
+            <p>Tu solicitud de medio día ha sido aprobada exitosamente</p>
+        </div>
+        
+        <div class='content'>
+            <div class='greeting'>
+                <p>Hola <strong>{$nombre_completo}</strong>,</p>
+                <p>Nos complace informarte que tu solicitud de medio día ha sido <span class='status-badge'>APROBADA</span>.</p>
+            </div>
+            
+            <div class='details-box'>
+                <div style='font-weight: 600; color: #28a745; margin-bottom: 15px;'>Detalles de tu solicitud:</div>
+                <div class='detail-row'>
+                    <span class='detail-label'>📅 Fecha:</span>
+                    <span class='detail-value'>{$fecha_formato}</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>⏰ Período:</span>
+                    <span class='detail-value'>{$periodo}</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>📊 Descuento:</span>
+                    <span class='detail-value'>0.5 días de vacaciones</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>👤 Aprobado por:</span>
+                    <span class='detail-value'>{$nombre_jefe_display}</span>
+                </div>
+            </div>
+            
+            <div class='info-box'>
+                <p><strong>ℹ️ Importante:</strong> Por favor asegúrate de registrar tu asistencia correctamente en el sistema. Recuerda que solo el período seleccionado está autorizado como ausencia.</p>
+            </div>
+            
+            <p style='color: #666; margin-top: 20px;'>Si tienes alguna pregunta o necesitas más información, no dudes en contactar con tu gerente directo o con el departamento de Recursos Humanos.</p>
+            
+            <div class='footer'>
+                <p>Este es un correo automático. Por favor no respondas directamente a este mensaje.</p>
+                <p style='margin-top: 10px;'>&copy; 2026 Departamento de Recursos Humanos. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+            ";
+        } else {
+            $asunto = '📋 Tu solicitud de medio día requiere atención';
+            $motivo = $update_data['motivo_rechazo'] ?? 'Sin especificar';
+            $cuerpo = "
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
+        .header { background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 600; }
+        .header p { margin: 5px 0 0 0; font-size: 14px; opacity: 0.95; }
+        .content { background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .greeting { font-size: 16px; color: #333; margin-bottom: 20px; }
+        .details-box { background-color: #fff8f0; border-left: 5px solid #ff9800; padding: 20px; margin: 20px 0; border-radius: 4px; }
+        .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e0e0e0; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { font-weight: 600; color: #ff9800; }
+        .detail-value { color: #555; }
+        .reason-box { background-color: #fce4ec; border-left: 5px solid #e91e63; padding: 20px; margin: 20px 0; border-radius: 4px; }
+        .reason-box .label { font-weight: 600; color: #c2185b; margin-bottom: 10px; display: block; }
+        .reason-box .content { color: #555; }
+        .suggestion-box { background-color: #e3f2fd; border-left: 5px solid #2196f3; padding: 15px; margin: 20px 0; border-radius: 4px; }
+        .suggestion-box p { margin: 0; color: #1565c0; font-size: 14px; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #999; border-top: 1px solid #eee; margin-top: 20px; }
+        .status-badge { display: inline-block; background-color: #ff9800; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1>⚠️ Solicitud No Aprobada</h1>
+            <p>Información sobre tu solicitud de medio día</p>
+        </div>
+        
+        <div class='content'>
+            <div class='greeting'>
+                <p>Hola <strong>{$nombre_completo}</strong>,</p>
+                <p>Hemos revisado tu solicitud de medio día y, lamentablemente, en esta ocasión no ha sido posible aprobarla. A continuación encontrarás los detalles y motivos.</p>
+            </div>
+            
+            <div class='details-box'>
+                <div style='font-weight: 600; color: #ff9800; margin-bottom: 15px;'>Detalles de tu solicitud:</div>
+                <div class='detail-row'>
+                    <span class='detail-label'>📅 Fecha:</span>
+                    <span class='detail-value'>{$fecha_formato}</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>⏰ Período:</span>
+                    <span class='detail-value'>{$periodo}</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>👤 Revisado por:</span>
+                    <span class='detail-value'>{$nombre_jefe_display}</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Estado:</span>
+                    <span class='detail-value'><span class='status-badge'>NO APROBADA</span></span>
+                </div>
+            </div>
+            
+            <div class='reason-box'>
+                <span class='label'>📝 Motivo del rechazo:</span>
+                <div class='content'>{$motivo}</div>
+            </div>
+            
+            <div class='suggestion-box'>
+                <p><strong>💡 Sugerencia:</strong> Revisa cuidadosamente los motivos del rechazo. Puedes solicitar asesoramiento a tu gerente directo para ayudarte a resolver la situación y presentar una nueva solicitud en el futuro.</p>
+            </div>
+            
+            <p style='color: #666; margin-top: 20px;'>Entendemos que esto puede no ser lo que esperabas. Si consideras que existe un error o deseas discutir los motivos, te recomendamos comunicarte directamente con tu gerente o con el departamento de Recursos Humanos para aclarar cualquier duda.</p>
+            
+            <div class='footer'>
+                <p>Este es un correo automático. Por favor no respondas directamente a este mensaje.</p>
+                <p style='margin-top: 10px;'>&copy; 2026 Departamento de Recursos Humanos. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+            ";
+        }
+        
+        $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
+        wp_mail( $empleado['correo'], $asunto, $cuerpo, $headers );
+    }
+
+    wp_safe_redirect(
+        admin_url( 'admin.php?page=hrm-vacaciones&tab=medio-dia&updated=1' )
+    );
+    exit;
+}
+add_action( 'admin_post_hrm_aprobar_rechazar_medio_dia', 'hrm_handle_aprobar_rechazar_medio_dia' );
+
+/* =====================================================
+ * DESCONTAR 0.5 DÍAS DE VACACIONES - SOLICITUD DE MEDIO DÍA
+ * ===================================================== */
+function hrm_descontar_dias_medio_dia( $id_solicitud ) {
+    global $wpdb;
+    
+    $table_solicitudes = $wpdb->prefix . 'rrhh_solicitudes_medio_dia';
+    $table_empleados = $wpdb->prefix . 'rrhh_empleados';
+    $table_vacaciones_anual = $wpdb->prefix . 'rrhh_vacaciones_anual';
+    
+    // Obtener datos de la solicitud de medio día APROBADA
+    $solicitud = $wpdb->get_row(
+        $wpdb->prepare(
+            "SELECT 
+                id_empleado, 
+                fecha_inicio, 
+                periodo_ausencia,
+                estado
+            FROM {$table_solicitudes}
+            WHERE id_solicitud = %d
+            AND estado = 'APROBADA'
+            AND fecha_inicio = fecha_fin
+            AND periodo_ausencia IN ('mañana', 'tarde')",
+            $id_solicitud
+        ),
+        ARRAY_A
+    );
+
+    if ( ! $solicitud ) {
+        error_log( "HRM: Solicitud de medio día no encontrada o no está aprobada: $id_solicitud" );
+        return false;
+    }
+
+    // Verificar que el empleado existe y tiene saldo suficiente
+    $empleado = $wpdb->get_row(
+        $wpdb->prepare(
+            "SELECT id_empleado, dias_vacaciones_disponibles, dias_vacaciones_usados
+             FROM {$table_empleados}
+             WHERE id_empleado = %d",
+            $solicitud['id_empleado']
+        ),
+        ARRAY_A
+    );
+    
+    if ( ! $empleado ) {
+        error_log( "HRM: Empleado no encontrado: " . $solicitud['id_empleado'] );
+        return false;
+    }
+    
+    // Validar saldo (0.5 días)
+    if ( $empleado['dias_vacaciones_disponibles'] < 0.5 ) {
+        error_log( "HRM: Empleado no tiene 0.5 días suficientes. Disponibles: " . 
+                   $empleado['dias_vacaciones_disponibles'] );
+        return false;
+    }
+
+    // Actualizar saldo en tabla de empleados
+    // Descontar 0.5 días de disponibles e incrementar usados en 0.5
+    $dias_a_descontar = 0.5;
+    
+    $actualizado = $wpdb->query(
+        $wpdb->prepare(
+            "UPDATE {$table_empleados}
+             SET
+                dias_vacaciones_usados = dias_vacaciones_usados + %f,
+                dias_vacaciones_disponibles = dias_vacaciones_disponibles - %f
+             WHERE id_empleado = %d",
+            $dias_a_descontar,
+            $dias_a_descontar,
+            $solicitud['id_empleado']
+        )
+    );
+    
+    if ( $actualizado === false ) {
+        error_log( "HRM Error SQL al descontar 0.5 días en empleados: " . $wpdb->last_error );
+        return false;
+    }
+
+    // Actualizar saldo en tabla vacaciones_anual (si existe el registro)
+    $ano_actual = (int) gmdate( 'Y' );
+    
+    $vacacion_anual = $wpdb->get_row(
+        $wpdb->prepare(
+            "SELECT id FROM {$table_vacaciones_anual}
+             WHERE id_empleado = %d AND ano = %d",
+            $solicitud['id_empleado'],
+            $ano_actual
+        )
+    );
+
+    if ( $vacacion_anual ) {
+        // Si existe, actualizar el registro
+        $wpdb->query(
+            $wpdb->prepare(
+                "UPDATE {$table_vacaciones_anual}
+                 SET
+                    dias_usados = dias_usados + %f,
+                    dias_disponibles = dias_disponibles - %f
+                 WHERE id = %d",
+                $dias_a_descontar,
+                $dias_a_descontar,
+                $vacacion_anual->id
+            )
+        );
+    } else {
+        // Si no existe, crear un nuevo registro
+        $wpdb->insert(
+            $table_vacaciones_anual,
+            [
+                'id_empleado' => $solicitud['id_empleado'],
+                'ano' => $ano_actual,
+                'dias_disponibles' => 28.5, // Asumiendo 29 días anuales menos 0.5
+                'dias_usados' => 0.5,
+            ],
+            [ '%d', '%d', '%f', '%f' ]
+        );
+    }
+
+    error_log( "HRM: Se descontaron 0.5 días de vacaciones al empleado " . $solicitud['id_empleado'] . 
+               " por solicitud de medio día #" . $id_solicitud );
+
+    return true;
+}
+
+/* =====================================================
+ * OBTENER DETALLES DE SOLICITUD DE MEDIO DÍA (AJAX)
+ * ===================================================== */
+function hrm_get_detalles_medio_dia_ajax() {
+    // Verificar permisos
+    if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_hrm_vacaciones' ) ) {
+        wp_send_json_error( [ 'message' => 'No tienes permisos.' ] );
+    }
+
+    $solicitud_id = intval( $_POST['solicitud_id'] ?? 0 );
+    error_log( '🔍 hrm_get_detalles_medio_dia_ajax - ID recibido: ' . $solicitud_id );
+    
+    if ( ! $solicitud_id ) {
+        error_log( '❌ ID de solicitud no especificado' );
+        wp_send_json_error( [ 'message' => 'ID de solicitud no especificado.' ] );
+    }
+
+    global $wpdb;
+    $table_solicitudes = $wpdb->prefix . 'rrhh_solicitudes_medio_dia';
+    $table_empleados = $wpdb->prefix . 'rrhh_empleados';
+    
+    error_log( '🔍 Buscando en tabla: ' . $table_solicitudes );
+
+    // Obtener detalles de la solicitud de medio día
+    $solicitud = $wpdb->get_row(
+        $wpdb->prepare(
+            "SELECT 
+                s.id_solicitud,
+                s.id_empleado,
+                e.nombre,
+                e.apellido,
+                e.correo,
+                s.fecha_inicio,
+                s.fecha_fin,
+                s.periodo_ausencia,
+                s.estado,
+                s.comentario_empleado,
+                s.motivo_rechazo,
+                s.nombre_jefe,
+                s.fecha_respuesta
+            FROM {$table_solicitudes} s
+            INNER JOIN {$table_empleados} e ON s.id_empleado = e.id_empleado
+            WHERE s.id_solicitud = %d",
+            $solicitud_id
+        ),
+        ARRAY_A
+    );
+
+    if ( ! $solicitud ) {
+        error_log( '❌ Solicitud no encontrada con ID: ' . $solicitud_id );
+        wp_send_json_error( [ 'message' => 'Solicitud no encontrada.' ] );
+    }
+    
+    error_log( '✅ Solicitud encontrada: ' . json_encode( $solicitud ) );
+    wp_send_json_success( $solicitud );
+}
+add_action( 'wp_ajax_hrm_get_detalles_medio_dia', 'hrm_get_detalles_medio_dia_ajax' );

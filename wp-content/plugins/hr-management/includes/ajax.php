@@ -202,36 +202,25 @@ function hrm_ajax_get_employee_documents() {
 
     ob_start();
     ?>
-    <table class="table table-striped table-hover">
-        <thead class="table-light">
+    
+    <table class="table table-striped table-bordered ">
+        <thead class="table-dark">
             <tr>
-                <th>Tipo</th>
                 <th>Año</th>
                 <th>Archivo</th>
-                <th>Fecha de Carga</th>
-                <th>Acción</th>
+                <th>Descargar</th>
+                <th>Eliminar</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody class="hrm-document-list">
             <?php foreach ( $documents as $doc ) : ?>
-                <tr data-type="<?= esc_attr( strtolower( $doc->tipo ) ) ?>" data-year="<?= esc_attr( $doc->anio ) ?>">
+                <tr class="table-secondary" data-type="<?= esc_attr( strtolower( $doc->tipo ) ) ?>" data-year="<?= esc_attr( $doc->anio ) ?>">
                     <td>
-                        <span class="badge bg-info text-dark">
-                            <?= esc_html( $doc->tipo ) ?>
-                        </span>
+                        <?= esc_html( $doc->anio ) ?>
                     </td>
-                    <td><?= esc_html( $doc->anio ) ?></td>
                     <td>
                         <span class="dashicons dashicons-media-document"></span>
                         <?= esc_html( $doc->nombre ) ?>
-                    </td>
-                    <td>
-                        <small class="text-muted">
-                            <?php 
-                            $date = strtotime( $doc->fecha ?? 'now' );
-                            echo date_i18n( 'd/m/Y H:i', $date );
-                            ?>
-                        </small>
                     </td>
                     <td>
                         <a href="<?= esc_url( $doc->url ) ?>" 
@@ -240,7 +229,9 @@ function hrm_ajax_get_employee_documents() {
                            rel="noopener noreferrer"
                            title="Descargar documento">
                             <span class="dashicons dashicons-download"></span> Descargar
-                        </a>
+                        </a>                        
+                    </td>
+                    <td>
                         <?php if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) ) : ?>
                             <form method="post" class="d-inline hrm-delete-form">
                                 <?php wp_nonce_field( 'hrm_delete_file', 'hrm_delete_nonce' ); ?>
@@ -252,7 +243,6 @@ function hrm_ajax_get_employee_documents() {
                                 </button>
                             </form>
                         <?php endif; ?>
-                    </td>
                 </tr>
             <?php endforeach; ?>
         </tbody>
@@ -265,62 +255,110 @@ function hrm_ajax_get_employee_documents() {
 /**
  * Manejador AJAX para eliminar un documento específico
  */
+
+// ...existing code...
 function hrm_ajax_delete_employee_document() {
+    // Debug: log de invocación y parámetros recibidos
+    error_log( 'HRM AJAX Delete - Called. Method: ' . ( $_SERVER['REQUEST_METHOD'] ?? 'UNKNOWN' ) . ' action: ' . ( isset( $_REQUEST['action'] ) ? $_REQUEST['action'] : '(none)' ) );
+    if ( defined( 'DOING_AJAX' ) ) {
+        error_log( 'HRM AJAX Delete - DOING_AJAX = true' );
+    } else {
+        error_log( 'HRM AJAX Delete - DOING_AJAX not defined or false' );
+    }
+    error_log( 'HRM AJAX Delete - REQUEST keys: ' . implode( ', ', array_keys( $_REQUEST ) ) );
+
+    // Validar contexto y autenticación
+    if ( ! defined( 'DOING_AJAX' ) || ! DOING_AJAX ) {
+        wp_send_json_error( [ 'message' => 'Petición inválida' ], 400 );
+    }
+    if ( ! is_user_logged_in() ) {
+        wp_send_json_error( [ 'message' => 'Usuario no autenticado' ], 401 );
+    }
+
     // Verificar permisos
     if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'edit_hrm_employees' ) ) {
-        wp_send_json_error( 'No tienes permisos para eliminar documentos.' );
+        wp_send_json_error( [ 'message' => 'No tienes permisos para eliminar documentos.' ], 403 );
+    }
+
+    // Limpiar buffer por si hay salida anterior que rompa JSON
+    if ( ob_get_length() ) {
+        ob_end_clean();
     }
 
     // Verificar nonce - aceptar tanto 'nonce' como 'hrm_delete_nonce'
-    $nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( $_POST['nonce'] ) : '';
+    $nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
     if ( empty( $nonce ) && isset( $_POST['hrm_delete_nonce'] ) ) {
-        $nonce = sanitize_text_field( $_POST['hrm_delete_nonce'] );
+        $nonce = sanitize_text_field( wp_unslash( $_POST['hrm_delete_nonce'] ) );
     }
-    
-    error_log( 'HRM Delete Document - Nonce received: ' . substr( $nonce, 0, 10 ) . '...' );
-    
-    if ( ! wp_verify_nonce( $nonce, 'hrm_delete_file' ) ) {
-        error_log( 'HRM Delete Document - Nonce verification FAILED for: ' . substr( $nonce, 0, 10 ) );
-        wp_send_json_error( 'Error de verificación de seguridad.' );
+
+    if ( ! $nonce || ! wp_verify_nonce( $nonce, 'hrm_delete_file' ) ) {
+        error_log( 'HRM Delete Document - Nonce verification FAILED' );
+        wp_send_json_error( [ 'message' => 'Token de seguridad inválido. Actualiza la página e intenta nuevamente.' ], 403 );
     }
-    
-    error_log( 'HRM Delete Document - Nonce verification OK' );
 
     // Obtener ID del documento
-    $doc_id = isset( $_POST['doc_id'] ) ? absint( $_POST['doc_id'] ) : 0;
+    $doc_id = isset( $_POST['doc_id'] ) ? absint( wp_unslash( $_POST['doc_id'] ) ) : 0;
     if ( ! $doc_id ) {
-        wp_send_json_error( 'ID de documento inválido.' );
+        wp_send_json_error( [ 'message' => 'ID de documento inválido.' ], 400 );
     }
 
     // Asegurar que las clases DB estén cargadas
     hrm_ensure_db_classes();
-    
+
     // Instancia de BD
     $db_docs = new HRM_DB_Documentos();
-    
+
     // Obtener documento
     $doc = $db_docs->get( $doc_id );
     if ( ! $doc ) {
-        wp_send_json_error( 'Documento no encontrado.' );
+        wp_send_json_error( [ 'message' => 'Documento no encontrado.' ], 404 );
     }
 
-    // Eliminar archivo físico
-    $upload_dir = wp_upload_dir();
-    $base_url_wp = $upload_dir['baseurl'];
-    $base_dir_wp = $upload_dir['basedir'];
-    
-    // Convertir URL a ruta física para borrar
-    $file_path = str_replace( $base_url_wp, $base_dir_wp, $doc->url );
-    
-    if ( file_exists( $file_path ) ) {
-        unlink( $file_path );
+    // Intentar eliminar archivo físico si existe URL
+    $deleted_file = false;
+    if ( ! empty( $doc->url ) ) {
+        $upload_dir = wp_upload_dir();
+        $base_url_wp = untrailingslashit( $upload_dir['baseurl'] );
+        $base_dir_wp = untrailingslashit( $upload_dir['basedir'] );
+
+        $file_path = $doc->url;
+
+        // Si la URL comienza con baseurl, convertir a path
+        if ( strpos( $file_path, $base_url_wp ) === 0 ) {
+            $file_path = str_replace( $base_url_wp, $base_dir_wp, $file_path );
+        }
+
+        // Normalizar y eliminar parámetros de query si los hay
+        $file_path = strtok( $file_path, '?' );
+        $file_path = wp_normalize_path( $file_path );
+
+        if ( file_exists( $file_path ) ) {
+            // usar @unlink para evitar warnings sin control; log si falla
+            if ( @unlink( $file_path ) ) {
+                $deleted_file = true;
+            } else {
+                error_log( "HRM Delete Document - Failed to unlink file: {$file_path}" );
+            }
+        } else {
+            error_log( "HRM Delete Document - File not found for deletion: {$file_path}" );
+        }
     }
-    
-    // Eliminar de la base de datos
-    $db_docs->delete( $doc_id );
-    
-    wp_send_json_success( 'Documento eliminado correctamente.' );
+
+    // Eliminar de la base de datos y comprobar resultado
+    $db_result = $db_docs->delete( $doc_id );
+    if ( $db_result === false ) {
+        error_log( "HRM Delete Document - DB delete failed for ID: {$doc_id}" );
+        wp_send_json_error( [ 'message' => 'No se pudo eliminar el registro en la base de datos.' ], 500 );
+    }
+
+    // Respuesta de éxito (incluye info útil)
+    wp_send_json_success( [
+        'message' => 'El documento se eliminó correctamente.',
+        'file_deleted' => $deleted_file,
+        'doc_id' => $doc_id
+    ] );
 }
+// ...existing code...s
 
 /**
  * =====================================================

@@ -109,6 +109,22 @@ function hrm_enqueue_vacaciones_admin_styles( $hook ) {
         array(),
         HRM_PLUGIN_VERSION
     );
+    
+    // Encolador de estilos de las vistas de vacaciones
+    wp_enqueue_style(
+        'hrm-vacaciones-admin-estilos',
+        HRM_PLUGIN_URL . 'assets/css/vacaciones-admin-estilos.css',
+        array(),
+        HRM_PLUGIN_VERSION
+    );
+    
+    // Encolador de estilos de tabs
+    wp_enqueue_style(
+        'hrm-vacaciones-tabs',
+        HRM_PLUGIN_URL . 'assets/css/vacaciones-tabs.css',
+        array(),
+        HRM_PLUGIN_VERSION
+    );
 }
 add_action( 'admin_enqueue_scripts', 'hrm_enqueue_vacaciones_admin_styles' );
 

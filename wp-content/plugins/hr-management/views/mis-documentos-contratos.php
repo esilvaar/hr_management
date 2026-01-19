@@ -24,8 +24,20 @@ if ( $employee_id ) {
     }
 }
 
-// Obtener licencias
-$documents = $db_docs->get_by_rut( $employee->rut, 'licencia' );
+// Obtener contratos (tipo 'contrato')
+$contracts = $db_docs->get_by_rut( $employee->rut, 'contrato' );
+
+// Asegurar que la lista esté ordenada por fecha de carga (más reciente primero)
+if ( ! empty( $contracts ) ) {
+    usort( $contracts, function( $a, $b ) {
+        $ta = isset( $a->fecha_carga ) ? strtotime( $a->fecha_carga ) : 0;
+        $tb = isset( $b->fecha_carga ) ? strtotime( $b->fecha_carga ) : 0;
+        return $tb <=> $ta;
+    } );
+    $latest_contract = $contracts[0];
+} else {
+    $latest_contract = null;
+}
 ?>
 
 <div class="container-fluid mt-4">
@@ -33,85 +45,45 @@ $documents = $db_docs->get_by_rut( $employee->rut, 'licencia' );
         <div class="col-12">
 
             <div class="hrm-panel mb-3">
-                <div class="hrm-panel-header">
-                    <h5 class="mb-0">
-                        <span class="dashicons dashicons-media-document"></span>
-                        Mis Licencias
-                    </h5>
-                    <small class="text-muted d-block mt-2">
-                        <?= esc_html( $employee->nombre . ' ' . $employee->apellido ) ?>
-                        (RUT: <?= esc_html( $employee->rut ) ?>)
-                    </small>
+                <div class="hrm-panel-header d-flex align-items-start justify-content-between gap-3">
+                    <div>
+                        <h5 class="mb-0">
+                            <span class="dashicons dashicons-media-document"></span>
+                            Mi Contrato
+                        </h5>
+                        <small class="text-muted d-block mt-2">
+                            <?= esc_html( $employee->nombre . ' ' . $employee->apellido ) ?>
+                            (RUT: <?= esc_html( $employee->rut ) ?>)
+                        </small>
+                    </div>
+
+                    <div class="d-flex align-items-center">
+                        <?php if ( $latest_contract ) : ?>
+                            <a href="<?= esc_url( $latest_contract->url ) ?>" class="btn btn-primary btn-sm" target="_blank" rel="noopener noreferrer" download>
+                                <span class="dashicons dashicons-download"></span> Descargar contrato
+                            </a>
+                        <?php endif; ?>
+                    </div>
                 </div>
 
                 <div class="hrm-panel-body">
 
-                    <div id="hrm-mis-documents-container">
-                        <?php if ( ! empty( $documents ) ) : ?>
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Año</th>
-                                            <th>Archivo</th>
-                                            <th>Fecha de Carga</th>
-                                            <th>Acción</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ( $documents as $doc ) : ?>
-                                            <tr data-year="<?= esc_attr( $doc->anio ) ?>">
-                                                <td><?= esc_html( $doc->anio ) ?></td>
-                                                <td>
-                                                    <span class="dashicons dashicons-media-document"></span>
-                                                    <?= esc_html( $doc->nombre ) ?>
-                                                </td>
-                                                <td>
-                                                    <small class="text-muted">
-                                                        <?php
-                                                        $date = strtotime( $doc->fecha_carga ?? 'now' );
-                                                        echo date_i18n( 'd/m/Y H:i', $date );
-                                                        ?>
-                                                    </small>
-                                                </td>
-                                                <td>
-                                                    <a href="<?= esc_url( $doc->url ) ?>"
-                                                       class="btn btn-sm btn-outline-primary"
-                                                       target="_blank"
-                                                       rel="noopener noreferrer">
-                                                        <span class="dashicons dashicons-download"></span> Descargar
-                                                    </a>
-
-                                                    <button type="button"
-                                                            class="btn btn-sm btn-secondary btn-preview-doc ms-2"
-                                                            data-url="<?= esc_url( $doc->url ) ?>">
-                                                        <span class="dashicons dashicons-visibility"></span> Previsualizar
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+                    <!-- PREVISUALIZACIÓN (mostrada inmediatamente si existe contrato) -->
+                    <?php if ( $latest_contract ) : ?>
+                        <div class="mb-4" id="hrm-preview-panel" style="display:block;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="fw-bold mb-0">Previsualización del contrato <?= '(' . esc_html( $latest_contract->anio ) . ')' ?></h6>
                             </div>
-                        <?php else : ?>
-                            <div class="alert alert-info text-center py-4">
-                                <span class="dashicons dashicons-media-document" style="font-size:48px;opacity:.5;"></span>
-                                <p class="mt-2 mb-0">No hay licencias disponibles.</p>
-                            </div>
-                        <?php endif; ?>
-                    </div>
 
-                    <!-- PREVISUALIZACIÓN -->
-                    <div class="mt-4" id="hrm-preview-panel" style="display:none;">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="fw-bold mb-0">Previsualización de documento</h6>
-                            <button type="button" id="btn-cerrar-preview" class="btn btn-sm btn-outline-secondary">
-                                Cerrar
-                            </button>
+                            <iframe id="hrm-preview-iframe" src="<?= esc_url( $latest_contract->url ) ?>" style="width:100%;min-height:600px;border:1px solid #ccc;background:#fff;"></iframe>
                         </div>
-                        <iframe id="hrm-preview-iframe"
-                                style="width:100%;min-height:600px;border:1px solid #ccc;background:#fff;"></iframe>
-                    </div>
+                    <?php else : ?>
+                        <div class="mb-4">
+                            <div class="alert alert-info mb-0">Aún no tienes un contrato.</div>
+                        </div>
+                    <?php endif; ?>
+
+                    
 
                 </div>
             </div>
@@ -121,33 +93,40 @@ $documents = $db_docs->get_by_rut( $employee->rut, 'licencia' );
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+(function(){
+    document.addEventListener('DOMContentLoaded', function () {
+        const previewPanel  = document.getElementById('hrm-preview-panel');
+        const previewIframe = document.getElementById('hrm-preview-iframe');
+        const closeBtn      = document.getElementById('btn-cerrar-preview');
 
-    const previewPanel  = document.getElementById('hrm-preview-panel');
-    const previewIframe = document.getElementById('hrm-preview-iframe');
-    const closeBtn      = document.getElementById('btn-cerrar-preview');
+        // Delegación: manejar clicks en cualquier botón de previsualizar (si existe el contenedor)
+        const misContainer = document.getElementById('hrm-mis-documents-container');
+        if ( misContainer ) {
+            misContainer.addEventListener('click', function (e) {
+                const btn = e.target.closest('.btn-preview-doc');
+                if (!btn) return;
+                const url = btn.dataset.url;
+                if (!url) return;
 
-    document.querySelectorAll('.btn-preview-doc').forEach(btn => {
-        btn.addEventListener('click', function () {
-            const url = this.dataset.url;
-            if (!url) return;
+                // Asegurarse que el documento sea de tipo 'contrato' (si se provee la info)
+                let type = '';
+                const row = btn.closest('tr');
+                if ( row ) type = row.getAttribute('data-type') || '';
+                if ( ! type ) type = btn.dataset.type || '';
+                if ( type && type.toLowerCase() !== 'contrato' ) return; // ignorar si no es contrato
 
-            // Visor nativo (mejor que Google Docs)
-            previewIframe.src = url;
-            previewPanel.style.display = 'block';
+                previewIframe.src = url;
+                previewPanel.style.display = 'block';
+                setTimeout(() => previewPanel.scrollIntoView({ behavior: 'smooth' }), 50);
+            });
+        }
 
-            setTimeout(() => {
-                previewPanel.scrollIntoView({ behavior: 'smooth' });
-            }, 50);
-        });
+        if ( closeBtn ) {
+            closeBtn.addEventListener('click', function () {
+                previewPanel.style.display = 'none';
+                previewIframe.src = '';
+            });
+        }
     });
-
-    if (closeBtn) {
-        closeBtn.addEventListener('click', function () {
-            previewPanel.style.display = 'none';
-            previewIframe.src = '';
-        });
-    }
-
-});
+})();
 </script>

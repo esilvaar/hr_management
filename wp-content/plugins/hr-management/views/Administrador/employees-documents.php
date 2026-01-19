@@ -73,7 +73,7 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
 
 
     <!-- Filtro de Año -->
-    <!-- <div class="mb-3 p-3 border-bottom">
+    <div class="mb-3 p-3 border-bottom">
         <h6 class="fw-bold mb-2">Filtrar por Año</h6>
         <div style="position: relative; display: inline-block; width: 100%; max-width: 250px;">
             <input 
@@ -84,7 +84,7 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
                 autocomplete="off">
             <div id="hrm-doc-year-filter-items" style="position: absolute; top: 100%; left: 0; min-width: 250px; max-width: 400px; background: white; border: 1px solid #dee2e6; border-top: none; max-height: 300px; overflow-y: auto; z-index: 1000; display: none;"></div>
         </div>
-    </div> -->
+    </div> 
 
     <!-- Panel de subida de documentos -->
     <div id="hrm-upload-panel" class="border rounded shadow p-4 mb-4 bg-white" style="max-width: 600px; margin: 0 auto; display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); z-index: 9999;">
@@ -159,6 +159,7 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
     </div>
 
     <!-- Listado de Documentos -->
+    <div id="hrm-documents-message"></div>
     <div id="hrm-documents-container" class="p-3 text-center">
         <div class="spinner-border text-primary" role="status">
             <span class="visually-hidden">Cargando...</span>

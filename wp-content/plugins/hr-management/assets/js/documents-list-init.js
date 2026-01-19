@@ -21,83 +21,29 @@
     }
 })();
 
-/**
- * Cargar documentos del empleado
- */
-function loadEmployeeDocuments() {
-    const container = document.getElementById('hrm-documents-container');
-    
-    if ( ! container || ! window.hrmDocsListData ) {
-        return;
-    }
-
-    const data = {
-        action: 'hrm_get_employee_documents',
-        employee_id: window.hrmDocsListData.employeeId,
-        nonce: window.hrmDocsListData.nonce,
-        doc_type: 'all'
-    };
-
-    const params = new URLSearchParams(data);
-
-    fetch(window.hrmDocsListData.ajaxUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: params
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            container.innerHTML = data.data;
-            setupDeleteButtons();
-        } else {
-            const message = data.data && data.data.message ? data.data.message : 'Error desconocido';
-            container.innerHTML = '<p class="text-danger">Error: ' + message + '</p>';
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        container.innerHTML = '<p class="text-danger">Error al cargar documentos</p>';
-    });
-}
+// Delegado: evitar duplicar la implementación real en este archivo. Las funciones principales
+// `loadEmployeeDocuments` y `setupDeleteButtons` deben estar en `assets/js/documents-list.js`.
+// Aquí solo intentamos invocar la implementación principal si está disponible.
 
 /**
- * Configurar botones de eliminar
+ * Delegated loader: if the primary implementation is available, call it; otherwise wait.
  */
-function setupDeleteButtons() {
-    const forms = document.querySelectorAll('.hrm-delete-form');
-    
-    forms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            if (!confirm('¿Estás seguro que deseas eliminar este documento?')) {
-                return;
+function initLoadEmployeeDocumentsDelegate() {
+    if ( typeof window.loadEmployeeDocuments === 'function' ) {
+        window.loadEmployeeDocuments();
+    } else {
+        document.addEventListener('DOMContentLoaded', function() {
+            if ( typeof window.loadEmployeeDocuments === 'function' ) {
+                window.loadEmployeeDocuments();
             }
-            
-            const formData = new FormData(this);
-            formData.append('action', 'hrm_delete_employee_document');
-            formData.append('nonce', window.hrmDocsListData.nonce);
-            
-            fetch(window.hrmDocsListData.ajaxUrl, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    loadEmployeeDocuments();
-                } else {
-                    const message = data.data && data.data.message ? data.data.message : 'Error desconocido';
-                    alert('Error: ' + message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error al eliminar documento');
-            });
         });
-    });
+    }
 }
+
+// Ejecutar el delegado para iniciar la carga de documentos
+initLoadEmployeeDocumentsDelegate();
+
+/**
+ * Nota: el manejo de los botones de eliminar se implementa en `documents-list.js` para evitar
+ * comportamientos duplicados y uso de alert/confirm en distintos scripts.
+ */

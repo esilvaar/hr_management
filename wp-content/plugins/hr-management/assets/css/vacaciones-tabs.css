@@ -4,6 +4,12 @@
     border-radius: 0.5rem 0.5rem 0 0;
     padding: 0.5rem;
     gap: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.nav-item {
+    margin-bottom: 0;
 }
 
 .nav-link {
@@ -14,6 +20,7 @@
     transition: all 0.3s ease;
     padding: 0.75rem 1.5rem;
     cursor: pointer;
+    display: block;
 }
 
 .nav-link:hover {
@@ -30,25 +37,44 @@
 
 .tab-content {
     position: relative;
+    display: block;
+    width: 100%;
 }
 
 .tab-pane {
-    position: absolute;
+    display: none !important;
     width: 100%;
-    left: 0;
-    top: 0;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
 .tab-pane.active {
-    position: relative;
+    display: block !important;
     opacity: 1;
     visibility: visible;
 }
 
 .tab-pane.show {
+    display: block !important;
     opacity: 1;
     visibility: visible;
+}
+
+.tab-pane.active.show {
+    display: block !important;
+    opacity: 1;
+    visibility: visible;
+}
+
+.tab-pane.fade {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.tab-pane.fade.show {
+    opacity: 1;
+}
+
+.tab-pane.fade.active {
+    opacity: 1;
 }

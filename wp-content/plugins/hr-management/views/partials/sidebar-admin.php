@@ -130,8 +130,8 @@ $logo_url = esc_url(
                         </a>
                     </li>
                     <li>
-                        <a class="nav-link px-3 py-2 <?= hrm_is_active_sidebar('hrm-debug-vacaciones-empleado'); ?>"
-                           href="<?= esc_url( admin_url('admin.php?page=hrm-debug-vacaciones-empleado') ); ?>">
+                        <a class="nav-link px-3 py-2 <?= hrm_is_active_sidebar('hrm-mi-perfil-vacaciones'); ?>"
+                           href="<?= esc_url( admin_url('admin.php?page=hrm-mi-perfil-vacaciones') ); ?>">
                             Mis vacaciones
                         </a>
                     </li>

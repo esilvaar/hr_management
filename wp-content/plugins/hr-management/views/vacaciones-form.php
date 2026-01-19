@@ -288,10 +288,9 @@ document.addEventListener('DOMContentLoaded', function () {
     
     if (!inicio || !fin) return;
     
-    // La fecha de inicio debe ser al menos un mes después de hoy
+    // La fecha de inicio debe ser hoy en adelante
     const hoy = new Date();
-    const unMesDelante = new Date(hoy.getFullYear(), hoy.getMonth() + 1, hoy.getDate());
-    const fechaMinimaStr = unMesDelante.toISOString().split('T')[0];
+    const fechaMinimaStr = hoy.toISOString().split('T')[0];
     inicio.min = fechaMinimaStr;
     
     // Objeto para almacenar feriados (clave: YYYY-MM-DD)

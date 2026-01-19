@@ -129,8 +129,8 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                             <span class="dashicons dashicons-media-document"></span>
                         </div>
                         <div class="hrm-doc-btn-content">
-                            <div class="hrm-doc-btn-title">Contratos</div>
-                            <div class="hrm-doc-btn-desc">Accede a tus contratos</div>
+                            <div class="hrm-doc-btn-title">Contrato</div>
+                            <div class="hrm-doc-btn-desc">Accede a tu contrato</div>
                         </div>
                         <div class="hrm-doc-btn-arrow">
                             <span class="dashicons dashicons-arrow-right-alt2"></span>
@@ -143,7 +143,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                         <div class="hrm-doc-btn-content">
                             <div class="hrm-doc-btn-title">Liquidaciones</div>
                             <div class="hrm-doc-btn-desc">Accede a tus liquidaciones</div>
-                        </div>
+                        </div>|
                         <div class="hrm-doc-btn-arrow">
                             <span class="dashicons dashicons-arrow-right-alt2"></span>
                         </div>
