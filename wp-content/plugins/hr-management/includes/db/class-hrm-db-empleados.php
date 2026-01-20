@@ -96,6 +96,14 @@ class HRM_DB_Empleados extends HRM_DB_Table {
         return $this->get_by_wp_user( $user_id );
     }
 
+    /**
+     * Obtener empleado por email (retorna objeto o null)
+     */
+    public function get_by_email( $email ) {
+        $select = $this->get_select_columns();
+        return $this->db->get_row( $this->db->prepare( "SELECT {$select} FROM {$this->table()} WHERE {$this->col('email')} = %s", $email ) );
+    }
+
     public function create( $data ) {
         $insert_data = [
             $this->col('rut')              => sanitize_text_field( $data['rut'] ),

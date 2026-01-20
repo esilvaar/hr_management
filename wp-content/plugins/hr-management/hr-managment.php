@@ -265,6 +265,16 @@ function hrm_enqueue_admin_assets() {
                 HRM_PLUGIN_VERSION,
                 true
             );
+
+            // Pasar ajaxUrl y nonce al script de crear empleados
+            wp_localize_script(
+                'hrm-employees-create',
+                'hrmCreateData',
+                array(
+                    'ajaxUrl' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce( 'hrm_check_email_nonce' ),
+                )
+            );
         }
     }
 }

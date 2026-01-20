@@ -60,4 +60,13 @@ abstract class HRM_DB_Table {
     public function table() {
         return $this->table;
     }
+
+    /**
+     * Obtener el último error de la conexión DB (si lo hubiera)
+     * Devuelve string vacío si no hay error
+     */
+    public function last_error() {
+        return isset( $this->db->last_error ) ? $this->db->last_error : '';
+    }
 }
+

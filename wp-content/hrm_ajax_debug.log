@@ -1,0 +1,56 @@
+2026-01-20T18:48:05+00:00 - hrm_check_email invoked by user_id=1 REQUEST_KEYS=["action","email_b64","nonce"]
+2026-01-20T18:48:05+00:00 - SHUTDOWN ERROR: Array
+(
+    [type] => 1
+    [message] => Uncaught Error: Cannot access protected property HRM_DB_Empleados::$db in /home/rrhhanacondaweb/public_html/wp-content/plugins/hr-management/includes/ajax.php:598
+Stack trace:
+#0 /home/rrhhanacondaweb/public_html/wp-includes/class-wp-hook.php(341): hrm_ajax_check_email('')
+#1 /home/rrhhanacondaweb/public_html/wp-includes/class-wp-hook.php(365): WP_Hook->apply_filters('', Array)
+#2 /home/rrhhanacondaweb/public_html/wp-includes/plugin.php(522): WP_Hook->do_action(Array)
+#3 /home/rrhhanacondaweb/public_html/wp-admin/admin-ajax.php(192): do_action('wp_ajax_hrm_che...')
+#4 {main}
+  thrown
+    [file] => /home/rrhhanacondaweb/public_html/wp-content/plugins/hr-management/includes/ajax.php
+    [line] => 598
+)
+
+ACTION_SNIPPET: Array
+(
+    [action] => hrm_check_email
+    [email_b64] => ZWR1YXJkby5zaWx2YTFAY2xvdWQudWF1dG9ub21hLmNs
+    [nonce] => 5f72bea71e
+)
+
+SERVER_SNIPPET: Array
+(
+    [REQUEST_URI] => /wp-admin/admin-ajax.php
+    [REQUEST_METHOD] => POST
+    [REMOTE_ADDR] => 200.126.68.202
+    [HTTP_USER_AGENT] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 OPR/125.0.0.0
+)
+
+2026-01-20T18:52:08+00:00 - SHUTDOWN ERROR: Array
+(
+    [type] => 4
+    [message] => syntax error, unexpected string content "", expecting "-" or identifier or variable or number
+    [file] => /home/rrhhanacondaweb/public_html/wp-content/plugins/hr-management/includes/db/class-hrm-db-empleados.php
+    [line] => 109
+)
+
+ACTION_SNIPPET: Array
+(
+    [action] => heartbeat
+)
+
+SERVER_SNIPPET: Array
+(
+    [REQUEST_URI] => /wp-admin/admin-ajax.php
+    [REQUEST_METHOD] => POST
+    [REMOTE_ADDR] => 200.126.68.202
+    [HTTP_USER_AGENT] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 OPR/125.0.0.0
+)
+
+2026-01-20T18:55:05+00:00 - hrm_check_email invoked by user_id=1 REQUEST_KEYS=["action","email_b64","nonce"]
+2026-01-20T18:56:14+00:00 - hrm_check_email invoked by user_id=1 REQUEST_KEYS=["action","email_b64","nonce"]
+2026-01-20T18:58:45+00:00 - hrm_check_email invoked by user_id=1 REQUEST_KEYS=["action","email_b64","nonce"]
+2026-01-20T18:59:32+00:00 - hrm_check_email invoked by user_id=1 REQUEST_KEYS=["action","email_b64","nonce"]

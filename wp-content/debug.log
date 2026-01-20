@@ -19547,3 +19547,37 @@
 [19-Jan-2026 14:49:25 UTC] HR Management: vacaciones.php force-loaded on admin_init
 [19-Jan-2026 14:49:25 UTC] HRM: Administrator role has ALL capabilities
 [19-Jan-2026 14:49:25 UTC] HRM: Supervisor capabilities updated. Has edit_hrm_employees: YES
+[19-Jan-2026 14:53:05 UTC] HRM: Administrator role has ALL capabilities
+[19-Jan-2026 14:53:05 UTC] HRM: Supervisor capabilities updated. Has edit_hrm_employees: YES
+[19-Jan-2026 14:53:07 UTC] HRM: Administrator role has ALL capabilities
+[19-Jan-2026 14:53:07 UTC] HRM: Supervisor capabilities updated. Has edit_hrm_employees: YES
+[19-Jan-2026 14:53:15 UTC] HRM: Administrator role has ALL capabilities
+[19-Jan-2026 14:53:15 UTC] HRM: Supervisor capabilities updated. Has edit_hrm_employees: YES
+[19-Jan-2026 14:56:25 UTC] HRM: Administrator role has ALL capabilities
+[19-Jan-2026 14:56:25 UTC] HRM: Supervisor capabilities updated. Has edit_hrm_employees: YES
+[19-Jan-2026 14:56:25 UTC] HR Management: vacaciones.php force-loaded on admin_init
+[19-Jan-2026 14:56:25 UTC] HRM: Administrator role has ALL capabilities
+[19-Jan-2026 14:56:25 UTC] HRM: Supervisor capabilities updated. Has edit_hrm_employees: YES
+[19-Jan-2026 14:58:13 UTC] HRM: Administrator role has ALL capabilities
+[19-Jan-2026 14:58:13 UTC] HRM: Supervisor capabilities updated. Has edit_hrm_employees: YES
+[19-Jan-2026 14:58:13 UTC] [HRM-DEBUG] hrm_register_admin_menus user_id=1 roles=["administrator","erp_hr_manager","erp_crm_manager","erp_ac_manager"] manage_options=YES view_hrm_admin_views=YES is_anaconda=NO
+[19-Jan-2026 14:58:13 UTC] [HRM-DEBUG] Registered top-level Convivencia for admin user_id=1
+[19-Jan-2026 14:58:13 UTC] HR Management: vacaciones.php force-loaded on admin_init
+[19-Jan-2026 14:58:13 UTC] HRM: Administrator role has ALL capabilities
+[19-Jan-2026 14:58:13 UTC] HRM: Supervisor capabilities updated. Has edit_hrm_employees: YES
+[19-Jan-2026 14:58:14 UTC] HRM: Administrator role has ALL capabilities
+[19-Jan-2026 14:58:14 UTC] HRM: Supervisor capabilities updated. Has edit_hrm_employees: YES
+[19-Jan-2026 14:59:29 UTC] HRM: Administrator role has ALL capabilities
+[19-Jan-2026 14:59:29 UTC] HRM: Supervisor capabilities updated. Has edit_hrm_employees: YES
+[19-Jan-2026 14:59:30 UTC] HR Management: vacaciones.php force-loaded on admin_init
+[19-Jan-2026 14:59:30 UTC] HRM: Administrator role has ALL capabilities
+[19-Jan-2026 14:59:30 UTC] HRM: Supervisor capabilities updated. Has edit_hrm_employees: YES
+[19-Jan-2026 14:59:31 UTC] HRM: Administrator role has ALL capabilities
+[19-Jan-2026 14:59:31 UTC] HRM: Supervisor capabilities updated. Has edit_hrm_employees: YES
+[19-Jan-2026 15:01:17 UTC] HRM: Administrator role has ALL capabilities
+[19-Jan-2026 15:01:17 UTC] HRM: Supervisor capabilities updated. Has edit_hrm_employees: YES
+[19-Jan-2026 15:01:17 UTC] HR Management: vacaciones.php force-loaded on admin_init
+[19-Jan-2026 15:01:17 UTC] HRM: Administrator role has ALL capabilities
+[19-Jan-2026 15:01:17 UTC] HRM: Supervisor capabilities updated. Has edit_hrm_employees: YES
+[19-Jan-2026 15:01:18 UTC] HRM: Administrator role has ALL capabilities
+[19-Jan-2026 15:01:18 UTC] HRM: Supervisor capabilities updated. Has edit_hrm_employees: YES

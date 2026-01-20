@@ -316,7 +316,8 @@ $hrm_puestos = apply_filters( 'hrm_puestos', array(
     'Administrativo(a) Contable',
     'Asistente Comercial',
     'Desarrollador de Software',
-    'Diseñador Gráfico'
+    'Diseñador Gráfico',
+    'Practicante',
 ) );
 $hrm_tipos_documento = apply_filters( 'hrm_tipos_documento', array( 'Contrato', 'Liquidaciones', 'Licencia' ) );
 $hrm_tipos_contrato = apply_filters( 'hrm_tipos_contrato', array( 'Indefinido', 'Plazo Fijo', 'Por Proyecto' ) );

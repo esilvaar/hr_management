@@ -1,6 +1,22 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+// Registrar un shutdown handler y un log inicial para peticiones AJAX
+if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) {
+    // Log inicial para depuración rápida
+    error_log( 'HRM AJAX START - action=' . ( isset( $_REQUEST['action'] ) ? $_REQUEST['action'] : '(none)' ) . ' REQUEST_KEYS=' . json_encode( array_keys( $_REQUEST ) ) );
+
+    // Registrar shutdown para capturar errores fatales que no llegan al stack normal
+    register_shutdown_function( function() {
+        $err = error_get_last();
+        if ( $err && in_array( $err['type'], array( E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR ), true ) ) {
+            error_log( 'HRM AJAX SHUTDOWN ERROR: ' . print_r( $err, true ) );
+            // Mostrar algunos parámetros útiles (sin volcar todo el request para evitar datos sensibles)
+            error_log( 'HRM AJAX SHUTDOWN - REQUEST_SNIPPET: ' . print_r( array_intersect_key( $_REQUEST, array( 'action' => 1, 'email' => 1, 'email_b64' => 1, 'nonce' => 1 ) ), true ) );
+        }
+    } );
+}
+
 // Endpoint AJAX para descargar liquidaciones en ZIP
 add_action('wp_ajax_hrm_descargar_liquidaciones', 'hrm_ajax_descargar_liquidaciones');
 function hrm_ajax_descargar_liquidaciones() {
@@ -526,6 +542,87 @@ function hrm_ajax_rechazar_solicitud_supervisor() {
 
 // Enganchar las funciones AJAX
 add_action( 'wp_ajax_hrm_get_employee_documents', 'hrm_ajax_get_employee_documents' );
+
+/**
+ * Endpoint AJAX: Comprobar si un email ya existe en WP
+ * Retorna JSON { success: true, data: { exists: bool, user_id: int|null } }
+ */
+function hrm_ajax_check_email() {
+    // Debug: registrar llamada para detectar problemas que causan 500
+    $current_user_id = get_current_user_id();
+    error_log( "HRM AJAX hrm_check_email called by user_id={$current_user_id}. REQUEST=" . json_encode( array_intersect_key( $_REQUEST, array( 'action' => 1, 'email' => 1, 'email_b64' => 1, 'nonce' => 1 ) ) ) );
+    // Also append to a file in wp-content to capture logs if syslog is suppressed
+    @file_put_contents( WP_CONTENT_DIR . '/hrm_ajax_debug.log', date( 'c' ) . " - hrm_check_email invoked by user_id={$current_user_id} REQUEST_KEYS=" . json_encode( array_keys( $_REQUEST ) ) . PHP_EOL, FILE_APPEND );
+
+    // Solo para usuarios con permisos de administración de empleados o creación de usuarios
+    if ( ! current_user_can( 'edit_hrm_employees' ) && ! current_user_can( 'create_users' ) && ! current_user_can( 'manage_options' ) ) {
+        error_log( "HRM AJAX hrm_check_email - permission denied for user_id={$current_user_id}" );
+        wp_send_json_error( array( 'message' => 'No tienes permisos para verificar este email.' ), 403 );
+    }
+
+    $nonce = isset( $_REQUEST['nonce'] ) ? sanitize_text_field( $_REQUEST['nonce'] ) : '';
+    if ( ! wp_verify_nonce( $nonce, 'hrm_check_email_nonce' ) ) {
+        error_log( "HRM AJAX hrm_check_email - invalid nonce for user_id={$current_user_id}" );
+        wp_send_json_error( array( 'message' => 'Nonce inválido' ), 403 );
+    }
+
+    // Support base64-encoded email (email_b64) to avoid WAF/ModSecurity blocking of raw email in POST bodies
+    $email = '';
+    if ( isset( $_REQUEST['email_b64'] ) ) {
+        $email_b64 = wp_unslash( $_REQUEST['email_b64'] );
+        $decoded = base64_decode( $email_b64, true );
+        if ( $decoded === false ) {
+            error_log( "HRM AJAX hrm_check_email - invalid base64 for email_b64" );
+            wp_send_json_error( array( 'message' => 'Email inválido (codificación)' ), 400 );
+        }
+        $email = sanitize_email( $decoded );
+        error_log( "HRM AJAX hrm_check_email - received email via base64: {$email}" );
+    } elseif ( isset( $_REQUEST['email'] ) ) {
+        $email = sanitize_email( wp_unslash( $_REQUEST['email'] ) );
+    }
+
+    if ( empty( $email ) || ! is_email( $email ) ) {
+        error_log( "HRM AJAX hrm_check_email - invalid email provided: '{$email}'" );
+        wp_send_json_error( array( 'message' => 'Email inválido' ), 400 );
+    }
+
+    // Comprobar usuario WP
+    try {
+        $user_id = email_exists( $email );
+
+        // Comprobar en tabla de empleados (correo)
+        hrm_ensure_db_classes();
+        $db_emp = new HRM_DB_Empleados();
+
+        // Usar prepare y get_row dentro de try/catch para capturar errores SQL
+        // Usar el método seguro en la clase para buscar por email
+        $empleado = $db_emp->get_by_email( $email );
+
+        // Verificar errores SQL inesperados a través del accessor
+        $last_error = $db_emp->last_error();
+        if ( ! empty( $last_error ) ) {
+            error_log( "HRM AJAX hrm_check_email - SQL error: " . $last_error );
+            wp_send_json_error( array( 'message' => 'Error en la consulta de la base de datos.' ), 500 );
+        }
+
+    } catch ( Exception $e ) {
+        error_log( "HRM AJAX hrm_check_email - Exception: " . $e->getMessage() );
+        wp_send_json_error( array( 'message' => 'Error interno al verificar email.' ), 500 );
+    }
+
+    $response = array(
+        'exists_wp' => (bool) $user_id,
+        'wp_user_id' => $user_id ? intval( $user_id ) : null,
+        'exists_emp' => ! empty( $empleado ),
+        'employee_id' => ! empty( $empleado ) ? intval( $empleado->id ) : null,
+        'employee_name' => ! empty( $empleado ) ? trim( ($empleado->nombre ?? '') . ' ' . ($empleado->apellido ?? '') ) : '',
+    );
+
+    error_log( "HRM AJAX hrm_check_email - response: " . json_encode( $response ) );
+
+    wp_send_json_success( $response );
+}
+add_action( 'wp_ajax_hrm_check_email', 'hrm_ajax_check_email' );
 add_action( 'wp_ajax_hrm_delete_employee_document', 'hrm_ajax_delete_employee_document' );
 add_action( 'wp_ajax_hrm_aprobar_solicitud_supervisor', 'hrm_ajax_aprobar_solicitud_supervisor' );
 add_action( 'wp_ajax_hrm_rechazar_solicitud_supervisor', 'hrm_ajax_rechazar_solicitud_supervisor' );

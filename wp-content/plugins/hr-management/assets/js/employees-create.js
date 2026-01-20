@@ -112,23 +112,234 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // ===== Validación de Email (misma lógica que RUT) =====
+    const emailInput = document.getElementById('hrm_email');
+    const emailFeedback = document.getElementById('hrm_email_feedback');
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+    function validarEmail(email) {
+        if (!email) return false;
+        return emailRegex.test(email.trim());
+    }
+
+    if (emailInput && emailFeedback) {
+        emailInput.addEventListener('blur', async function() {
+            const email = this.value.trim();
+
+            if (!email) {
+                emailFeedback.style.display = 'none';
+                emailInput.classList.remove('is-invalid', 'is-valid');
+                return;
+            }
+
+            if (!validarEmail(email)) {
+                emailInput.classList.remove('is-valid');
+                emailInput.classList.add('is-invalid');
+                emailFeedback.className = 'mt-2 alert alert-danger alert-sm mb-0';
+                emailFeedback.innerHTML = '<i class="dashicons dashicons-no"></i> Email inválido (formato incorrecto)';
+                emailFeedback.style.display = 'block';
+                return;
+            }
+
+            // Si formato OK, consultar al servidor si ya existe
+            try {
+                console.debug('hrm_check_email (blur) sending', email);
+                const resp = await fetch(hrmCreateData.ajaxUrl, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                    body: new URLSearchParams({ action: 'hrm_check_email', email_b64: btoa(email), nonce: hrmCreateData.nonce }).toString()
+                });
+
+                if ( !resp.ok ) {
+                    const text = await resp.text();
+                    console.error('hrm_check_email failed (blur): status=' + resp.status, text);
+                    emailInput.classList.remove('is-valid');
+                    emailInput.classList.add('is-invalid');
+                    emailFeedback.className = 'mt-2 alert alert-danger alert-sm mb-0';
+                    emailFeedback.innerHTML = '<i class="dashicons dashicons-no"></i> Error verificando email (servidor ' + resp.status + ')';
+                    emailFeedback.style.display = 'block';
+                    return;
+                }
+
+                let json;
+                try {
+                    json = await resp.json();
+                } catch (e) {
+                    const text = await resp.text();
+                    console.error('hrm_check_email returned non-JSON (blur):', text);
+                    emailInput.classList.remove('is-valid');
+                    emailInput.classList.add('is-invalid');
+                    emailFeedback.className = 'mt-2 alert alert-danger alert-sm mb-0';
+                    emailFeedback.innerHTML = '<i class="dashicons dashicons-no"></i> Error verificando email (respuesta inválida)';
+                    emailFeedback.style.display = 'block';
+                    return;
+                }
+
+                if ( json.success && json.data ) {
+                    const d = json.data;
+                    // Si existe en tabla empleados, prioridad para ese mensaje
+                    if ( d.exists_emp ) {
+                        emailInput.classList.remove('is-valid');
+                        emailInput.classList.add('is-invalid');
+                        emailFeedback.className = 'mt-2 alert alert-danger alert-sm mb-0';
+                        emailFeedback.innerHTML = '<i class="dashicons dashicons-no"></i> Email ya asociado a un empleado (ID: ' + d.employee_id + ')';
+                        emailFeedback.style.display = 'block';
+                    } else if ( d.exists_wp ) {
+                        emailInput.classList.remove('is-valid');
+                        emailInput.classList.add('is-invalid');
+                        emailFeedback.className = 'mt-2 alert alert-danger alert-sm mb-0';
+                        emailFeedback.innerHTML = '<i class="dashicons dashicons-no"></i> Email ya registrado en WordPress (ID: ' + d.wp_user_id + ')';
+                        emailFeedback.style.display = 'block';
+                    } else {
+                        emailInput.classList.remove('is-invalid');
+                        emailInput.classList.add('is-valid');
+                        emailFeedback.className = 'mt-2 alert alert-success alert-sm mb-0';
+                        emailFeedback.innerHTML = '<i class="dashicons dashicons-yes"></i> Email válido y disponible';
+                        emailFeedback.style.display = 'block';
+                    }
+                } else {
+                    // Error de servidor (JSON de error)
+                    console.error('hrm_check_email returned success=false', json);
+                    emailInput.classList.remove('is-valid');
+                    emailInput.classList.add('is-invalid');
+                    emailFeedback.className = 'mt-2 alert alert-danger alert-sm mb-0';
+                    emailFeedback.innerHTML = '<i class="dashicons dashicons-no"></i> Error verificando email';
+                    emailFeedback.style.display = 'block';
+                }
+            } catch (err) {
+                console.error('hrm_check_email fetch error (blur):', err);
+                emailInput.classList.remove('is-valid');
+                emailInput.classList.add('is-invalid');
+                emailFeedback.className = 'mt-2 alert alert-danger alert-sm mb-0';
+                emailFeedback.innerHTML = '<i class="dashicons dashicons-no"></i> Error verificando email';
+                emailFeedback.style.display = 'block';
+            }
+        });
+
+        emailInput.addEventListener('input', function() {
+            // Ocultar feedback mientras se escribe
+            emailFeedback.style.display = 'none';
+            emailInput.classList.remove('is-valid', 'is-invalid');
+        });
+    }
+
     // Validación al enviar el formulario
     if (form) {
         form.addEventListener('submit', function(e) {
+            // Validar RUT
             if (rutInput && rutInput.value.trim()) {
                 const rut = rutInput.value.trim();
-                
+
                 if (!validarRUT(rut)) {
                     e.preventDefault();
                     rutInput.classList.add('is-invalid');
                     rutFeedback.className = 'mt-2 alert alert-danger alert-sm mb-0';
                     rutFeedback.innerHTML = '<i class="dashicons dashicons-no"></i> RUT inválido. Debe cumplir el formato 12345678-9';
                     rutFeedback.style.display = 'block';
-                    
+
                     // Hacer scroll al campo de error
                     rutInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     return false;
                 }
+            }
+
+            // Validar Email (misma lógica centralizada)
+            if (emailInput && emailInput.value.trim()) {
+                const email = emailInput.value.trim();
+
+                if (!validarEmail(email)) {
+                    e.preventDefault();
+                    emailInput.classList.add('is-invalid');
+                    emailFeedback.className = 'mt-2 alert alert-danger alert-sm mb-0';
+                    emailFeedback.innerHTML = '<i class="dashicons dashicons-no"></i> Email inválido. Debe cumplir el formato usuario@dominio.com';
+                    emailFeedback.style.display = 'block';
+
+                    // Hacer scroll al campo de error
+                    emailInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return false;
+                }
+
+                // Verificar existencia en servidor (sincronizar)
+                e.preventDefault();
+                (async function() {
+                        try {
+                        console.debug('hrm_check_email (submit) sending', email);
+                        const resp = await fetch(hrmCreateData.ajaxUrl, {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                            body: new URLSearchParams({ action: 'hrm_check_email', email_b64: btoa(email), nonce: hrmCreateData.nonce }).toString()
+                        });
+
+                        if ( !resp.ok ) {
+                            const text = await resp.text();
+                            console.error('hrm_check_email failed (submit): status=' + resp.status, text);
+                            emailInput.classList.remove('is-valid');
+                            emailInput.classList.add('is-invalid');
+                            emailFeedback.className = 'mt-2 alert alert-danger alert-sm mb-0';
+                            emailFeedback.innerHTML = '<i class="dashicons dashicons-no"></i> Error verificando email (servidor ' + resp.status + ')';
+                            emailFeedback.style.display = 'block';
+                            emailInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            return false;
+                        }
+
+                        let json;
+                        try {
+                            json = await resp.json();
+                        } catch (e) {
+                            const text = await resp.text();
+                            console.error('hrm_check_email returned non-JSON (submit):', text);
+                            emailInput.classList.remove('is-valid');
+                            emailInput.classList.add('is-invalid');
+                            emailFeedback.className = 'mt-2 alert alert-danger alert-sm mb-0';
+                            emailFeedback.innerHTML = '<i class="dashicons dashicons-no"></i> Error verificando email (respuesta inválida)';
+                            emailFeedback.style.display = 'block';
+                            emailInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            return false;
+                        }
+
+                        if ( json.success && json.data ) {
+                            const d = json.data;
+                            if ( d.exists_emp ) {
+                                emailInput.classList.remove('is-valid');
+                                emailInput.classList.add('is-invalid');
+                                emailFeedback.className = 'mt-2 alert alert-danger alert-sm mb-0';
+                                emailFeedback.innerHTML = '<i class="dashicons dashicons-no"></i> Email ya asociado a un empleado (ID: ' + d.employee_id + (d.employee_name ? ' - ' + d.employee_name : '') + ')';
+                                emailFeedback.style.display = 'block';
+                                emailInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                return false;
+                            } else if ( d.exists_wp ) {
+                                emailInput.classList.remove('is-valid');
+                                emailInput.classList.add('is-invalid');
+                                emailFeedback.className = 'mt-2 alert alert-danger alert-sm mb-0';
+                                emailFeedback.innerHTML = '<i class="dashicons dashicons-no"></i> Email ya registrado en WordPress (ID: ' + d.wp_user_id + ')';
+                                emailFeedback.style.display = 'block';
+                                emailInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                return false;
+                            }
+
+                            // Si todo OK, reintentar submit
+                            e.target.submit();
+                        } else {
+                            // Error de servidor
+                            console.error('hrm_check_email returned success=false (submit)', json);
+                            emailInput.classList.remove('is-valid');
+                            emailInput.classList.add('is-invalid');
+                            emailFeedback.className = 'mt-2 alert alert-danger alert-sm mb-0';
+                            emailFeedback.innerHTML = '<i class="dashicons dashicons-no"></i> Error verificando email';
+                            emailFeedback.style.display = 'block';
+                        }
+                    } catch (err) {
+                        console.error('hrm_check_email fetch error (submit):', err);
+                        emailInput.classList.remove('is-valid');
+                        emailInput.classList.add('is-invalid');
+                        emailFeedback.className = 'mt-2 alert alert-danger alert-sm mb-0';
+                        emailFeedback.innerHTML = '<i class="dashicons dashicons-no"></i> Error verificando email';
+                        emailFeedback.style.display = 'block';
+                    }
+                })();
+                return false;
             }
         });
     }

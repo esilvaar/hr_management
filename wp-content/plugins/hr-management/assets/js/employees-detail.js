@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const departamentoSelect = document.getElementById('departamento');
     const puestoSelect = document.getElementById('puesto');
     const areaGerenciaSelect = document.getElementById('area_gerencia');
-    const areaGerenciaContainer = areaGerenciaSelect.closest('.col-md-6');
+    const areaGerenciaContainer = areaGerenciaSelect ? areaGerenciaSelect.closest('.col-md-6') : null;
     const deptosCargoContainer = document.getElementById('deptos_a_cargo_container');
     const deptosCheckboxesDiv = document.getElementById('deptos_checkboxes');
     
@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const todosDeptos = hrmEmployeeData.departamentos || [];
     
     // Mapeo de áreas gerenciales con sus departamentos predefinidos
-    const deptosPredefi nidos = {
+    const deptosPredefinidos = {
         'comercial': ['Soporte', 'Ventas'],
         'proyectos': ['Desarrollo'],
         'operaciones': ['Administracion', 'Gerencia', 'Sistemas']
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Obtener departamentos predefinidos para este área
-        const deptosAMarcar = deptosPredefi nidos[areaValue] || [];
+        const deptosAMarcar = deptosPredefinidos[areaValue] || [];
         
         // Obtener departamentos ya asignados (desde la BD)
         const asignados = await loadAsignedDeparments();
@@ -85,8 +85,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // 1. Si ya está asignado en la BD, marcarlo
             // 2. Si es un nuevo gerente, marcar los predefinidos
             const estaAsignado = asignados.includes(depto);
-            const estaPredefi nido = deptosAMarcar.some( d => d.toLowerCase() === depto.toLowerCase() );
-            const checked = (estaAsignado || estaPredefi nido) ? 'checked' : '';
+            const estaPredefinido = deptosAMarcar.some( d => d.toLowerCase() === depto.toLowerCase() );
+            const checked = (estaAsignado || estaPredefinido) ? 'checked' : '';
             
             const id = 'depto_checkbox_' + index;
             html += `
@@ -107,8 +107,8 @@ document.addEventListener('DOMContentLoaded', function() {
      * Alternar visibilidad de área de gerencia según puesto/departamento
      */
     function toggleAreaGerencia() {
-        const puestoValue = puestoSelect.value.toLowerCase().trim();
-        const deptoValue = departamentoSelect.value.toLowerCase().trim();
+        const puestoValue = (puestoSelect && puestoSelect.value) ? puestoSelect.value.toLowerCase().trim() : '';
+        const deptoValue = (departamentoSelect && departamentoSelect.value) ? departamentoSelect.value.toLowerCase().trim() : '';
         
         // Mostrar área de gerencia y departamentos solo si:
         // 1. El puesto es "Gerente" O
@@ -116,39 +116,41 @@ document.addEventListener('DOMContentLoaded', function() {
         const esGerente = puestoValue === 'gerente' || deptoValue === 'gerencia';
         
         if ( esGerente ) {
-            areaGerenciaContainer.style.display = 'block';
+            if ( areaGerenciaContainer ) areaGerenciaContainer.style.display = 'block';
             // Si hay un área seleccionada, mostrar los checkboxes
-            if ( areaGerenciaSelect.value !== '' ) {
-                deptosCargoContainer.style.display = 'block';
+            if ( areaGerenciaSelect && areaGerenciaSelect.value !== '' ) {
+                if ( deptosCargoContainer ) deptosCargoContainer.style.display = 'block';
                 loadDepartamentosCheckboxes();
             }
         } else {
-            areaGerenciaContainer.style.display = 'none';
-            deptosCargoContainer.style.display = 'none';
-            areaGerenciaSelect.value = '';
-            deptosCheckboxesDiv.innerHTML = '';
+            if ( areaGerenciaContainer ) areaGerenciaContainer.style.display = 'none';
+            if ( deptosCargoContainer ) deptosCargoContainer.style.display = 'none';
+            if ( areaGerenciaSelect ) areaGerenciaSelect.value = '';
+            if ( deptosCheckboxesDiv ) deptosCheckboxesDiv.innerHTML = '';
         }
     }
     
     // Event listeners
-    departamentoSelect.addEventListener('change', toggleAreaGerencia);
-    puestoSelect.addEventListener('change', toggleAreaGerencia);
+    if ( departamentoSelect ) departamentoSelect.addEventListener('change', toggleAreaGerencia);
+    if ( puestoSelect ) puestoSelect.addEventListener('change', toggleAreaGerencia);
     
-    areaGerenciaSelect.addEventListener('change', function() {
-        const puestoValue = puestoSelect.value.toLowerCase().trim();
-        const deptoValue = departamentoSelect.value.toLowerCase().trim();
-        const esGerente = puestoValue === 'gerente' || deptoValue === 'gerencia';
-        
-        if ( esGerente ) {
-            if ( areaGerenciaSelect.value !== '' ) {
-                deptosCargoContainer.style.display = 'block';
-                loadDepartamentosCheckboxes();
-            } else {
-                deptosCargoContainer.style.display = 'none';
-                deptosCheckboxesDiv.innerHTML = '';
+    if ( areaGerenciaSelect ) {
+        areaGerenciaSelect.addEventListener('change', function() {
+            const puestoValue = puestoSelect ? puestoSelect.value.toLowerCase().trim() : '';
+            const deptoValue = departamentoSelect ? departamentoSelect.value.toLowerCase().trim() : '';
+            const esGerente = puestoValue === 'gerente' || deptoValue === 'gerencia';
+            
+            if ( esGerente ) {
+                if ( areaGerenciaSelect.value !== '' ) {
+                    if ( deptosCargoContainer ) deptosCargoContainer.style.display = 'block';
+                    loadDepartamentosCheckboxes();
+                } else {
+                    if ( deptosCargoContainer ) deptosCargoContainer.style.display = 'none';
+                    if ( deptosCheckboxesDiv ) deptosCheckboxesDiv.innerHTML = '';
+                }
             }
-        }
-    });
+        });
+    }
     
     // Inicializar
     toggleAreaGerencia();

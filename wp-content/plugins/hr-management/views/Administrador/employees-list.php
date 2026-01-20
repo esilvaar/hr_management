@@ -152,15 +152,15 @@ if ( ! empty( $lista_empleados ) ) {
                                         <div class="mb-3">
                                             <span class="dashicons dashicons-lock" style="font-size: 64px; opacity: 0.5;"></span>
                                         </div>
-                                        <p class="fs-5 fw-semibold mb-2">No hay empleados inactivos.</p>
+                                        <p class="fs-5 fw-semibold m-2">No hay empleados inactivos.</p>
                                         <a href="?page=hrm-empleados&tab=list" class="btn btn-secondary mt-2">
                                             <span class="dashicons dashicons-visibility"></span> Ver Empleados Activos
                                         </a>
                                     <?php else : ?>
                                         <div class="mb-3">
-                                            <span class="dashicons dashicons-admin-users" style="font-size: 64px; opacity: 0.5;"></span>
+                                            <span class="dashicons dashicons-admin-users mb-3" style="font-size: 64px; opacity: 0.5;"></span>
                                         </div>
-                                        <p class="fs-5 fw-semibold mb-2">No hay empleados activos registrados.</p>
+                                        <p class="fs-5 fw-semibold m-2">No hay empleados activos registrados.</p>
                                         <a href="?page=hrm-empleados&tab=new" class="btn btn-primary mt-2">
                                             <span class="dashicons dashicons-plus-alt2"></span> Crear Primer Empleado
                                         </a>

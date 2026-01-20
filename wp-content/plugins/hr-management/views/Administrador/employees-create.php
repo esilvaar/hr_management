@@ -10,12 +10,12 @@ $wp_roles = function_exists( 'hrm_get_allowed_employee_roles' ) ? hrm_get_allowe
 
 <div class="d-flex justify-content-center">
     <div class="rounded shadow-sm w-100">
-
+        
         <!-- HEADER -->
         <div class="d-flex justify-content-between align-items-center p-3 bg-dark text-white rounded-top">
             <h2 class="mb-0">Crear Nuevo Empleado</h2>
         </div>
-
+        
         <div class="card-body p-4">
 
             <form method="post">
@@ -24,35 +24,39 @@ $wp_roles = function_exists( 'hrm_get_allowed_employee_roles' ) ? hrm_get_allowe
                 <!-- Hidden inputs para guardar los años calculados -->
                 <input type="hidden" id="hrm_anos_en_la_empresa_hidden" name="anos_en_la_empresa" value="0">
                 <input type="hidden" id="hrm_anos_totales_trabajados_hidden" name="anos_totales_trabajados" value="0">
-
+                
                 <!-- SECCIÓN 1: DATOS REQUERIDOS -->
                 <fieldset class="hrm-form-section mb-4">
-
+                    
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="hrm_rut" class="form-label">RUT <span class="text-danger">*</span></label>
                             <input id="hrm_rut" name="rut" type="text" placeholder="12345678-9" class="form-control" required>
-                            <small class="form-text d-block mt-1">
-                                Formato: 12345678-5 (sin puntos)
-                            </small>
                             <div id="hrm_rut_feedback" class="mt-2" style="display: none;"></div>
                         </div>
-
+                        
                         <div class="col-md-6 mb-3">
                             <label for="hrm_email" class="form-label">Email <span class="text-danger">*</span></label>
-                            <input id="hrm_email" name="email" type="email" class="form-control" required pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$" title="Ingresa un correo electrónico válido">
+                            <input id="hrm_email" name="email" type="email" class="form-control" required title="Ingresa un correo electrónico válido">
+                            <div id="hrm_email_feedback" class="mt-2" style="display: none;"></div>
                         </div>
                     </div>
-
+                    
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="hrm_nombre" class="form-label">Nombres <span class="text-danger">*</span></label>
                             <input id="hrm_nombre" name="nombre" type="text" class="form-control" required>
                         </div>
-
+                        
                         <div class="col-md-6 mb-3">
                             <label for="hrm_apellido" class="form-label">Apellidos <span class="text-danger">*</span></label>
                             <input id="hrm_apellido" name="apellido" type="text" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                                    <label for="hrm_fecha_ingreso" class="form-label">Fecha de Ingreso <span class="text-danger">*</span></label>
+                                    <input id="hrm_fecha_ingreso" name="fecha_ingreso" type="date" class="form-control" title="Fecha de ingreso a la empresa" required>
                         </div>
                     </div>
                 </fieldset>
@@ -78,18 +82,33 @@ $wp_roles = function_exists( 'hrm_get_allowed_employee_roles' ) ? hrm_get_allowe
                         </div>
                         
                         <div class="row border-top pt-3">
-                            <div class="col-md-6 mb-3">
-                                <strong>Información Laboral</strong>
-                                <label for="hrm_departamento" class="form-label">Departamento</label>
-                                <select id="hrm_departamento" name="departamento" class="form-select">
-                                    <option value="">Selecciona...</option>
-                                    <?php foreach ( $hrm_departamentos as $dept ) : ?>
-                                        <option value="<?= esc_attr( $dept ) ?>"><?= esc_html( $dept ) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
+                            <strong>Información Laboral</strong>
+                            <div class="row mt-3 mb-3">
+                                <div class="col-md-6">
+                                    <label for="hrm_departamento" class="form-label">Departamento</label>
+                                    <select id="hrm_departamento" name="departamento" class="form-select">
+                                        <option value="">Selecciona...</option>
+                                        <?php foreach ( $hrm_departamentos as $dept ) : ?>
+                                            <option value="<?= esc_attr( $dept ) ?>"><?= esc_html( $dept ) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="hrm_puesto" class="form-label">Puesto</label>
+                                    <select id="hrm_puesto" name="puesto" class="form-select">
+                                        <option value="">Selecciona...</option>
+                                        <?php foreach ( $hrm_puestos as $puesto ) : ?>
+                                            <option value="<?= esc_attr( $puesto ) ?>"><?= esc_html( $puesto ) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                     
+                                </div>
+                                
                             </div>
+                            
 
-                            <div class="col-md-6 mb-3">
+                            <div id="area_gerencia_section" class="col-md-6 mb-3" style="display:none;">
                                 <label for="hrm_area_gerencia" class="form-label">Área de Gerencia</label>
                                 <select id="hrm_area_gerencia" name="area_gerencia" class="form-select">
                                     <option value="">Selecciona...</option>
@@ -102,14 +121,108 @@ $wp_roles = function_exists( 'hrm_get_allowed_employee_roles' ) ? hrm_get_allowe
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="hrm_puesto" class="form-label">Puesto</label>
-                                <select id="hrm_puesto" name="puesto" class="form-select">
-                                    <option value="">Selecciona...</option>
-                                    <?php foreach ( $hrm_puestos as $puesto ) : ?>
-                                        <option value="<?= esc_attr( $puesto ) ?>"><?= esc_html( $puesto ) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
                             </div>
+                            
+                            <script>
+                            document.addEventListener('DOMContentLoaded', function () {
+
+                                const departamento = document.getElementById('hrm_departamento');
+                                const puesto = document.getElementById('hrm_puesto');
+
+                                if (!departamento || !puesto) return;
+
+                                // Guardar todas las opciones originales
+                                const opcionesOriginales = Array.from(puesto.options).map(opt => ({
+                                    value: opt.value,
+                                    text: opt.text
+                                }));
+
+                                // Mapeo EXACTO departamento → puestos
+                                const mapaPuestos = {
+                                    'soporte': [
+                                        'Ingeniero de Soporte',
+                                        'Practicante'
+                                    ],
+                                    'desarrollo': [
+                                        'Desarrollador de Software',
+                                        'Diseñador Gráfico'
+                                    ],
+                                    'ventas': [
+                                        'Asistente Comercial'
+                                    ],
+                                    'administracion': [
+                                        'Administrativo(a) Contable'
+                                    ],
+                                    'gerencia': [
+                                        'Gerente'
+                                    ],
+                                    'sistemas': [
+                                        'Ingeniero en Sistemas'
+                                    ]
+                                };
+
+                                /**
+                                 * Agrega un puesto al select si existe
+                                 */
+                                function agregarPuesto(nombre) {
+                                    const opt = opcionesOriginales.find(o => o.text === nombre);
+                                    if (!opt) return;
+
+                                    const option = document.createElement('option');
+                                    option.value = opt.value;
+                                    option.text = opt.text;
+                                    puesto.appendChild(option);
+                                }
+
+                                /**
+                                 * Restaura todos los puestos
+                                 */
+                                function restaurarTodos() {
+                                    opcionesOriginales.forEach((opt, idx) => {
+                                        if (idx === 0) return;
+                                        const option = document.createElement('option');
+                                        option.value = opt.value;
+                                        option.text = opt.text;
+                                        puesto.appendChild(option);
+                                    });
+                                }
+
+                                /**
+                                 * Filtra los puestos según el departamento
+                                 */
+                                function filtrarPuestos() {
+
+                                    const depto = departamento.value.toLowerCase().trim();
+
+                                    // Limpiar select
+                                    puesto.innerHTML = '';
+
+                                    // Opción por defecto
+                                    const optDefault = document.createElement('option');
+                                    optDefault.value = '';
+                                    optDefault.text = 'Selecciona...';
+                                    puesto.appendChild(optDefault);
+
+                                    // Si existe mapeo, usarlo
+                                    if (mapaPuestos[depto]) {
+                                        mapaPuestos[depto].forEach(nombrePuesto => {
+                                            agregarPuesto(nombrePuesto);
+                                        });
+                                        return;
+                                    }
+
+                                    // Si no hay mapeo → mostrar todos
+                                    restaurarTodos();
+                                }
+
+                                // Evento
+                                departamento.addEventListener('change', filtrarPuestos);
+
+                                // Inicializar
+                                filtrarPuestos();
+                            });
+                            </script>
+
                         </div>
 
                         <!-- Sección: Departamentos a cargo (solo para gerentes) -->
@@ -162,8 +275,6 @@ $wp_roles = function_exists( 'hrm_get_allowed_employee_roles' ) ? hrm_get_allowe
                                 </div>
 
                                 <div class="col-md-6 mb-3">
-                                    <label for="hrm_fecha_ingreso" class="form-label">Fecha de Ingreso <span class="text-danger">*</span></label>
-                                    <input id="hrm_fecha_ingreso" name="fecha_ingreso" type="date" class="form-control" title="Fecha de ingreso a la empresa">
                                 </div>
                             </div>
 
@@ -239,29 +350,33 @@ $wp_roles = function_exists( 'hrm_get_allowed_employee_roles' ) ? hrm_get_allowe
             </form>
 
         </div>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var departamento = document.getElementById('hrm_departamento');
+            var areaGerenciaSection = document.getElementById('area_gerencia_section');
+            function toggleAreaGerencia() {
+                if (departamento.value === 'Gerencia') {
+                    areaGerenciaSection.style.display = 'block';
+                } else {
+                    areaGerenciaSection.style.display = 'none';
+                }
+            }
+            toggleAreaGerencia();
+            departamento.addEventListener('change', toggleAreaGerencia);
+        });
+        </script>
     </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-        // Validación personalizada de email con regex en el frontend
-        const emailInput = document.getElementById('hrm_email');
-        if (emailInput) {
-            emailInput.addEventListener('input', function() {
-                const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-                if (this.value && !regex.test(this.value)) {
-                    this.classList.add('is-invalid');
-                    this.setCustomValidity('Correo electrónico inválido');
-                } else {
-                    this.classList.remove('is-invalid');
-                    this.setCustomValidity('');
-                }
-            });
-        }
+        // Validación de email ahora centralizada en assets/js/employees-create.js
+        // (Se mantiene el div #hrm_email_feedback para mostrar mensajes desde el JS centralizado)
+        
     const departamentoSelect = document.getElementById('hrm_departamento');
     const puestoSelect = document.getElementById('hrm_puesto');
     const areaGerenciaSelect = document.getElementById('hrm_area_gerencia');
-    const areaGerenciaContainer = areaGerenciaSelect.closest('.col-md-6');
+    const areaGerenciaContainer = areaGerenciaSelect ? areaGerenciaSelect.closest('.col-md-6') : null;
     const deptosCargoContainer = document.getElementById('hrm_deptos_a_cargo_container');
     const deptosCheckboxesDiv = document.getElementById('hrm_deptos_checkboxes');
     
@@ -269,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const todosDeptos = <?= json_encode( $hrm_departamentos ) ?>;
     
     // Mapeo de áreas gerenciales con sus departamentos predefinidos
-    const deptosPredefini dos = {
+    const deptosPredefinidos = {
         'comercial': ['Soporte', 'Ventas'],
         'proyectos': ['Desarrollo'],
         'operaciones': ['Administracion', 'Gerencia', 'Sistemas']
@@ -284,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Obtener departamentos predefinidos para este área
-        const deptosAMarcar = deptosPredefini dos[areaValue] || [];
+        const deptosAMarcar = deptosPredefinidos[areaValue] || [];
         
         // Generar checkboxes para todos los departamentos (excepto Gerencia)
         let html = '';
@@ -295,8 +410,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Verificar si este departamento debe estar marcado
-            const estaPredefini do = deptosAMarcar.some( d => d.toLowerCase() === depto.toLowerCase() );
-            const checked = estaPredefini do ? 'checked' : '';
+            const estaPredefinido = deptosAMarcar.some( d => d.toLowerCase() === depto.toLowerCase() );
+            const checked = estaPredefinido ? 'checked' : '';
             
             const id = 'depto_checkbox_' + index;
             html += `
@@ -320,14 +435,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const esGerencia = deptoValue === 'gerencia';
         
         if ( esGerencia ) {
-            areaGerenciaContainer.style.display = 'block';
-            deptosCargoContainer.style.display = 'block';
+            if ( areaGerenciaContainer ) areaGerenciaContainer.style.display = 'block';
+            if ( deptosCargoContainer ) deptosCargoContainer.style.display = 'block';
             loadDepartamentosCheckboxes();
         } else {
-            areaGerenciaContainer.style.display = 'none';
-            deptosCargoContainer.style.display = 'none';
-            areaGerenciaSelect.value = '';
-            deptosCheckboxesDiv.innerHTML = '';
+            if ( areaGerenciaContainer ) areaGerenciaContainer.style.display = 'none';
+            if ( deptosCargoContainer ) deptosCargoContainer.style.display = 'none';
+            if ( areaGerenciaSelect ) areaGerenciaSelect.value = '';
+            if ( deptosCheckboxesDiv ) deptosCheckboxesDiv.innerHTML = '';
         }
     }
     
@@ -340,11 +455,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if ( deptoValue === 'gerencia' ) {
             if ( areaGerenciaSelect.value !== '' ) {
-                deptosCargoContainer.style.display = 'block';
+                if ( deptosCargoContainer ) deptosCargoContainer.style.display = 'block';
                 loadDepartamentosCheckboxes();
             } else {
-                deptosCargoContainer.style.display = 'none';
-                deptosCheckboxesDiv.innerHTML = '';
+                if ( deptosCargoContainer ) deptosCargoContainer.style.display = 'none';
+                if ( deptosCheckboxesDiv ) deptosCheckboxesDiv.innerHTML = '';
             }
         }
     });
@@ -455,3 +570,4 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('hrm_anos_en_la_empresa_hidden').value = anosEmpresaInput.value;
         document.getElementById('hrm_anos_totales_trabajados_hidden').value = anosTotalesInput.value;
     });
+</script>
