@@ -197,7 +197,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                     </h5>
                 </div>
                 <div class="hrm-panel-body hrm-doc-panel-body">
-                    <a href="<?= esc_url( add_query_arg( array( 'page' => 'hrm-mi-documentos-contratos', 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis contratos" data-icon-color="#b0b5bd">
+                        <a href="<?= esc_url( add_query_arg( array( 'page' => 'hrm-mi-documentos-contratos', 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis contratos" data-icon-color="#b0b5bd">
                         <div class="hrm-doc-btn-icon">
                             <span class="dashicons dashicons-media-document"></span>
                         </div>
@@ -235,6 +235,34 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                             <span class="dashicons dashicons-arrow-right-alt2"></span>
                         </div>
                     </a>
+
+                    <?php
+                    // Añadir enlaces para tipos de documento dinámicos (excluyendo nombres reservados)
+                    hrm_ensure_db_classes();
+                    $db_docs = new HRM_DB_Documentos();
+                    $doc_types = $db_docs->get_all_types();
+                    if ( ! empty( $doc_types ) ) {
+                        $reserved = array_map( 'strtolower', array( 'contrato', 'contratos', 'liquidacion', 'liquidaciones', 'licencia', 'licencias' ) );
+                        foreach ( $doc_types as $t_id => $t_name ) {
+                            if ( in_array( strtolower( trim( $t_name ) ), $reserved, true ) ) continue;
+                            $url = add_query_arg( array( 'page' => 'hrm-mi-documentos-type-' . intval( $t_id ), 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) );
+                            ?>
+                            <a href="<?= esc_url( $url ) ?>" class="hrm-doc-btn" title="<?= esc_attr( $t_name ) ?>" data-icon-color="#e6eef6">
+                                <div class="hrm-doc-btn-icon">
+                                    <span class="dashicons dashicons-media-document"></span>
+                                </div>
+                                <div class="hrm-doc-btn-content">
+                                    <div class="hrm-doc-btn-title"><?= esc_html( $t_name ) ?></div>
+                                    <div class="hrm-doc-btn-desc">Accede a <?= esc_html( $t_name ) ?></div>
+                                </div>
+                                <div class="hrm-doc-btn-arrow">
+                                    <span class="dashicons dashicons-arrow-right-alt2"></span>
+                                </div>
+                            </a>
+                            <?php
+                        }
+                    }
+                    ?>
                 </div>
             </div>
 

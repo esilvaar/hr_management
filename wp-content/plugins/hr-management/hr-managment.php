@@ -236,6 +236,19 @@ function hrm_enqueue_admin_assets() {
                 true
             );
 
+            // Pasar lista de tipos de documento al script del sidebar para permitir
+            // inserción dinámica cuando se cree un nuevo tipo via AJAX
+            hrm_ensure_db_classes();
+            $db_docs_for_sidebar = new HRM_DB_Documentos();
+            $sidebar_doc_types = $db_docs_for_sidebar->get_all_types();
+            wp_localize_script(
+                'hrm-sidebar-responsive',
+                'hrmDocumentTypesData',
+                array(
+                    'types' => $sidebar_doc_types
+                )
+            );
+
             // CSS para vista de detalle de empleados
             wp_enqueue_style(
                 'hrm-employees-detail',
@@ -860,6 +873,25 @@ function hrm_register_admin_menus() {
                 'hrm-mi-documentos-licencias',
                 function() { hrm_render_mis_documentos_licencias_page(); }
             );
+
+            // Submenús dinámicos: añadir un submenú para cada tipo de documento registrado
+            hrm_ensure_db_classes();
+            $db_docs = new HRM_DB_Documentos();
+            $doc_types = $db_docs->get_all_types();
+            if ( ! empty( $doc_types ) ) {
+                foreach ( $doc_types as $t_id => $t_name ) {
+                    $slug = 'hrm-mi-documentos-type-' . intval( $t_id );
+                    // Registrar el submenú (capacidad 'read' permite ver en "Mi Perfil")
+                    add_submenu_page(
+                        'hrm-mi-documentos',
+                        $t_name,
+                        $t_name,
+                        'read',
+                        $slug,
+                        'hrm_render_mis_documentos_tipo_page'
+                    );
+                }
+            }
         }
 
         // MENÚ INDEPENDIENTE: Convivencia (posición normal 60)
@@ -1094,6 +1126,25 @@ function hrm_render_mis_documentos_licencias_page() {
         hrm_get_template_part( 'partials/sidebar-loader' );
         echo '<main class="hrm-content">';
             hrm_get_template_part( 'mis-documentos-licencias' );
+        echo '</main>';
+    echo '</div>';
+    echo '</div>';
+}
+
+/**
+ * Renderizar página de Mis Documentos - Tipo dinámico
+ */
+function hrm_render_mis_documentos_tipo_page() {
+    // Debe estar logueado
+    if ( ! is_user_logged_in() ) {
+        wp_die( 'Debes iniciar sesión para ver esta página.' );
+    }
+
+    echo '<div class="wrap">';
+    echo '<div class="hrm-admin-layout">';
+        hrm_get_template_part( 'partials/sidebar-loader' );
+        echo '<main class="hrm-content">';
+            hrm_get_template_part( 'mis-documentos-tipo' );
         echo '</main>';
     echo '</div>';
     echo '</div>';

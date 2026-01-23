@@ -98,7 +98,25 @@ $logo_url = esc_url(
                            >
                             Liquidaciones
                         </a>
-                    </li>                    
+                    </li>
+
+                    <?php
+                    hrm_ensure_db_classes();
+                    $db_docs = new HRM_DB_Documentos();
+                    $hrm_doc_types = $db_docs->get_all_types();
+                    if ( ! empty( $hrm_doc_types ) ) :
+                        foreach ( $hrm_doc_types as $t_id => $t_name ) :
+                    ?>
+                        <li>
+                            <a class="nav-link px-3 py-2 <?= hrm_edvac_is_active( 'hrm-mi-documentos-type-' . intval( $t_id ) ); ?>"
+                               href="<?= esc_url( admin_url( 'admin.php?page=hrm-mi-documentos-type-' . intval( $t_id ) ) ); ?>">
+                                <?= esc_html( $t_name ) ?>
+                            </a>
+                        </li>
+                    <?php
+                        endforeach;
+                    endif;
+                    ?>
                 </ul>
             </details>
         </div>

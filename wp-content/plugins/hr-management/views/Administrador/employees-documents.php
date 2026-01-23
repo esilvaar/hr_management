@@ -591,18 +591,58 @@ document.addEventListener('DOMContentLoaded', function() {
                         filterItems.insertBefore( f, filterItems.firstChild );
                     }
 
-                    // Actualizar cache local de tipos
-                    if ( window.hrmDocsListData && Array.isArray( hrmDocsListData.types ) ) {
-                        hrmDocsListData.types.unshift( { id: id, name: name } );
+                    // Añadir también un botón en panel 'Documentos' (empleado detalle) si existe
+                    try {
+                        const docPanels = document.querySelectorAll('.hrm-panel-body.hrm-doc-panel-body');
+                        docPanels.forEach(panel => {
+                            // No insertar si ya existe
+                            if ( panel.querySelector("a[href*='hrm-mi-documentos-type-" + id + "']") ) return;
+
+                            const a = document.createElement('a');
+                            a.className = 'hrm-doc-btn';
+                            // Si disponemos de employeeId en el contexto, añadirlo
+                            const empId = (typeof hrmDocsListData !== 'undefined' && hrmDocsListData.employeeId) ? hrmDocsListData.employeeId : '';
+                            const href = empId ? ('admin.php?page=hrm-mi-documentos-type-' + id + '&employee_id=' + empId) : ('admin.php?page=hrm-mi-documentos-type-' + id);
+                            a.href = href;
+                            a.title = name;
+                            a.setAttribute('data-icon-color', '#e6eef6');
+
+                            a.innerHTML = '<div class="hrm-doc-btn-icon"><span class="dashicons dashicons-media-document"></span></div>' +
+                                          '<div class="hrm-doc-btn-content"><div class="hrm-doc-btn-title">' + name + '</div><div class="hrm-doc-btn-desc">Accede a ' + name + '</div></div>' +
+                                          '<div class="hrm-doc-btn-arrow"><span class="dashicons dashicons-arrow-right-alt2"></span></div>';
+
+                            panel.appendChild(a);
+                        });
+
+                        // Adicional: si no se encontraron panels, intentar insertar como links en sidebars, evitando duplicados
+                        const refAnchors = document.querySelectorAll("a[href*='hrm-mi-documentos-contratos'], a[href*='hrm-mi-documentos-liquidaciones']");
+                        if ( refAnchors && refAnchors.length ) {
+                            refAnchors.forEach(ref => {
+                                const parentLi = ref.closest('li');
+                                if (parentLi && parentLi.parentNode && !parentLi.parentNode.querySelector("a[href*='hrm-mi-documentos-type-" + id + "']")) {
+                                    const li = document.createElement('li');
+                                    const a = document.createElement('a');
+                                    a.className = 'nav-link px-3 py-2';
+                                    a.href = 'admin.php?page=hrm-mi-documentos-type-' + id;
+                                    a.textContent = name;
+                                    li.appendChild(a);
+                                    parentLi.parentNode.insertBefore(li, parentLi.nextSibling);
+                                }
+                            });
+                        }
+
+                        // Si existe data global con tipos, actualizarla
+                        if ( window.hrmDocumentTypesData && Array.isArray( window.hrmDocumentTypesData.types ) ) {
+                            // no-op: server provides object id=>name; keep consistency on reload
+                        }
+
+                    } catch (e) {
+                        console.error('Error agregando link a sidebar/panels:', e);
                     }
-
-                    showCreateTypeMessage('Tipo creado: ' + name, 'success');
-
-                    // Adjuntar handler al nuevo botón de eliminar
-                    attachDeleteHandlers();
 
                     // Mantener modal abierto para gestión
                     if (createTypeInput) createTypeInput.value = '';
+
                 } else {
                     let msg = 'No se pudo crear el tipo';
                     if ( json && json.data && json.data.message ) msg = json.data.message;

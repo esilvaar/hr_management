@@ -18,6 +18,29 @@
 
         // Cargar documentos via AJAX (delegado para evitar race conditions si el core no se ha cargado)
         initLoadEmployeeDocumentsDelegate();
+
+        // Si la URL lleva una ancla, abrir el panel correspondiente (#upload, #create-type)
+        (function() {
+            const hash = window.location.hash;
+            try {
+                if ( hash === '#upload' ) {
+                    const panel = document.getElementById('hrm-upload-panel');
+                    if ( panel ) {
+                        // Obtener id del querystring (id) o fallback a datos localizados
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const id = urlParams.get('id') || (window.hrmDocsListData && window.hrmDocsListData.employeeId) || '';
+                        const empInput = document.getElementById('hrm_upload_employee_id');
+                        if ( empInput && id ) empInput.value = id;
+                        panel.style.display = 'block';
+                    }
+                } else if ( hash === '#create-type' ) {
+                    const panel = document.getElementById('hrm-create-type-panel');
+                    if ( panel ) panel.style.display = 'block';
+                }
+            } catch ( e ) {
+                console.error('Error procesando ancla de documentos:', e);
+            }
+        })();
     }
 })();
 

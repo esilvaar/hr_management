@@ -620,7 +620,27 @@ function hrm_ajax_create_document_type() {
         wp_send_json_error( [ 'message' => 'No se pudo crear el tipo' ], 500 );
     }
 
-    wp_send_json_success( [ 'id' => $id, 'name' => $nombre ] );
+    // Attempt to create a per-type view stub so each type can have a dedicated template file
+    $created_file = false;
+    $create_stub = apply_filters( 'hrm_create_type_create_view_file', true, (int) $id, $nombre );
+    if ( $create_stub ) {
+        $template_stub = "<?php\nif ( ! defined( 'ABSPATH' ) ) exit;\n// Plantilla stub para tipo de documento: " . str_replace("'", "\\'", $nombre) . " (ID: " . intval( $id ) . ")\n\n// Predefine \$type_id para que la plantilla genérica lo use\n\$type_id = " . intval( $id ) . ";\n\nrequire_once __DIR__ . '/mis-documentos-tipo.php';\n";
+
+        $stub_path = HRM_PLUGIN_DIR . "views/mis-documentos-tipo-" . intval( $id ) . ".php";
+        // Only attempt if not exists and directory writable
+        if ( ! file_exists( $stub_path ) ) {
+            try {
+                file_put_contents( $stub_path, $template_stub );
+                // Make file readable
+                @chmod( $stub_path, 0644 );
+                $created_file = file_exists( $stub_path );
+            } catch ( Exception $e ) {
+                error_log( 'HRM: No se pudo crear stub para tipo id=' . intval( $id ) . ' - ' . $e->getMessage() );
+            }
+        }
+    }
+
+    wp_send_json_success( [ 'id' => $id, 'name' => $nombre, 'created_file' => $created_file ] );
 }
 
 add_action( 'wp_ajax_hrm_create_document_type', 'hrm_ajax_create_document_type' );
