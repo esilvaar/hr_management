@@ -6,6 +6,43 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 // Obtener los roles permitidos de forma segura
 $wp_roles = function_exists( 'hrm_get_allowed_employee_roles' ) ? hrm_get_allowed_employee_roles() : wp_roles()->get_names();
+
+// Determinar el área de gerencia del usuario que está viendo la página
+// y preparar un listado de puestos permitidos para mostrar (solo para no-admins)
+$viewer_allowed_puestos = array();
+$current_user = wp_get_current_user();
+if ( ! current_user_can( 'manage_options' ) && $current_user && $current_user->ID ) {
+    global $wpdb;
+    $user_id = absint( $current_user->ID );
+    $area_gerencia = $wpdb->get_var( $wpdb->prepare( "SELECT area_gerencia FROM {$wpdb->prefix}rrhh_empleados WHERE user_id = %d", $user_id ) );
+
+    if ( $area_gerencia ) {
+        // Obtener departamentos asociados al área (usa la función existente si está disponible)
+        $deptos_por_area = function_exists( 'hrm_get_deptos_predefinidos_por_area' ) ? hrm_get_deptos_predefinidos_por_area( $area_gerencia ) : array();
+
+        // Guardar también los departamentos permitidos para filtrar el select de departamento
+        $viewer_allowed_departamentos = $deptos_por_area;
+        $viewer_allowed_departamentos_lower = array_map( 'strtolower', $viewer_allowed_departamentos );
+
+        // Mapa departamento -> puestos (paralelo al mapa JS en la vista)
+        $mapa_puestos_php = array(
+            'soporte' => array('Ingeniero de Soporte', 'Practicante'),
+            'desarrollo' => array('Desarrollador de Software', 'Diseñador Gráfico'),
+            'ventas' => array('Asistente Comercial'),
+            'administracion' => array('Administrativo(a) Contable'),
+            'gerencia' => array('Gerente'),
+            'sistemas' => array('Ingeniero en Sistemas'),
+        );
+
+        foreach ( $deptos_por_area as $d ) {
+            $key = strtolower( $d );
+            if ( isset( $mapa_puestos_php[ $key ] ) ) {
+                $viewer_allowed_puestos = array_merge( $viewer_allowed_puestos, $mapa_puestos_php[ $key ] );
+            }
+        }
+        $viewer_allowed_puestos = array_unique( $viewer_allowed_puestos );
+    }
+}
 ?>
 
 <div class="d-flex justify-content-center">
@@ -41,6 +78,7 @@ $wp_roles = function_exists( 'hrm_get_allowed_employee_roles' ) ? hrm_get_allowe
                             <div id="hrm_email_feedback" class="mt-2" style="display: none;"></div>
                         </div>
                     </div>
+                    <!-- area_gerencia moved next to departamento select -->
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -57,6 +95,42 @@ $wp_roles = function_exists( 'hrm_get_allowed_employee_roles' ) ? hrm_get_allowe
                         <div class="col-md-6 mb-3">
                                     <label for="hrm_fecha_ingreso" class="form-label">Fecha de Ingreso <span class="text-danger">*</span></label>
                                     <input id="hrm_fecha_ingreso" name="fecha_ingreso" type="date" class="form-control" title="Fecha de ingreso a la empresa" required>
+                        </div>
+                    </div>
+                    <div class="row mt-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="hrm_departamento" class="form-label">Departamento <span class="text-danger">*</span></label>
+                            <select id="hrm_departamento" name="departamento" class="form-select" required>
+                                <option value="">Selecciona...</option>
+                                <?php foreach ( $hrm_departamentos as $dept ) : ?>
+                                    <?php if ( isset( $viewer_allowed_departamentos_lower ) && ! empty( $viewer_allowed_departamentos_lower ) ) {
+                                        if ( ! in_array( strtolower( $dept ), $viewer_allowed_departamentos_lower, true ) ) continue;
+                                    } ?>
+                                    <option value="<?= esc_attr( $dept ) ?>"><?= esc_html( $dept ) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div id="area_gerencia_section" style="display:none; margin-top:0.75rem;">
+                                <label for="hrm_area_gerencia" class="form-label">Área de Gerencia</label>
+                                <select id="hrm_area_gerencia" name="area_gerencia" class="form-select">
+                                    <option value="">Selecciona...</option>
+                                    <option value="Proyectos">Proyectos</option>
+                                    <option value="Comercial">Comercial</option>
+                                    <option value="Operaciones">Operaciones</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="hrm_puesto" class="form-label">Puesto <span class="text-danger">*</span></label>
+                            <select id="hrm_puesto" name="puesto" class="form-select" required>
+                                <option value="">Selecciona...</option>
+                                <?php
+                                foreach ( $hrm_puestos as $puesto ) :
+                                    if ( ! empty( $viewer_allowed_puestos ) && ! in_array( $puesto, $viewer_allowed_puestos, true ) ) continue;
+                                ?>
+                                    <option value="<?= esc_attr( $puesto ) ?>"><?= esc_html( $puesto ) ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                     </div>
                 </fieldset>
@@ -80,49 +154,11 @@ $wp_roles = function_exists( 'hrm_get_allowed_employee_roles' ) ? hrm_get_allowe
                                 <input id="hrm_fecha_nacimiento" name="fecha_nacimiento" type="date" class="form-control">
                             </div>
                         </div>
-                        
-                        <div class="row border-top pt-3">
-                            <strong>Información Laboral</strong>
-                            <div class="row mt-3 mb-3">
-                                <div class="col-md-6">
-                                    <label for="hrm_departamento" class="form-label">Departamento</label>
-                                    <select id="hrm_departamento" name="departamento" class="form-select">
-                                        <option value="">Selecciona...</option>
-                                        <?php foreach ( $hrm_departamentos as $dept ) : ?>
-                                            <option value="<?= esc_attr( $dept ) ?>"><?= esc_html( $dept ) ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                        
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="hrm_puesto" class="form-label">Puesto</label>
-                                    <select id="hrm_puesto" name="puesto" class="form-select">
-                                        <option value="">Selecciona...</option>
-                                        <?php foreach ( $hrm_puestos as $puesto ) : ?>
-                                            <option value="<?= esc_attr( $puesto ) ?>"><?= esc_html( $puesto ) ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                     
-                                </div>
-                                
-                            </div>
-                            
-
-                            <div id="area_gerencia_section" class="col-md-6 mb-3" style="display:none;">
-                                <label for="hrm_area_gerencia" class="form-label">Área de Gerencia</label>
-                                <select id="hrm_area_gerencia" name="area_gerencia" class="form-select">
-                                    <option value="">Selecciona...</option>
-                                    <option value="Proyectos">Proyectos</option>
-                                    <option value="Comercial">Comercial</option>
-                                    <option value="Operaciones">Operaciones</option>
-                                </select>
-                            </div>
-                        </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
                             </div>
-                            
+
                             <script>
                             document.addEventListener('DOMContentLoaded', function () {
 
@@ -314,6 +350,7 @@ $wp_roles = function_exists( 'hrm_get_allowed_employee_roles' ) ? hrm_get_allowe
                                 name="crear_usuario_wp"
                                 id="hrm_crear_usuario_wp"
                                 class="form-check-input"
+                                checked
                             >
                             <label class="form-check-label" for="hrm_crear_usuario_wp">
                                 Crear cuenta de usuario en WordPress
@@ -328,9 +365,61 @@ $wp_roles = function_exists( 'hrm_get_allowed_employee_roles' ) ? hrm_get_allowe
 
                     <div id="hrm_rol_row" style="display: none;" class="mb-3">
                         <label for="hrm_rol_usuario_wp" class="form-label">Rol en WordPress <span class="text-danger">*</span></label>
+                        <?php
+                        // Determinar roles disponibles en el select dependiendo del usuario que mira la página
+                        $available_wp_roles = $wp_roles;
+                        $current_user_obj = wp_get_current_user();
+                        $has_supervisor_role = ( $current_user_obj && ! empty( $current_user_obj->roles ) && in_array( 'supervisor', (array) $current_user_obj->roles, true ) );
+                        $is_supervisor_view = ( $has_supervisor_role || current_user_can( 'edit_hrm_employees' ) ) && ! current_user_can( 'manage_options' );
+
+                        if ( $is_supervisor_view ) {
+                            // Para supervisores: mostrar SOLO roles de tipo "empleado".
+                            // Preferir la función de whitelist si está presente, pero
+                            // forzar que el conjunto resultante contenga únicamente roles
+                            // cuyo slug o nombre indiquen "empleado".
+                            $all_roles = wp_roles()->get_names();
+                            $filtered = array();
+
+                            if ( function_exists( 'hrm_get_allowed_employee_roles' ) ) {
+                                $allowed = hrm_get_allowed_employee_roles(); // expected array role_key => role_name
+                                $allowed_keys = is_array( $allowed ) ? array_keys( $allowed ) : array();
+
+                                if ( ! empty( $allowed_keys ) ) {
+                                    foreach ( $all_roles as $rk => $rn ) {
+                                        // Incluir solo si está en la whitelist y parece un rol de empleado
+                                        if ( in_array( $rk, $allowed_keys, true ) && (
+                                                $rk === 'empleado' || stripos( $rk, 'emplead' ) !== false || stripos( $rk, 'employee' ) !== false ||
+                                                stripos( $rn, 'emplead' ) !== false || stripos( $rn, 'employee' ) !== false
+                                            ) ) {
+                                            $filtered[ $rk ] = $rn;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Si no hay resultados todavía, buscar roles por heurística
+                            if ( empty( $filtered ) ) {
+                                foreach ( $all_roles as $rk => $rn ) {
+                                    if ( $rk === 'empleado' || stripos( $rk, 'emplead' ) !== false || stripos( $rk, 'employee' ) !== false || stripos( $rn, 'emplead' ) !== false || stripos( $rn, 'employee' ) !== false ) {
+                                        $filtered[ $rk ] = $rn;
+                                    }
+                                }
+                            }
+
+                            // Último recurso: roles de baja confianza por defecto
+                            if ( empty( $filtered ) ) {
+                                $fallback_keys = array( 'subscriber', 'contributor' );
+                                foreach ( $all_roles as $rk => $rn ) {
+                                    if ( in_array( $rk, $fallback_keys, true ) ) $filtered[ $rk ] = $rn;
+                                }
+                            }
+
+                            $available_wp_roles = $filtered;
+                        }
+                        ?>
                         <select id="hrm_rol_usuario_wp" name="rol_usuario_wp" class="form-select">
                             <option value="">Selecciona un rol...</option>
-                            <?php foreach ( $wp_roles as $role_key => $role_name ) : ?>
+                            <?php foreach ( $available_wp_roles as $role_key => $role_name ) : ?>
                                 <option value="<?= esc_attr( $role_key ) ?>"><?= esc_html( $role_name ) ?></option>
                             <?php endforeach; ?>
                         </select>
@@ -354,13 +443,17 @@ $wp_roles = function_exists( 'hrm_get_allowed_employee_roles' ) ? hrm_get_allowe
         document.addEventListener('DOMContentLoaded', function() {
             var departamento = document.getElementById('hrm_departamento');
             var areaGerenciaSection = document.getElementById('area_gerencia_section');
+            if ( ! departamento || ! areaGerenciaSection ) return;
+
             function toggleAreaGerencia() {
-                if (departamento.value === 'Gerencia') {
+                var val = (departamento.value || '').toLowerCase().trim();
+                if ( val === 'gerencia' ) {
                     areaGerenciaSection.style.display = 'block';
                 } else {
                     areaGerenciaSection.style.display = 'none';
                 }
             }
+
             toggleAreaGerencia();
             departamento.addEventListener('change', toggleAreaGerencia);
         });

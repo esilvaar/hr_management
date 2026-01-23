@@ -561,3 +561,52 @@ add_action( 'hrm_after_employee_update', 'hrm_actualizar_dias_disponibles_emplea
  */
 add_action( 'hrm_after_employee_create', 'hrm_inicializar_dias_disponibles_empleado' );
 
+
+/**
+ * Redirigir al listado de empleados tras iniciar sesión.
+ * Si el usuario tiene acceso al panel HRM, enviarlo a la lista de empleados.
+ */
+function hrm_login_redirect_after_login( $redirect_to, $requested_redirect_to, $user ) {
+    if ( ! $user ) {
+        return $redirect_to;
+    }
+
+    $wp_user = null;
+    if ( is_a( $user, 'WP_User' ) ) {
+        $wp_user = $user;
+    } elseif ( is_array( $user ) && isset( $user['ID'] ) ) {
+        $wp_user = get_user_by( 'id', intval( $user['ID'] ) );
+    }
+
+    if ( ! $wp_user ) {
+        return $redirect_to;
+    }
+
+    // Si existe una redirección solicitada explícitamente por otro plugin, respetarla
+    if ( ! empty( $requested_redirect_to ) ) {
+        return $redirect_to;
+    }
+
+    $employees_url = admin_url( 'admin.php?page=hrm-empleados&tab=list' );
+
+    // Redirigir según rol: administrador_anaconda y supervisor -> listado de empleados
+    // editor_vacaciones -> panel de Vacaciones
+    $user_roles = (array) $wp_user->roles;
+    $is_admin_anaconda = in_array( 'administrador_anaconda', $user_roles, true );
+    $is_supervisor = in_array( 'supervisor', $user_roles, true );
+    $is_editor_vacaciones = in_array( 'editor_vacaciones', $user_roles, true );
+
+    if ( $is_editor_vacaciones || user_can( $wp_user, 'manage_hrm_vacaciones' ) ) {
+        return admin_url( 'admin.php?page=hrm-vacaciones' );
+    }
+
+    if ( user_can( $wp_user, 'manage_options' ) || $is_admin_anaconda || $is_supervisor || user_can( $wp_user, 'edit_hrm_employees' ) || user_can( $wp_user, 'view_hrm_admin_views' ) ) {
+        return $employees_url;
+    }
+
+    // Si no cumple las condiciones, respetar la redirección por defecto
+    return $redirect_to;
+}
+
+add_filter( 'login_redirect', 'hrm_login_redirect_after_login', 10, 3 );
+

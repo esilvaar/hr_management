@@ -100,6 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+
         // Formatear mientras escribe
         rutInput.addEventListener('input', function() {
             let rut = this.value;
@@ -349,12 +350,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const rolRow = document.getElementById('hrm_rol_row');
     
     if (checkboxCrearUsuario && rolRow) {
+        // Inicializar el estado en carga (soporta checkbox marcado por defecto)
+        rolRow.style.display = checkboxCrearUsuario.checked ? 'block' : 'none';
+        const selectRolInit = document.getElementById('hrm_rol_usuario_wp');
+        if ( selectRolInit ) selectRolInit.required = checkboxCrearUsuario.checked;
+
         checkboxCrearUsuario.addEventListener('change', function() {
             rolRow.style.display = this.checked ? 'block' : 'none';
             // Si se marca, hacer el select requerido; si no, no requerido
             const selectRol = document.getElementById('hrm_rol_usuario_wp');
             if (selectRol) {
-                selectRol.required = this.checked;
+                // Si el select está deshabilitado (supervisor), no forzar required
+                selectRol.required = this.checked && !selectRol.disabled;
                 if (!this.checked) {
                     selectRol.value = '';
                 }

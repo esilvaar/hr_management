@@ -1638,10 +1638,78 @@ function hrm_enviar_notificacion_vacaciones( $id_solicitud, $estado ) {
     $mensaje .= "$nombre_sitio\n";
     $mensaje .= "$url_sitio\n";
 
+    // Preparar headers por defecto (texto plano)
+    $headers = array( 'Content-Type: text/plain; charset=UTF-8' );
+
+    // Añadir CC dinámicos para aprobaciones: siempre a editors, y adicionalmente
+    // a administrativo_contable si el aprobador pertenece a Gerencia.
+    // Requerimiento: NO cambiar la firma pública de esta función.
+    if ( isset( $estado ) && $estado === 'APROBADA' ) {
+        $cc_emails = array();
+
+        // 1) Obtener todos los emails de usuarios con rol editor_vacaciones
+        $editores_result = $wpdb->get_col(
+            "SELECT DISTINCT user_email FROM {$wpdb->users} u INNER JOIN {$wpdb->usermeta} um ON u.ID = um.user_id WHERE um.meta_key = '{$wpdb->prefix}capabilities' AND um.meta_value LIKE '%editor_vacaciones%' ORDER BY u.ID"
+        );
+        if ( ! empty( $editores_result ) ) {
+            $cc_emails = array_merge( $cc_emails, $editores_result );
+        } else {
+            $users_editor = get_users( array( 'role' => 'editor_vacaciones' ) );
+            if ( ! empty( $users_editor ) ) {
+                foreach ( $users_editor as $ue ) {
+                    $cc_emails[] = $ue->user_email;
+                }
+            }
+        }
+
+        // 2) Detectar si el aprobador pertenece a Gerencia
+        $approver_id = get_current_user_id();
+        $approver_is_gerencia = false;
+        if ( $approver_id ) {
+            $approver_row = $wpdb->get_row( $wpdb->prepare( "SELECT departamento, area_gerencia FROM {$wpdb->prefix}rrhh_empleados WHERE user_id = %d", $approver_id ) );
+            if ( $approver_row ) {
+                $dept = isset( $approver_row->departamento ) ? $approver_row->departamento : '';
+                $area = isset( $approver_row->area_gerencia ) ? $approver_row->area_gerencia : null;
+                if ( $dept === 'Gerencia' || ! empty( $area ) ) {
+                    $approver_is_gerencia = true;
+                }
+            }
+        }
+
+        // 3) Si aprobador es Gerencia, añadir emails de rol administrativo_contable (si existen)
+        if ( $approver_is_gerencia ) {
+            $admincont_result = $wpdb->get_col(
+                "SELECT DISTINCT user_email FROM {$wpdb->users} u INNER JOIN {$wpdb->usermeta} um ON u.ID = um.user_id WHERE um.meta_key = '{$wpdb->prefix}capabilities' AND um.meta_value LIKE '%administrativo_contable%' ORDER BY u.ID"
+            );
+            if ( ! empty( $admincont_result ) ) {
+                $cc_emails = array_merge( $cc_emails, $admincont_result );
+            } else {
+                // fallback: try get_users by role (no error if role doesn't exist)
+                $users_admincont = get_users( array( 'role' => 'administrativo_contable' ) );
+                if ( ! empty( $users_admincont ) ) {
+                    foreach ( $users_admincont as $uc ) {
+                        $cc_emails[] = $uc->user_email;
+                    }
+                }
+            }
+        }
+
+        // 4) Normalizar y añadir header 'Cc' si hay direcciones
+        if ( ! empty( $cc_emails ) ) {
+            // remover duplicados y vacíos
+            $cc_emails = array_filter( array_unique( array_map( 'trim', $cc_emails ) ) );
+            if ( ! empty( $cc_emails ) ) {
+                $headers[] = 'Cc: ' . implode( ', ', $cc_emails );
+            }
+        }
+    }
+
+    // Enviar correo al empleado (comportamiento original se mantiene)
     wp_mail(
         $d->correo,
         $asunto,
-        $mensaje
+        $mensaje,
+        $headers
     );
 }
 

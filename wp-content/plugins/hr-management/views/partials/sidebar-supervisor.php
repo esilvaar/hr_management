@@ -89,8 +89,16 @@ $logo_url = esc_url(
                                 Documentos
                     </a>
                 </li>
+                <li>
+                    <a class="nav-link px-3 py-2 <?= hrm_sup_is_active('hrm-empleados', 'new'); ?>"
+                       href="<?= esc_url( admin_url('admin.php?page=hrm-empleados&tab=new') ); ?>">
+                        Nuevo empleado
+                    </a>
+                </li>
             </ul>
         </details>
+
+
 
         <!-- Vacaciones -->
         <details <?= in_array( $current_page, array( 'hrm-vacaciones', 'hrm-mi-perfil-vacaciones' ), true ) ? 'open' : ''; ?>>

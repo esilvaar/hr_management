@@ -104,6 +104,8 @@ class HRM_DB_Empleados extends HRM_DB_Table {
         return $this->db->get_row( $this->db->prepare( "SELECT {$select} FROM {$this->table()} WHERE {$this->col('email')} = %s", $email ) );
     }
 
+
+
     /**
      * Obtener empleados visibles para un usuario dado.
      * Usuarios con rol 'administrador_anaconda' o 'supervisor' que además sean gerentes

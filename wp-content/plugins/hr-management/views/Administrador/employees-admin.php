@@ -150,124 +150,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
         }
     }
     
-    // --- ACCIÓN B: Crear Empleado + Usuario WP (VERSIÓN DEFINITIVA) ---
-    elseif ( $action === 'create_employee' && check_admin_referer( 'hrm_create_employee', 'hrm_create_employee_nonce' ) ) {
-        
-        // 1. Recoger datos
-        $rut          = sanitize_text_field( $_POST['rut'] ?? '' );
-        $email        = sanitize_email( $_POST['email'] ?? '' );
-        $nombre       = sanitize_text_field( $_POST['nombre'] ?? '' );
-        $apellido     = sanitize_text_field( $_POST['apellido'] ?? '' );
-        $fecha_ingreso= sanitize_text_field( $_POST['fecha_ingreso'] ?? '' );
-        $rol_wp       = sanitize_text_field( $_POST['rol_usuario_wp'] ?? 'subscriber' );
-
-        // 2. Detectar Checkbox
-        $crear_wp = isset($_POST['crear_usuario_wp']); 
-        // Si se va a crear usuario y no se seleccionó rol, forzar 'subscriber'
-        if ($crear_wp && empty($rol_wp)) {
-            $rol_wp = 'subscriber';
-        }
-
-        // 3. Validación de campos obligatorios
-        $missing = array();
-        if ( $rut === '' ) $missing[] = 'RUT';
-        if ( $nombre === '' ) $missing[] = 'Nombres';
-        if ( $apellido === '' ) $missing[] = 'Apellidos';
-        if ( $email === '' || ! is_email( $email ) ) $missing[] = 'Email válido';
-
-        if ( ! empty( $missing ) ) {
-            $message_error = 'Faltan campos obligatorios: ' . implode( ', ', $missing );
-        }
-        
-        $wp_user_id = null;
-        $error_wp   = '';
-
-        // 3. Lógica de Creación de Usuario WP
-        if ( $crear_wp ) {
-            // Solo usuarios con capacidad de crear usuarios pueden crear cuentas WP
-            if ( ! current_user_can( 'create_users' ) ) {
-                $error_wp = 'No tienes permisos para crear usuarios en WordPress.';
-            }
-
-            // Si no hay error, procesar creación de usuario
-            if ( empty( $error_wp ) ) {
-                // Limpieza vital: "12.345.678-9" -> "12345678-9"
-                $username_clean = str_replace([ '.', ' ', ',' ], '', trim( $rut ) );
-
-                if ( empty( $email ) || ! is_email( $email ) ) {
-                    $error_wp = 'El correo es inválido o está vacío.';
-                } elseif ( email_exists( $email ) ) {
-                    $error_wp = 'El correo ya existe en WordPress.';
-                } elseif ( username_exists( $username_clean ) ) {
-                    $error_wp = "El usuario (RUT: $username_clean) ya existe en WordPress.";
-                } else {
-                    $password = wp_generate_password( 12, false );
-
-                    $userdata = [
-                        'user_login' => $username_clean,
-                        'user_email' => $email,
-                        'user_pass'  => $password,
-                        'first_name' => $nombre,
-                        'last_name'  => $apellido,
-                        'role'       => $rol_wp,
-                    ];
-
-                    $new_id = wp_insert_user( $userdata );
-
-                    if ( is_wp_error( $new_id ) ) {
-                        $error_wp = 'Error WP: ' . $new_id->get_error_message();
-                    } else {
-                        $wp_user_id = $new_id;
-                        $sent = false;
-                        if ( function_exists( 'hrm_send_user_credentials_email' ) ) {
-                            $sent = hrm_send_user_credentials_email( $new_id, $username_clean, $password, $email );
-                        }
-                        if ( ! $sent && apply_filters( 'hrm_send_new_user_notification', false, $new_id ) ) {
-                            wp_new_user_notification( $new_id, null, 'both' );
-                        }
-                    }
-                }
-            }
-        }
-
-        // 4. Guardar en Base de Datos de Empleados
-        if ( $error_wp ) {
-            $message_error = $error_wp; // Si falló WP, mostramos error y no guardamos nada
-        } elseif ( empty( $message_error ) ) {
-            // Construir data con todos los campos (campos opcionales pueden quedar vacíos)
-            $data = array(
-                'rut' => $rut,
-                'nombre' => $nombre,
-                'apellido' => $apellido,
-                'email' => $email,
-                'fecha_ingreso' => $fecha_ingreso,
-                'telefono' => sanitize_text_field( $_POST['telefono'] ?? '' ),
-                'fecha_nacimiento' => sanitize_text_field( $_POST['fecha_nacimiento'] ?? '' ),
-                'departamento' => sanitize_text_field( $_POST['departamento'] ?? '' ),
-                'puesto' => sanitize_text_field( $_POST['puesto'] ?? '' ),
-                'tipo_contrato' => sanitize_text_field( $_POST['tipo_contrato'] ?? '' ),
-                'salario' => isset($_POST['salario']) && $_POST['salario'] !== '' ? floatval( $_POST['salario'] ) : null,
-                'estado' => 1,
-            );
-            
-            // Si creamos usuario, vinculamos el ID
-            if ( $wp_user_id ) {
-                $data['user_id'] = $wp_user_id;
-            }
-
-            if ( $db_emp->create( $data ) ) {
-                $msg_extra = $wp_user_id ? " (Usuario web creado: $username_clean)" : "";
-                
-                // Redirigir para limpiar formulario (Patrón PRG)
-                wp_safe_redirect( add_query_arg( ['page' => 'hrm-empleados', 'tab' => 'list', 'msg' => 'created'], admin_url( 'admin.php' ) ) );
-                exit;
-            } else {
-                // Rollback: Si falla la BD local, borramos el usuario WP para no dejar basura
-                if ( $wp_user_id ) wp_delete_user( $wp_user_id );
-                $message_error = 'Error SQL al guardar empleado. Verifica que el RUT no esté duplicado en la lista.';
-            }
-        }
-    }
+    // El bloque de creación de empleado se procesa ahora en el handler central `hrm_handle_employees_post()` (includes/employees.php) para garantizar que las redirecciones ocurran antes de enviar salida y evitar warnings de headers. Si necesitas ajustar su comportamiento, edítalo allí.
 
     // --- ACCIÓN C: Subir Documentos ---
     elseif ( $action === 'upload_document' && check_admin_referer( 'hrm_upload_file', 'hrm_upload_nonce' ) ) {
@@ -460,15 +343,17 @@ if ( $tab !== 'list' ) {
         <main class="hrm-content">
             
             <?php if ( ! empty( $message_success ) ) : ?>
-                <div class="notice notice-success is-dismissible"><p><?= esc_html( $message_success ) ?></p></div>
+                <?php if ( $tab === 'new' ) : // Mostrar el notice en blanco sobre la vista de creación ?>
+                    <div class="notice notice-success is-dismissible" style="background-color:#198754; border-left-color:#0f5132; color:#ffffff;">
+                        <p style="color:#ffffff; margin:0; padding:6px 8px;"><?= esc_html( $message_success ) ?></p>
+                    </div>
+                <?php else : ?>
+                    <div class="notice notice-success is-dismissible"><p><?= esc_html( $message_success ) ?></p></div>
+                <?php endif; ?>
             <?php endif; ?>
 
             <?php if ( ! empty( $message_error ) ) : ?>
                 <div class="notice notice-error is-dismissible"><p><?= esc_html( $message_error ) ?></p></div>
-            <?php endif; ?>
-
-            <?php if ( isset($_GET['msg']) && $_GET['msg'] == 'created' ) : ?>
-                <div class="notice notice-success is-dismissible"><p>Empleado creado correctamente.</p></div>
             <?php endif; ?>
 
             <!-- Selector de Empleado (usando partial para mantener consistencia) -->

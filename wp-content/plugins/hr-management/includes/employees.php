@@ -3,39 +3,17 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 /**
  * Obtiene los departamentos predefinidos para cada área gerencial
- * 
- * @param string $area_gerencia El área gerencial (ej: "Comercial", "Proyectos", "Operaciones")
- * @return array Array de departamentos a cargo
  */
 function hrm_get_deptos_predefinidos_por_area( $area_gerencia ) {
     $mapeo = array(
-        'Comercial' => array(
-            'Soporte',
-            'Ventas'
-        ),
-        'Proyectos' => array(
-            'Desarrollo'
-        ),
-        'Operaciones' => array(
-            'Administracion',
-            'Gerencia',
-            'Sistemas'
-        )
+        'Comercial' => array('Soporte', 'Ventas'),
+        'Proyectos' => array('Desarrollo'),
+        'Operaciones' => array('Administracion', 'Gerencia', 'Sistemas')
     );
     
-    // Normalizar la búsqueda (case-insensitive)
-    $area_normalizada = null;
     foreach ( $mapeo as $key => $deptos ) {
-        if ( strtolower( $key ) === strtolower( $area_gerencia ) ) {
-            $area_normalizada = $key;
-            break;
-        }
+        if ( strtolower( $key ) === strtolower( $area_gerencia ) ) return $mapeo[ $key ];
     }
-    
-    if ( $area_normalizada && isset( $mapeo[ $area_normalizada ] ) ) {
-        return $mapeo[ $area_normalizada ];
-    }
-    
     return array();
 }
 
@@ -43,30 +21,23 @@ function hrm_get_deptos_predefinidos_por_area( $area_gerencia ) {
  * Renderiza la página de administración (Vista)
  */
 function hrm_render_employees_admin_page() {
-    // Cargar la vista correspondiente según el rol/capability del usuario
-    // 1) Admin siempre ve la vista completa
     if ( current_user_can( 'manage_options' ) ) {
         require_once HRM_PLUGIN_DIR . 'views/Administrador/employees-admin.php';
         return;
     }
-
-    // 2) Usuarios con view_hrm_admin_views (como administrador_anaconda) ven vista de admin
     if ( current_user_can( 'view_hrm_admin_views' ) ) {
         require_once HRM_PLUGIN_DIR . 'views/Administrador/employees-admin.php';
         return;
     }
 
-    // 3) Mapear roles a vistas (configurable mediante filtro)
     $default_map = array(
         'supervisor' => HRM_PLUGIN_DIR . 'views/Administrador/employees-admin.php',
         'editor_vacaciones' => HRM_PLUGIN_DIR . 'views/employees-editor_vacaciones.php',
         'empleado' => HRM_PLUGIN_DIR . 'views/Empleado/employees-empleados.php',
     );
-
     $map = apply_filters( 'hrm_role_views_map', $default_map );
-
     $current_user = wp_get_current_user();
-    if ( ! empty( $current_user->roles ) && is_array( $current_user->roles ) ) {
+    if ( ! empty( $current_user->roles ) ) {
         foreach ( $current_user->roles as $r ) {
             if ( isset( $map[ $r ] ) && file_exists( $map[ $r ] ) ) {
                 require_once $map[ $r ];
@@ -74,1098 +45,361 @@ function hrm_render_employees_admin_page() {
             }
         }
     }
-
-    // 4) Fallback por capability
     if ( current_user_can( 'view_hrm_employee_admin' ) && file_exists( HRM_PLUGIN_DIR . 'views/Empleado/employees-empleados.php' ) ) {
         require_once HRM_PLUGIN_DIR . 'views/Empleado/employees-empleados.php';
         return;
     }
-
     wp_die( 'No tienes permisos para ver esta página.', 'Acceso denegado', array( 'response' => 403 ) );
 }
 
 /**
  * Procesa los formularios (Controlador)
- * Se ejecuta en 'admin_init' para poder redireccionar antes de enviar cabeceras HTML.
  */
 function hrm_handle_employees_post() {
-    // 1. Verificaciones de seguridad básicas
-    if ( ! is_admin() || $_SERVER['REQUEST_METHOD'] !== 'POST' ) {
-        return;
-    }
-
-    // Si no se envió ninguna acción de nuestro plugin, salimos.
-    if ( ! isset( $_POST['hrm_action'] ) ) {
-        return;
-    }
+    if ( ! is_admin() || $_SERVER['REQUEST_METHOD'] !== 'POST' ) return;
+    if ( ! isset( $_POST['hrm_action'] ) ) return;
 
     $action = $_POST['hrm_action'];
-
-    // 2. Instancias de Base de Datos
-    // Asegúrate de que las clases estén cargadas antes de este punto
     $db_emp  = new HRM_DB_Empleados();
     $db_docs = new HRM_DB_Documentos();
-
-    // URL base para redirecciones (volver a la página del plugin)
     $base_url = add_query_arg( ['page' => 'hrm-empleados'], admin_url( 'admin.php' ) );
-
-    // Detectar página de origen para redirección correcta
+    
+    // Redirección inteligente
     $referrer_page = isset( $_GET['page'] ) ? sanitize_text_field( $_GET['page'] ) : 'hrm-empleados';
     $is_own_profile = in_array( $referrer_page, array( 'hrm-mi-perfil', 'hrm-mi-perfil-info' ), true );
-    
-    // Si viene de su propia página, redireccionar ahí; sino a empleados
-    $redirect_base = ( $is_own_profile ) ? 
-        add_query_arg( ['page' => $referrer_page], admin_url( 'admin.php' ) ) :
-        $base_url;
+    $redirect_base = ( $is_own_profile ) ? add_query_arg( ['page' => $referrer_page], admin_url( 'admin.php' ) ) : $base_url;
 
     // =========================================================================
     // ACCIÓN A: ACTUALIZAR EMPLEADO
     // =========================================================================
     if ( $action === 'update_employee' && check_admin_referer( 'hrm_update_employee', 'hrm_update_employee_nonce' ) ) {
         $emp_id = absint( $_POST['employee_id'] );
-
-        hrm_debug_log( 'Update employee action triggered', $_POST );
-
-        // Trazas adicionales: garantizar escritura directa en wp-content/debug.log
-        try {
-            $trace_file = WP_CONTENT_DIR . '/debug.log';
-            @file_put_contents( $trace_file, "HRM-TRACE: update_employee triggered at " . date('c') . "\nPOST: " . print_r( $_POST, true ) . "\n\n", FILE_APPEND | LOCK_EX );
-        } catch ( Exception $e ) {
-            // No hacer nada si falla (evitar romper flujo)
-        }
-
-        // Verificar permisos
+        
         if ( ! hrm_can_edit_employee( $emp_id ) ) {
-            hrm_redirect_with_message(
-                $redirect_base,
-                __( 'No tienes permisos para editar este perfil.', 'hr-management' ),
-                'error'
-            );
+            hrm_redirect_with_message( $redirect_base, __( 'No tienes permisos para editar este perfil.', 'hr-management' ), 'error' );
         }
 
-        // VALIDACIÓN: Verificar si el RUT está siendo modificado y si ya existe otro empleado con ese RUT
-        if ( isset( $_POST['rut'] ) && ! empty( $_POST['rut'] ) ) {
-            global $wpdb;
-            $table_empleados = $wpdb->prefix . 'rrhh_empleados';
-            
-            $nuevo_rut = sanitize_text_field( $_POST['rut'] );
-            $empleado_con_rut = $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT id_empleado FROM {$table_empleados} WHERE rut = %s AND id_empleado != %d",
-                    $nuevo_rut,
-                    $emp_id
-                )
-            );
-            
-            if ( $empleado_con_rut ) {
-                // El RUT ya existe en otro empleado
-                hrm_redirect_with_message(
-                    $redirect_base,
-                    sprintf( __( 'El RUT %s ya existe en el sistema (Empleado ID: %d). No se puede asignar el mismo RUT a dos empleados.', 'hr-management' ), $nuevo_rut, $empleado_con_rut ),
-                    'error'
-                );
-            }
-        }
-
-        // Si el request incluye un archivo de avatar, procesarlo primero
-        if ( ! empty( $_FILES['avatar'] ) && isset( $_FILES['avatar']['name'] ) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK ) {
-            if ( ! function_exists( 'wp_handle_upload' ) ) {
-                require_once ABSPATH . 'wp-admin/includes/file.php';
-            }
-
-            $file = $_FILES['avatar'];
-            $overrides = array( 'test_form' => false );
-
-            $upload_result = wp_handle_upload( $file, $overrides );
-            if ( isset( $upload_result['file'] ) && ! empty( $upload_result['file'] ) && file_exists( $upload_result['file'] ) ) {
-                // Guardado físico correcto; intentamos registrar como attachment en WP
-                $file_path = $upload_result['file'];
-
-                if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
-                    require_once ABSPATH . 'wp-admin/includes/image.php';
-                }
-                if ( ! function_exists( 'wp_insert_attachment' ) ) {
-                    require_once ABSPATH . 'wp-admin/includes/media.php';
-                }
-
-                $filetype = wp_check_filetype( basename( $file_path ), null );
-                $attachment = array(
-                    'guid'           => $upload_result['url'],
-                    'post_mime_type' => $filetype['type'] ?? '',
-                    'post_title'     => sanitize_file_name( basename( $file_path ) ),
-                    'post_content'   => '',
-                    'post_status'    => 'inherit'
-                );
-
-                $attach_id = wp_insert_attachment( $attachment, $file_path );
-                if ( ! is_wp_error( $attach_id ) ) {
-                    $attach_data = wp_generate_attachment_metadata( $attach_id, $file_path );
-                    wp_update_attachment_metadata( $attach_id, $attach_data );
-
-                    $avatar_url = wp_get_attachment_url( $attach_id );
-
-                    if ( ! empty( $employee_obj ) && ! empty( $employee_obj->user_id ) ) {
-                        $user_id = intval( $employee_obj->user_id );
-                        // Guardamos URL específica de plugin
-                        update_user_meta( $user_id, 'hrm_avatar', esc_url_raw( $avatar_url ) );
-                        // Sincronizar con metadatos comunes (plugins que usan attachment ID)
-                        update_user_meta( $user_id, 'user_avatar', $attach_id );
-                        update_user_meta( $user_id, 'wp_user_avatar', $attach_id );
-                        // simple_local_avatar suele esperar array con 'full' y 'thumb'
-                        update_user_meta( $user_id, 'simple_local_avatar', array( 'full' => $avatar_url, 'thumb' => $avatar_url ) );
-                    } else {
-                        update_option( 'hrm_avatar_emp_' . intval( $emp_id ), esc_url_raw( $avatar_url ) );
-                    }
-                } else {
-                    // Fallback: si no pudimos crear attachment, guardamos URL directa
-                    if ( isset( $upload_result['url'] ) && ! empty( $upload_result['url'] ) ) {
-                        $avatar_url = $upload_result['url'];
-                        if ( ! empty( $employee_obj ) && ! empty( $employee_obj->user_id ) ) {
-                            update_user_meta( intval( $employee_obj->user_id ), 'hrm_avatar', esc_url_raw( $avatar_url ) );
-                        } else {
-                            update_option( 'hrm_avatar_emp_' . intval( $emp_id ), esc_url_raw( $avatar_url ) );
-                        }
-                    }
-                }
-            }
-        }
-
-        // Cargar objeto empleado actual para validaciones adicionales
         $employee_obj = $db_emp->get( $emp_id );
+        if ( ! $employee_obj ) wp_die('Empleado no encontrado');
 
-        // ----------------------
-        // Validación de permisos por campo (server-side)
-        // ----------------------
-        $current_user_id = get_current_user_id();
-        $is_admin = current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' );
+        // 1. PROCESAR DATOS NORMALES (Campos editables)
+        // ---------------------------------------------
+        $current_user = wp_get_current_user();
+        $is_admin = current_user_can( 'manage_options' );
         $is_supervisor = current_user_can( 'edit_hrm_employees' );
-        $is_own_profile = ( $employee_obj && intval( $employee_obj->user_id ) === $current_user_id );
+        $is_own = ( intval( $employee_obj->user_id ) === get_current_user_id() );
 
-        // Override: usuarios con rol 'empleado' o 'editor_vacaciones' (no admin/supervisor) solo pueden editar campos personales en su propio perfil
-        $current_user_obj = wp_get_current_user();
-        $restricted_roles = array( 'empleado', 'editor_vacaciones' );
-        // Detectar rol 'supervisor' explícitamente para bloquear edición propia
-        $is_role_supervisor = in_array( 'supervisor', (array) $current_user_obj->roles, true );
-        if ( $is_role_supervisor && $is_own_profile && ! ( current_user_can( 'manage_options' ) ) ) {
-            // Supervisores SOLO pueden editar campos personales en su propio perfil
-            $allowed_fields = array('nombre','apellido','telefono','email','fecha_nacimiento');
-        } elseif ( array_intersect( $restricted_roles, (array) $current_user_obj->roles ) && ! $is_admin && ! $is_supervisor ) {
-            if ( $is_own_profile ) {
-                $allowed_fields = array('nombre','apellido','telefono','email','fecha_nacimiento');
-            } else {
-                $allowed_fields = array();
-            }
-        } elseif ( $is_admin ) {
-            $allowed_fields = array('nombre','apellido','telefono','email','departamento','puesto','estado','anos_acreditados_anteriores','fecha_ingreso','salario');
-        } elseif ( hrm_can_edit_employee( $emp_id ) && ! $is_own_profile ) {
-            $allowed_fields = array('nombre','apellido','telefono','email','departamento','puesto','anos_acreditados_anteriores','fecha_ingreso');
-        } elseif ( $is_own_profile ) {
-            $allowed_fields = array('nombre','apellido','telefono','email','fecha_nacimiento');
-        } else {
-            $allowed_fields = array();
+        // Determinar campos permitidos (Misma lógica que la vista para seguridad)
+        $allowed_fields = array();
+        if( $is_admin ) {
+            $allowed_fields = array('nombre','apellido','telefono','email','departamento','puesto','estado','anos_acreditados_anteriores','fecha_ingreso','tipo_contrato','salario','area_gerencia');
+        } elseif( $is_supervisor && !$is_own ) {
+             $allowed_fields = array('nombre','apellido','telefono','email','departamento','puesto','anos_acreditados_anteriores','fecha_ingreso');
+        } elseif( $is_own ) {
+             $allowed_fields = array('nombre','apellido','telefono','email','fecha_nacimiento');
         }
 
         $update_data = array();
         foreach ( $allowed_fields as $field ) {
             if ( isset( $_POST[ $field ] ) ) {
-                switch ( $field ) {
-                    case 'email':
-                        $update_data['email'] = sanitize_email( $_POST['email'] );
-                        break;
-                    case 'fecha_nacimiento':
-                        $fecha_nac = sanitize_text_field( $_POST['fecha_nacimiento'] );
-                        if ( preg_match( '/^\\d{4}-\\d{2}-\\d{2}$/', $fecha_nac ) ) {
-                            $update_data['fecha_nacimiento'] = $fecha_nac;
-                        }
-                        break;
-                    case 'salario':
-                        $update_data['salario'] = floatval( $_POST['salario'] );
-                        break;
-                    case 'anos_acreditados_anteriores':
-                        $update_data['anos_acreditados_anteriores'] = floatval( $_POST['anos_acreditados_anteriores'] );
-                        break;
-                    case 'estado':
-                        $update_data['estado'] = intval( $_POST['estado'] );
-                        break;
-                    case 'fecha_ingreso':
-                        $fecha = sanitize_text_field( $_POST['fecha_ingreso'] );
-                        if ( preg_match( '/^\\d{4}-\\d{2}-\\d{2}$/', $fecha ) ) {
-                            $update_data['fecha_ingreso'] = $fecha;
-                        }
-                        break;
-                    default:
-                        $update_data[ $field ] = sanitize_text_field( $_POST[ $field ] );
-                }
+                if($field === 'email') $update_data['email'] = sanitize_email( $_POST['email'] );
+                elseif($field === 'salario') $update_data['salario'] = floatval( $_POST['salario'] );
+                elseif($field === 'anos_acreditados_anteriores') $update_data['anos_acreditados_anteriores'] = floatval( $_POST['anos_acreditados_anteriores'] );
+                else $update_data[ $field ] = sanitize_text_field( $_POST[ $field ] );
             }
         }
 
-        // Recalcular años en servidor para evitar manipulación desde cliente
+        // Recálculo automático de años
         if ( isset( $update_data['fecha_ingreso'] ) || isset( $update_data['anos_acreditados_anteriores'] ) ) {
-            $fecha_ingreso_final = isset( $update_data['fecha_ingreso'] ) ? $update_data['fecha_ingreso'] : ( $employee_obj->fecha_ingreso ?? '' );
+            $fi = isset( $update_data['fecha_ingreso'] ) ? $update_data['fecha_ingreso'] : $employee_obj->fecha_ingreso;
             $anos_empresa = 0;
-            if ( $fecha_ingreso_final && $fecha_ingreso_final !== '0000-00-00' ) {
-                $fecha_obj = DateTime::createFromFormat( 'Y-m-d', $fecha_ingreso_final );
-                if ( $fecha_obj ) {
-                    $today = new DateTime( 'today' );
-                    $diff = $today->diff( $fecha_obj );
-                    $anos_empresa = intval( $diff->y );
-                }
+            if ( $fi && $fi !== '0000-00-00' ) {
+                $d1 = new DateTime( $fi ); $d2 = new DateTime();
+                $diff = $d2->diff( $d1 );
+                $anos_empresa = $diff->y;
             }
             $update_data['anos_en_la_empresa'] = $anos_empresa;
-            $anos_anteriores = isset( $update_data['anos_acreditados_anteriores'] ) ? floatval( $update_data['anos_acreditados_anteriores'] ) : floatval( $employee_obj->anos_acreditados_anteriores ?? 0 );
-            $update_data['anos_totales_trabajados'] = $anos_anteriores + $anos_empresa;
+            $previos = isset( $update_data['anos_acreditados_anteriores'] ) ? $update_data['anos_acreditados_anteriores'] : ($employee_obj->anos_acreditados_anteriores ?? 0);
+            $update_data['anos_totales_trabajados'] = $previos + $anos_empresa;
         }
 
-        hrm_debug_log( 'Allowed update fields', $allowed_fields );
-        hrm_debug_log( 'Update payload (sanitized)', $update_data );
-
-        if ( empty( $update_data ) ) {
-            hrm_redirect_with_message(
-                $redirect_base,
-                __( 'No tienes permiso para modificar los campos enviados.', 'hr-management' ),
-                'error'
-            );
+        // Ejecutar actualización de datos
+        $db_result = false;
+        if(!empty($update_data)) {
+            $db_result = $db_emp->update( $emp_id, $update_data );
         }
 
-        // -----------------------------
-        // Manejo opcional de cambio de contraseña
-        // Solo a partir de edición por Admin / Administrador_Anaconda / Supervisor
-        // -----------------------------
+        // 2. PROCESAR CAMBIO DE CONTRASEÑA (Integrado)
+        // --------------------------------------------
         $password_changed = false;
-        $password_msgs = array();
+        $email_sent = false;
 
-        if ( isset( $_POST['hrm_new_password'] ) && strlen( trim( $_POST['hrm_new_password'] ) ) > 0 ) {
-            $new_pass = $_POST['hrm_new_password'];
-            $confirm_pass = isset( $_POST['hrm_confirm_password'] ) ? $_POST['hrm_confirm_password'] : '';
-
-            // Permisos: admin, administrador_anaconda o supervisor (edit_hrm_employees)
-            $can_change_pass = current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) || current_user_can( 'view_hrm_admin_views' ) || in_array( 'administrador_anaconda', (array) $current_user_obj->roles, true );
-
-            if ( ! $can_change_pass ) {
-                hrm_redirect_with_message( $redirect_base, __( 'No tienes permisos para cambiar la contraseña de usuarios.', 'hr-management' ), 'error' );
-            }
-
-            if ( empty( $employee_obj ) || empty( $employee_obj->user_id ) ) {
-                hrm_redirect_with_message( $redirect_base, __( 'El empleado no tiene una cuenta WordPress asociada.', 'hr-management' ), 'error' );
-            }
-
-            if ( $new_pass !== $confirm_pass ) {
-                hrm_redirect_with_message( $redirect_base, __( 'Las contraseñas no coinciden.', 'hr-management' ), 'error' );
-            }
-
-            if ( strlen( $new_pass ) < 8 ) {
-                hrm_redirect_with_message( $redirect_base, __( 'La contraseña debe tener al menos 8 caracteres.', 'hr-management' ), 'error' );
-            }
-
-            // Depuración: registrar intento de cambio de contraseña
-            error_log( 'HRM: Intentando cambiar contraseña WP para empleado ID ' . $emp_id . ' (WP user id: ' . intval( $employee_obj->user_id ) . ') por usuario ' . get_current_user_id() );
-            // También escribir traza directa en debug.log para asegurar visibilidad
-            @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: Intento cambio pass para emp_id={$emp_id}, wp_user_id=" . intval( $employee_obj->user_id ) . " por usuario=" . get_current_user_id() . " at " . date('c') . "\n", FILE_APPEND | LOCK_EX );
-
-            // Actualizar contraseña en WP
-            $wp_user_id = intval( $employee_obj->user_id );
-
-            // Registrar estado previo y metadatos del usuario para diagnóstico
-            $user_obj_before = get_userdata( $wp_user_id );
-            @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: Pre-change user data for wp_user_id={$wp_user_id} at " . date('c') . "\n" . print_r( $user_obj_before, true ) . "\nUser meta: " . print_r( get_user_meta( $wp_user_id ), true ) . "\n", FILE_APPEND | LOCK_EX );
-
-            // Usar wp_set_password y registrar en log
-            if ( function_exists( 'wp_set_password' ) ) {
+        if ( isset( $_POST['hrm_new_password'] ) && ! empty( $_POST['hrm_new_password'] ) ) {
+            $new_pass = sanitize_text_field( $_POST['hrm_new_password'] );
+            
+            // Validar longitud
+            if ( strlen( $new_pass ) >= 8 ) {
+                $wp_user_id = intval( $employee_obj->user_id );
+                
+                // Cambiar pass en WordPress
                 wp_set_password( $new_pass, $wp_user_id );
-                error_log( 'HRM: wp_set_password ejecutado para WP user id ' . $wp_user_id );
+                $password_changed = true;
 
-                // Verificar si el usuario existe y anotar en logs
-                $user_obj_after = get_userdata( $wp_user_id );
-                if ( $user_obj_after ) {
-                    error_log( 'HRM: Usuario encontrado tras cambio: ' . $user_obj_after->user_login . ' <' . $user_obj_after->user_email . '>' );
-                    // Verificar que la contraseña coincida usando wp_check_password
-                    $pw_ok = function_exists('wp_check_password') ? wp_check_password( $new_pass, $user_obj_after->user_pass, $wp_user_id ) : false;
-                    @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: wp_check_password returns: " . ( $pw_ok ? 'true' : 'false' ) . " for user_id={$wp_user_id} at " . date('c') . "\nUser after data:" . print_r( $user_obj_after, true ) . "\n", FILE_APPEND | LOCK_EX );
-                } else {
-                    error_log( 'HRM: Usuario no encontrado tras intento de cambio de contraseña para WP id ' . $wp_user_id );
-                    @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: Usuario no encontrado tras intento de cambio de contraseña para WP id {$wp_user_id} at " . date('c') . "\n", FILE_APPEND | LOCK_EX );
-                }
-            } else {
-                // Fallback: intentar wp_update_user
-                $res = wp_update_user( array( 'ID' => $wp_user_id, 'user_pass' => $new_pass ) );
-                error_log( 'HRM: wp_set_password no disponible, wp_update_user resultado: ' . print_r( $res, true ) );
-                @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: wp_update_user result: " . print_r( $res, true ) . " at " . date('c') . "\n", FILE_APPEND | LOCK_EX );
-            }
+                // Guardar pass temporal para mostrar (solo al admin que lo cambió)
+                set_transient( 'hrm_temp_new_pass_' . get_current_user_id(), $new_pass, 60 );
 
-            $password_changed = true;
-            $password_msgs[] = __( 'Contraseña actualizada.', 'hr-management' );
-
-            // Guardar la nueva contraseña temporalmente en un transient asociado al usuario que hace el cambio
-            // TTL corto (60 segundos) para poder mostrarla una vez y permitir copia al portapapeles
-            $admin_user_id = get_current_user_id();
-            if ( $admin_user_id ) {
-                set_transient( 'hrm_temp_new_pass_' . $admin_user_id, $new_pass, 60 );
-            }
-
-            // Envío de email opcional
-            if ( isset( $_POST['hrm_notify_user'] ) && intval( $_POST['hrm_notify_user'] ) === 1 ) {
-                $user_obj = get_userdata( $wp_user_id );
-                $to = ( $user_obj && ! empty( $user_obj->user_email ) ) ? $user_obj->user_email : ( ! empty( $employee_obj->email ) ? $employee_obj->email : '' );
-
-                error_log( 'HRM: hrm_notify_user solicitado. Mail destinatario calculado: ' . ( $to ?: '[vacío]' ) );
-
-                if ( $to ) {
-                    $site_name = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
-                    $login_url = wp_login_url();
-                    $subject = sprintf( '[%s] %s', $site_name, __( 'Tu acceso ha sido actualizado', 'hr-management' ) );
-                    $message = sprintf( "%s\n\n%s: %s\n%s: %s\n\n%s: %s",
-                        sprintf( __( 'Hola %s,', 'hr-management' ), $employee_obj->nombre ),
-                        __( 'Usuario', 'hr-management' ), ( $user_obj ? $user_obj->user_login : '' ),
-                        __( 'Contraseña', 'hr-management' ), $new_pass,
-                        __( 'Podrás iniciar sesión en', 'hr-management' ), $login_url
-                    );
-
-                    // Trazas directas antes de enviar email
-                    @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: Preparando wp_mail to={$to} subject=" . str_replace("\n", " ", $subject) . " at " . date('c') . "\nMessage: " . str_replace("\n", " ", $message) . "\n", FILE_APPEND | LOCK_EX );
-
-                    // Registrar cabeceras From calculadas por filtros (útil si el servidor bloquea envíos sin From válido)
-                    $from_email = apply_filters( 'wp_mail_from', get_option( 'admin_email' ) );
-                    $from_name = apply_filters( 'wp_mail_from_name', get_bloginfo( 'name' ) );
-                    @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: wp_mail from={$from_email} from_name=" . str_replace("\n", " ", $from_name) . "\n", FILE_APPEND | LOCK_EX );
-
-                    // Añadir logger para fallos en wp_mail
-                    function hrm_wp_mail_failed_logger( $wp_error ) {
-                        @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: wp_mail_failed: " . print_r( $wp_error->get_error_messages(), true ) . " | data: " . print_r( $wp_error->get_error_data(), true ) . " at " . date('c') . "\n", FILE_APPEND | LOCK_EX );
-                    }
-                    add_action( 'wp_mail_failed', 'hrm_wp_mail_failed_logger' );
-
-                    // Construir cabeceras explícitas para mejorar compatibilidad con algunos MTAs
-                    $headers = array();
-                    if ( ! empty( $from_name ) && ! empty( $from_email ) ) {
-                        $headers[] = 'From: ' . $from_name . ' <' . $from_email . '>';
-                    }
-                    $headers[] = 'Content-Type: text/plain; charset=' . get_option( 'blog_charset' );
-
-                    @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: wp_mail headers: " . print_r( $headers, true ) . " at " . date('c') . "\n", FILE_APPEND | LOCK_EX );
-
-                    $mail_sent = wp_mail( $to, $subject, $message, $headers );
-
-                    // Remover el logger para evitar múltiples registros inesperados
-                    remove_action( 'wp_mail_failed', 'hrm_wp_mail_failed_logger' );
-                    error_log( 'HRM: wp_mail() returns: ' . ( $mail_sent ? 'true' : 'false' ) );
-                    // Registrar también en debug.log para visibilidad
-                    @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: wp_mail() returns: " . ( $mail_sent ? 'true' : 'false' ) . " to={$to} at " . date('c') . "\n", FILE_APPEND | LOCK_EX );
-
-                    if ( $mail_sent ) {
-                        $password_msgs[] = __( 'Se envió un correo al usuario.', 'hr-management' );
-                    } else {
-                        $password_msgs[] = __( 'No se envió correo: error en wp_mail().', 'hr-management' );
-                    }
-                } else {
-                    $password_msgs[] = __( 'No se envió correo: usuario sin email.', 'hr-management' );
+                // Enviar Correo si se solicitó
+                if ( isset( $_POST['hrm_notify_user'] ) && $_POST['hrm_notify_user'] == '1' ) {
+                    $user_info = get_userdata( $wp_user_id );
+                    $to = $user_info->user_email;
+                    $subject = 'Credenciales actualizadas - Intranet';
+                    $message = "Hola " . $employee_obj->nombre . ",\r\n\r\n";
+                    $message .= "Se ha actualizado tu contraseña de acceso.\r\n";
+                    $message .= "Usuario: " . $user_info->user_login . "\r\n";
+                    $message .= "Nueva Contraseña: " . $new_pass . "\r\n\r\n";
+                    $message .= "Accede aquí: " . wp_login_url() . "\r\n";
+                    
+                    $headers = array('Content-Type: text/plain; charset=UTF-8');
+                    $sent = wp_mail( $to, $subject, $message, $headers );
+                    if($sent) $email_sent = true;
                 }
             }
         }
 
-        $update_result = $db_emp->update( $emp_id, $update_data );
-        hrm_debug_log( 'Update result', $update_result ? 'success' : 'failed' );
+        // 3. FINALIZAR Y REDIRECCIONAR
+        // ----------------------------
+        do_action( 'hrm_after_employee_update', $emp_id ); // Hooks externos
 
-        // ★ Actualizar años en la empresa y total de años trabajados
-        do_action( 'hrm_after_employee_update', $emp_id );
+        $msgs = array();
+        if($db_result) $msgs[] = 'Datos actualizados.';
+        if($password_changed) $msgs[] = 'Contraseña cambiada.';
 
-        // Si es Gerente, guardar departamentos a cargo
-        $puesto = isset( $_POST['puesto'] ) ? sanitize_text_field( $_POST['puesto'] ) : '';
-        $area_gerencia = isset( $_POST['area_gerencia'] ) ? sanitize_text_field( $_POST['area_gerencia'] ) : '';
-        $deptos_a_cargo = isset( $_POST['deptos_a_cargo'] ) ? (array) $_POST['deptos_a_cargo'] : [];
+        // Construir URL de redirección
+        $args = array(
+            'id' => $emp_id, 
+            'tab' => 'profile'
+        );
         
-        if ( strtolower( $puesto ) === 'gerente' && ! empty( $area_gerencia ) ) {
-            // Obtener nombre y correo del gerente
-            $nombre_gerente = '';
-            $correo_gerente = '';
-            if ( isset( $_POST['nombre'] ) && isset( $_POST['apellido'] ) ) {
-                $nombre = sanitize_text_field( $_POST['nombre'] );
-                $apellido = sanitize_text_field( $_POST['apellido'] );
-                $nombre_gerente = trim( "$nombre $apellido" );
-            }
-            if ( isset( $_POST['email'] ) ) {
-                $correo_gerente = sanitize_email( $_POST['email'] );
-            }
-            
-            require_once plugin_dir_path( __FILE__ ) . 'db/class-hrm-db-gerencia-deptos.php';
-            $db_gerencia = new HRM_DB_Gerencia_Deptos();
-            $db_gerencia->save_area_deptos( $area_gerencia, $deptos_a_cargo, $nombre_gerente, $correo_gerente );
-            error_log( "HRM: Departamentos a cargo actualizados para área: $area_gerencia (Gerente: $nombre_gerente - $correo_gerente)" );
-            
-            // LIMPIAR CACHÉS DE VACACIONES RELACIONADOS
-            // Esto es importante para que los gerentes vean las solicitudes correctas
-            wp_cache_delete( 'hrm_all_vacaciones_' . md5( '' . '' . '' ), '' );
-            // Limpiar todos los cachés de vacaciones de todos los usuarios
-            global $wpdb;
-            $users = $wpdb->get_results( "SELECT ID FROM {$wpdb->users}" );
-            foreach ( $users as $user ) {
-                $cache_patterns = array(
-                    'hrm_all_vacaciones_' . md5( '' . '' . $user->ID ),
-                    'hrm_all_vacaciones_' . md5( '' . 'PENDIENTE' . $user->ID ),
-                    'hrm_all_vacaciones_' . md5( '' . 'APROBADA' . $user->ID ),
-                    'hrm_all_vacaciones_' . md5( '' . 'RECHAZADA' . $user->ID ),
-                );
-                foreach ( $cache_patterns as $pattern ) {
-                    wp_cache_delete( $pattern );
-                }
-            }
-        }
+        if ( $password_changed ) $args['password_changed'] = '1';
+        if ( $email_sent ) $args['email_sent'] = '1';
 
-        if ( $update_result ) {
-            $success_msg = __( 'Datos actualizados.', 'hr-management' );
-            if ( ! empty( $password_msgs ) ) {
-                $success_msg .= ' ' . implode( ' ', $password_msgs );
-            }
-
-            // Si la contraseña fue cambiada, añadir flag en la URL para mostrar confirmación inline
-            if ( $password_changed ) {
-                $redirect_base = add_query_arg( 'password_changed', '1', $redirect_base );
-            }
-
-            hrm_redirect_with_message(
-                $redirect_base,
-                $success_msg,
-                'success'
-            );
+        if ( $db_result || $password_changed ) {
+            $args['message_success'] = rawurlencode( implode(' ', $msgs) );
+            wp_redirect( add_query_arg( $args, $redirect_base ) );
+            exit;
         } else {
-            $error_msg = __( 'No se realizaron cambios o error en actualización.', 'hr-management' );
-            if ( ! empty( $password_msgs ) && $password_changed ) {
-                // Si hubo cambio de contraseña pero fallo en update_data, notificarlo como success parcial
-                $error_msg = implode( ' ', $password_msgs ) . ' ' . $error_msg;
-            }
-            hrm_redirect_with_message(
-                $redirect_base,
-                $error_msg,
-                'error'
-            );
+            // Si no hubo cambios
+            wp_redirect( add_query_arg( $args, $redirect_base ) );
+            exit;
         }
     }
 
     // =========================================================================
-    // ACCIÓN: TOGGLE ESTADO EMPLEADO (Activar/Desactivar)
+    // ACCIÓN: TOGGLE ESTADO
     // =========================================================================
     if ( $action === 'toggle_employee_status' && check_admin_referer( 'hrm_toggle_employee_status', 'hrm_toggle_status_nonce' ) ) {
-        
-        // Solo administradores y supervisores pueden cambiar el estado
-        if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'edit_hrm_employees' ) ) {
-            hrm_redirect_with_message(
-                $redirect_base,
-                __( 'No tienes permisos para cambiar el estado de empleados.', 'hr-management' ),
-                'error'
-            );
-        }
+        if ( ! current_user_can( 'edit_hrm_employees' ) ) wp_die('Sin permisos');
         
         $emp_id = absint( $_POST['employee_id'] );
-        $current_estado = intval( $_POST['current_estado'] ?? 1 );
-        
-        // Toggle: si está activo (1), cambiar a inactivo (0) y viceversa
-        $nuevo_estado = ( $current_estado === 1 ) ? 0 : 1;
+        $nuevo_estado = ( intval($_POST['current_estado']) === 1 ) ? 0 : 1;
         
         global $wpdb;
-        $table = $wpdb->prefix . 'rrhh_empleados';
-        
-        // Obtener el departamento del empleado ANTES de cambiar el estado
-        $empleado = $wpdb->get_row(
-            $wpdb->prepare(
-                "SELECT departamento FROM {$table} WHERE id_empleado = %d",
-                $emp_id
-            )
+        $wpdb->update( 
+            $wpdb->prefix . 'rrhh_empleados', 
+            array('estado' => $nuevo_estado), 
+            array('id_empleado' => $emp_id) 
         );
         
-        $result = $wpdb->update(
-            $table,
-            array( 'estado' => $nuevo_estado ),
-            array( 'id_empleado' => $emp_id ),
-            array( '%d' ),
-            array( '%d' )
-        );
-        
-        if ( $result !== false ) {
-            // Si el empleado tiene departamento, actualizar el recuento
-            if ( $empleado && ! empty( $empleado->departamento ) ) {
-                $departamento = $empleado->departamento;
-                
-                // Si se desactiva (de 1 a 0), decrementar personal_vigente
-                if ( $current_estado === 1 && $nuevo_estado === 0 ) {
-                    $wpdb->query(
-                        $wpdb->prepare(
-                            "UPDATE {$wpdb->prefix}rrhh_departamentos 
-                             SET personal_vigente = GREATEST(0, personal_vigente - 1)
-                             WHERE nombre_departamento = %s",
-                            $departamento
-                        )
-                    );
-                    error_log( "HRM: Decrementado personal_vigente para departamento '$departamento' (empleado desactivado)" );
-                    // Limpiar caché de departamentos para obtener datos frescos
-                    hrm_clear_departamentos_cache();
-                }
-                // Si se activa (de 0 a 1), incrementar personal_vigente
-                elseif ( $current_estado === 0 && $nuevo_estado === 1 ) {
-                    $wpdb->query(
-                        $wpdb->prepare(
-                            "UPDATE {$wpdb->prefix}rrhh_departamentos 
-                             SET personal_vigente = personal_vigente + 1
-                             WHERE nombre_departamento = %s",
-                            $departamento
-                        )
-                    );
-                    error_log( "HRM: Incrementado personal_vigente para departamento '$departamento' (empleado activado)" );
-                    // Limpiar caché de departamentos para obtener datos frescos
-                    hrm_clear_departamentos_cache();
-                }
-            }
-            
-            $mensaje = ( $nuevo_estado === 1 ) 
-                ? __( 'Empleado activado correctamente. Ahora puede iniciar sesión.', 'hr-management' )
-                : __( 'Empleado desactivado correctamente. Su acceso ha sido bloqueado.', 'hr-management' );
-            
-            $redirect_url = add_query_arg( 
-                array( 'page' => 'hrm-empleados', 'tab' => 'profile', 'id' => $emp_id ), 
-                admin_url( 'admin.php' ) 
-            );
-            
-            hrm_redirect_with_message( $redirect_url, $mensaje, 'success' );
-        } else {
-            hrm_redirect_with_message(
-                $redirect_base,
-                __( 'Error al cambiar el estado del empleado.', 'hr-management' ),
-                'error'
-            );
-        }
+        wp_redirect( add_query_arg( ['id'=>$emp_id, 'tab'=>'profile', 'message_success'=>'Estado actualizado'], $redirect_base ) );
+        exit;
     }
 
     // =========================================================================
-    // ACCIÓN E: ELIMINAR AVATAR SUBIDO
+    // ACCIÓN: UPLOAD AVATAR
+    // =========================================================================
+    if ( $action === 'upload_avatar' && check_admin_referer( 'hrm_upload_avatar', 'hrm_upload_avatar_nonce' ) ) {
+        $emp_id = absint( $_POST['employee_id'] );
+        if ( ! empty( $_FILES['avatar'] ) ) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+
+            $upload = wp_handle_upload( $_FILES['avatar'], ['test_form' => false] );
+            if ( isset( $upload['file'] ) ) {
+                $attach_id = wp_insert_attachment( array(
+                    'guid' => $upload['url'], 
+                    'post_mime_type' => $upload['type'],
+                    'post_title' => basename($upload['file']),
+                    'post_content' => '',
+                    'post_status' => 'inherit'
+                ), $upload['file'] );
+                
+                $attach_data = wp_generate_attachment_metadata( $attach_id, $upload['file'] );
+                wp_update_attachment_metadata( $attach_id, $attach_data );
+                
+                $emp = $db_emp->get($emp_id);
+                update_user_meta( $emp->user_id, 'hrm_avatar', $upload['url'] );
+                update_user_meta( $emp->user_id, 'simple_local_avatar', array('full'=>$upload['url']) );
+            }
+        }
+        wp_redirect( add_query_arg( ['id'=>$emp_id, 'tab'=>'profile'], $redirect_base ) );
+        exit;
+    }
+
+    // =========================================================================
+    // ACCIÓN: DELETE AVATAR
     // =========================================================================
     if ( $action === 'delete_avatar' && check_admin_referer( 'hrm_delete_avatar', 'hrm_delete_avatar_nonce' ) ) {
-        $emp_id = absint( $_POST['employee_id'] ?? 0 );
-        if ( ! $emp_id ) {
-            wp_redirect( add_query_arg( ['tab' => 'profile', 'id' => $emp_id, 'message_error' => rawurlencode('Empleado no válido.')], $redirect_base ) );
-            exit;
-        }
-
-        $employee_obj = $db_emp->get( $emp_id );
-        $current_user_id = get_current_user_id();
-
-        $allowed = false;
-        if ( current_user_can( 'edit_hrm_employees' ) ) {
-            $allowed = true;
-        } elseif ( current_user_can( 'view_hrm_own_profile' ) && $employee_obj && intval( $employee_obj->user_id ) === $current_user_id ) {
-            $allowed = true;
-        }
-
-        if ( ! $allowed ) {
-            wp_redirect( add_query_arg( ['tab' => 'profile', 'id' => $emp_id, 'message_error' => rawurlencode('No tienes permisos para esta acción.')], $redirect_base ) );
-            exit;
-        }
-
-        // Si está vinculado a user WP, intentamos borrar attachment y metadatos
-        if ( $employee_obj && ! empty( $employee_obj->user_id ) ) {
-            $user_id = intval( $employee_obj->user_id );
-
-            // Borrar attachment si existe en usermeta (user_avatar / wp_user_avatar)
-            $attach_id = get_user_meta( $user_id, 'user_avatar', true );
-            if ( empty( $attach_id ) ) {
-                $attach_id = get_user_meta( $user_id, 'wp_user_avatar', true );
-            }
-
-            // Si no hay ID, intentar resolver desde URL almacenada en metas
-            if ( empty( $attach_id ) ) {
-                $avatar_url = '';
-                $simple_local = get_user_meta( $user_id, 'simple_local_avatar', true );
-                if ( is_array( $simple_local ) && ! empty( $simple_local['full'] ) ) {
-                    $avatar_url = esc_url_raw( $simple_local['full'] );
-                }
-                if ( empty( $avatar_url ) ) {
-                    $meta_url = get_user_meta( $user_id, 'hrm_avatar', true );
-                    if ( $meta_url ) {
-                        $avatar_url = esc_url_raw( $meta_url );
-                    }
-                }
-                if ( $avatar_url ) {
-                    $maybe_attach = attachment_url_to_postid( $avatar_url );
-                    if ( $maybe_attach ) {
-                        $attach_id = $maybe_attach;
-                    } else {
-                        // Último recurso: eliminar archivo físico si existe
-                        $upload_dir = wp_upload_dir();
-                        $file_path  = str_replace( $upload_dir['baseurl'], $upload_dir['basedir'], $avatar_url );
-                        if ( $file_path && file_exists( $file_path ) ) {
-                            @unlink( $file_path );
-                        }
-                    }
-                }
-            }
-
-            if ( ! empty( $attach_id ) && is_numeric( $attach_id ) ) {
-                // Intentar borrar attachment (force delete)
-                wp_delete_attachment( intval( $attach_id ), true );
-            }
-
-            // Eliminar metadatos que sincronizamos
-            delete_user_meta( $user_id, 'hrm_avatar' );
-            delete_user_meta( $user_id, 'user_avatar' );
-            delete_user_meta( $user_id, 'wp_user_avatar' );
-            delete_user_meta( $user_id, 'simple_local_avatar' );
-            // También eliminar opción legacy por si existiera
-            delete_option( 'hrm_avatar_emp_' . intval( $emp_id ) );
-        } else {
-            // Si no hay user_id, eliminar archivo físico y la opción específica
-            $opt_key = 'hrm_avatar_emp_' . intval( $emp_id );
-            $opt_url = get_option( $opt_key );
-            if ( $opt_url ) {
-                $upload_dir = wp_upload_dir();
-                $file_path  = str_replace( $upload_dir['baseurl'], $upload_dir['basedir'], $opt_url );
-                if ( $file_path && file_exists( $file_path ) ) {
-                    @unlink( $file_path );
-                }
-            }
-            delete_option( $opt_key );
-        }
-
-        wp_redirect( add_query_arg( ['tab' => 'profile', 'id' => $emp_id, 'message_success' => rawurlencode('Avatar eliminado.')], $redirect_base ) );
+        $emp_id = absint( $_POST['employee_id'] );
+        $emp = $db_emp->get($emp_id);
+        delete_user_meta( $emp->user_id, 'hrm_avatar' );
+        delete_user_meta( $emp->user_id, 'simple_local_avatar' );
+        wp_redirect( add_query_arg( ['id'=>$emp_id, 'tab'=>'profile'], $redirect_base ) );
         exit;
     }
-
-    // =========================================================================
-    // ACCIÓN: SUBIR AVATAR (Sin tocar otros datos del empleado)
-    // =========================================================================
-    if ( $action === 'upload_avatar' ) {
-        hrm_debug_log( 'Upload avatar action triggered' );
-        
-        // Verificar nonce
-        if ( ! isset( $_POST['hrm_upload_avatar_nonce'] ) || 
-             ! wp_verify_nonce( $_POST['hrm_upload_avatar_nonce'], 'hrm_upload_avatar' ) ) {
-            hrm_debug_log( 'Nonce verification failed' );
-            hrm_redirect_with_message(
-                $redirect_base,
-                __( 'Error de seguridad: nonce inválido.', 'hr-management' ),
-                'error'
-            );
-        }
-        
-        $emp_id = absint( $_POST['employee_id'] ?? 0 );
-        if ( ! $emp_id ) {
-            hrm_debug_log( 'No employee_id provided' );
-            wp_redirect( $redirect_base );
-            exit;
+    
+    // --- ACCIÓN B: Crear Empleado + Usuario WP (migrado del template a handler central) ---
+    elseif ( $action === 'create_employee' && check_admin_referer( 'hrm_create_employee', 'hrm_create_employee_nonce' ) ) {
+        // Solo usuarios con capacidad de administrar empleados pueden crear (admin/supervisor)
+        if ( ! ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) ) ) {
+            hrm_redirect_with_message( $redirect_base, 'No tienes permisos para crear empleados.', 'error' );
         }
 
-        // Cargar contexto empleado y usuario actual
-        $employee_obj   = $db_emp->get( $emp_id );
-        $current_user_id = get_current_user_id();
-        $allowed = false;
+        // 1. Recoger datos
+        $rut          = sanitize_text_field( $_POST['rut'] ?? '' );
+        $email        = sanitize_email( $_POST['email'] ?? '' );
+        $nombre       = sanitize_text_field( $_POST['nombre'] ?? '' );
+        $apellido     = sanitize_text_field( $_POST['apellido'] ?? '' );
+        $fecha_ingreso= sanitize_text_field( $_POST['fecha_ingreso'] ?? '' );
+        $rol_wp       = sanitize_text_field( $_POST['rol_usuario_wp'] ?? 'subscriber' );
 
-        // Verificar permisos
-        if ( ! hrm_can_edit_employee( $emp_id ) ) {
-            hrm_redirect_with_message(
-                $redirect_base,
-                __( 'No tienes permisos para subir avatar.', 'hr-management' ),
-                'error'
-            );
-        }
-        if ( current_user_can( 'edit_hrm_employees' ) ) {
-            $allowed = true;
-        } elseif ( current_user_can( 'view_hrm_own_profile' ) && $employee_obj && intval( $employee_obj->user_id ) === $current_user_id ) {
-            $allowed = true;
+        // 2. Detectar Checkbox
+        $crear_wp = isset($_POST['crear_usuario_wp']); 
+        // Si se va a crear usuario y no se seleccionó rol, forzar 'subscriber'
+        if ($crear_wp && empty($rol_wp)) {
+            $rol_wp = 'subscriber';
         }
 
-        if ( ! $allowed ) {
-            wp_redirect( add_query_arg( ['message_error' => rawurlencode('No tienes permisos para subir avatar.')], $redirect_base ) );
-            exit;
+        // 3. Validación de campos obligatorios
+        $missing = array();
+        if ( $rut === '' ) $missing[] = 'RUT';
+        if ( $nombre === '' ) $missing[] = 'Nombres';
+        if ( $apellido === '' ) $missing[] = 'Apellidos';
+        if ( $email === '' || ! is_email( $email ) ) $missing[] = 'Email válido';
+
+        if ( ! empty( $missing ) ) {
+            hrm_redirect_with_message( $redirect_base, 'Faltan campos obligatorios: ' . implode( ', ', $missing ), 'error' );
         }
 
-        // Procesar archivo de avatar
-        if ( ! empty( $_FILES['avatar'] ) && isset( $_FILES['avatar']['name'] ) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK ) {
-            if ( ! function_exists( 'wp_handle_upload' ) ) {
-                require_once ABSPATH . 'wp-admin/includes/file.php';
+        $wp_user_id = null;
+        $error_wp   = '';
+
+        // 4. Lógica de Creación de Usuario WP (si se solicitó)
+        if ( $crear_wp ) {
+            // Solo usuarios con capacidad de crear usuarios pueden crear cuentas WP
+            if ( ! current_user_can( 'create_users' ) ) {
+                $error_wp = 'No tienes permisos para crear usuarios en WordPress.';
             }
 
-            $file = $_FILES['avatar'];
-            $overrides = array( 'test_form' => false );
+            // Si no hay error, procesar creación de usuario
+            if ( empty( $error_wp ) ) {
+                // Limpieza vital: "12.345.678-9" -> "12345678-9"
+                $username_clean = str_replace([ '.', ' ', ',' ], '', trim( $rut ) );
 
-            $upload_result = wp_handle_upload( $file, $overrides );
-            if ( isset( $upload_result['file'] ) && ! empty( $upload_result['file'] ) && file_exists( $upload_result['file'] ) ) {
-                $file_path = $upload_result['file'];
-
-                if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
-                    require_once ABSPATH . 'wp-admin/includes/image.php';
-                }
-                if ( ! function_exists( 'wp_insert_attachment' ) ) {
-                    require_once ABSPATH . 'wp-admin/includes/media.php';
-                }
-
-                $filetype = wp_check_filetype( basename( $file_path ), null );
-                $attachment = array(
-                    'guid'           => $upload_result['url'],
-                    'post_mime_type' => $filetype['type'] ?? '',
-                    'post_title'     => sanitize_file_name( basename( $file_path ) ),
-                    'post_content'   => '',
-                    'post_status'    => 'inherit'
-                );
-
-                $attach_id = wp_insert_attachment( $attachment, $file_path );
-                if ( ! is_wp_error( $attach_id ) ) {
-                    $attach_data = wp_generate_attachment_metadata( $attach_id, $file_path );
-                    wp_update_attachment_metadata( $attach_id, $attach_data );
-
-                    $avatar_url = wp_get_attachment_url( $attach_id );
-
-                    if ( ! empty( $employee_obj ) && ! empty( $employee_obj->user_id ) ) {
-                        $user_id = intval( $employee_obj->user_id );
-                        update_user_meta( $user_id, 'hrm_avatar', esc_url_raw( $avatar_url ) );
-                        update_user_meta( $user_id, 'user_avatar', $attach_id );
-                        update_user_meta( $user_id, 'wp_user_avatar', $attach_id );
-                        update_user_meta( $user_id, 'simple_local_avatar', array( 'full' => $avatar_url, 'thumb' => $avatar_url ) );
-                    } else {
-                        update_option( 'hrm_avatar_emp_' . intval( $emp_id ), esc_url_raw( $avatar_url ) );
-                    }
-
-                    wp_redirect( add_query_arg( ['message_success' => rawurlencode('Avatar actualizado.')], $redirect_base ) );
-                    exit;
+                if ( empty( $email ) || ! is_email( $email ) ) {
+                    $error_wp = 'El correo es inválido o está vacío.';
+                } elseif ( email_exists( $email ) ) {
+                    $error_wp = 'El correo ya existe en WordPress.';
+                } elseif ( username_exists( $username_clean ) ) {
+                    $error_wp = "El usuario (RUT: $username_clean) ya existe en WordPress.";
                 } else {
-                    if ( isset( $upload_result['url'] ) && ! empty( $upload_result['url'] ) ) {
-                        $avatar_url = $upload_result['url'];
-                        if ( ! empty( $employee_obj ) && ! empty( $employee_obj->user_id ) ) {
-                            update_user_meta( intval( $employee_obj->user_id ), 'hrm_avatar', esc_url_raw( $avatar_url ) );
-                        } else {
-                            update_option( 'hrm_avatar_emp_' . intval( $emp_id ), esc_url_raw( $avatar_url ) );
+                    $password = wp_generate_password( 12, false );
+
+                    $userdata = [
+                        'user_login' => $username_clean,
+                        'user_email' => $email,
+                        'user_pass'  => $password,
+                        'first_name' => $nombre,
+                        'last_name'  => $apellido,
+                        'role'       => $rol_wp,
+                    ];
+
+                    $new_id = wp_insert_user( $userdata );
+
+                    if ( is_wp_error( $new_id ) ) {
+                        $error_wp = 'Error WP: ' . $new_id->get_error_message();
+                    } else {
+                        $wp_user_id = $new_id;
+                        $sent = false;
+                        if ( function_exists( 'hrm_send_user_credentials_email' ) ) {
+                            $sent = hrm_send_user_credentials_email( $new_id, $username_clean, $password, $email );
+                        }
+                        if ( ! $sent && apply_filters( 'hrm_send_new_user_notification', false, $new_id ) ) {
+                            wp_new_user_notification( $new_id, null, 'both' );
                         }
                     }
-                    wp_redirect( add_query_arg( ['message_success' => rawurlencode('Avatar actualizado.')], $redirect_base ) );
-                    exit;
                 }
-            } else {
-                $error_msg = isset( $upload_result['error'] ) ? $upload_result['error'] : 'Error desconocido al subir archivo.';
-                wp_redirect( add_query_arg( ['message_error' => rawurlencode( $error_msg )], $redirect_base ) );
-                exit;
             }
+        }
+
+        // 5. Guardar en Base de Datos de Empleados
+        if ( $error_wp ) {
+            // Si hubo error en la creación WP, retrocedemos
+            if ( $wp_user_id ) wp_delete_user( $wp_user_id );
+            hrm_redirect_with_message( $redirect_base, $error_wp, 'error' );
         } else {
-            wp_redirect( $redirect_base );
-            exit;
+            // Construir data con todos los campos (campos opcionales pueden quedar vacíos)
+            $data = array(
+                'rut' => $rut,
+                'nombre' => $nombre,
+                'apellido' => $apellido,
+                'email' => $email,
+                'fecha_ingreso' => $fecha_ingreso,
+                'telefono' => sanitize_text_field( $_POST['telefono'] ?? '' ),
+                'fecha_nacimiento' => sanitize_text_field( $_POST['fecha_nacimiento'] ?? '' ),
+                'departamento' => sanitize_text_field( $_POST['departamento'] ?? '' ),
+                'puesto' => sanitize_text_field( $_POST['puesto'] ?? '' ),
+                'tipo_contrato' => sanitize_text_field( $_POST['tipo_contrato'] ?? '' ),
+                'salario' => isset($_POST['salario']) && $_POST['salario'] !== '' ? floatval( $_POST['salario'] ) : null,
+                'estado' => 1,
+            );
+
+            // Si creamos usuario, vinculamos el ID
+            if ( $wp_user_id ) {
+                $data['user_id'] = $wp_user_id;
+            }
+
+            if ( $db_emp->create( $data ) ) {
+                $msg_text = $wp_user_id ? sprintf( __( 'Empleado creado (usuario WP: %s)', 'hr-management' ), $username_clean ) : __( 'Empleado creado correctamente.', 'hr-management' );
+                // Redirigir de vuelta al formulario de creación para dejar el formulario limpio y mostrar el mensaje ahí
+                hrm_redirect_with_message( add_query_arg( ['page' => 'hrm-empleados', 'tab' => 'new'], admin_url( 'admin.php' ) ), $msg_text, 'success' );
+            } else {
+                // Rollback: Si falla la BD local, borramos el usuario WP para no dejar basura
+                if ( $wp_user_id ) wp_delete_user( $wp_user_id );
+                hrm_redirect_with_message( $redirect_base, 'Error SQL al guardar empleado. Verifica que el RUT no esté duplicado en la lista.', 'error' );
+            }
         }
     }
 
     // =========================================================================
-    // ACCIÓN B: CREAR EMPLEADO (CON LÓGICA DE USUARIO WP)
+    // ACCIÓN: TOGGLE ESTADO
     // =========================================================================
-    if ( $action === 'create_employee' && check_admin_referer( 'hrm_create_employee', 'hrm_create_employee_nonce' ) ) {
+    if ( $action === 'toggle_employee_status' && check_admin_referer( 'hrm_toggle_employee_status', 'hrm_toggle_status_nonce' ) ) {
+        if ( ! current_user_can( 'edit_hrm_employees' ) ) wp_die('Sin permisos');
         
-        // 1. Recoger datos del formulario
-        $rut      = sanitize_text_field( $_POST['rut'] );
-        $email    = sanitize_email( $_POST['email'] );
-        $nombre   = sanitize_text_field( $_POST['nombre'] );
-        $apellido = sanitize_text_field( $_POST['apellido'] );
-        $rol_wp   = sanitize_text_field( $_POST['rol_usuario_wp'] ?? 'subscriber' );
+        $emp_id = absint( $_POST['employee_id'] );
+        $nuevo_estado = ( intval($_POST['current_estado']) === 1 ) ? 0 : 1;
         
-        // Checkbox: ¿El usuario quiere crear cuenta web?
-        $crear_wp = isset($_POST['crear_usuario_wp']); 
-
-        $wp_user_id = null; // Aquí guardaremos el ID si se crea el usuario
-        $error_wp   = '';   // Aquí guardaremos errores de WP si ocurren
-
-        // 2. Intentar crear el usuario en WordPress
-        if ( $crear_wp ) {
-            // Limpieza del RUT para usarlo como Username (quitar puntos, espacios)
-            $username_clean = str_replace(['.', ' ', ','], '', trim($rut));
-
-            // Validaciones previas
-            if ( empty( $email ) || ! is_email( $email ) ) {
-                $error_wp = 'El correo electrónico es inválido o está vacío.';
-            } elseif ( email_exists( $email ) ) {
-                $error_wp = 'El correo electrónico ya está registrado en WordPress.';
-            } elseif ( username_exists( $username_clean ) ) {
-                $error_wp = "El usuario '$username_clean' (RUT) ya existe en WordPress.";
-            } else {
-                // Todo OK, procedemos a insertar en wp_users
-                $password = wp_generate_password( 12, false );
-                
-                $userdata = [
-                    'user_login' => $username_clean,
-                    'user_email' => $email,
-                    'user_pass'  => $password,
-                    'first_name' => $nombre,
-                    'last_name'  => $apellido,
-                    'role'       => $rol_wp,
-                ];
-
-                $new_id = wp_insert_user( $userdata );
-
-                if ( is_wp_error( $new_id ) ) {
-                    // Falló WP
-                    $error_wp = $new_id->get_error_message();
-                } else {
-                    // Éxito WP
-                    $wp_user_id = $new_id;
-                    // Enviar credenciales (username + password) al usuario recién creado
-                    $sent = false;
-                    if ( function_exists( 'hrm_send_user_credentials_email' ) ) {
-                        $sent = hrm_send_user_credentials_email( $new_id, $username_clean, $password, $email );
-                    }
-                    // Como fallback opcional, permitir llamar al notifier WP si el filtro lo permite
-                    if ( ! $sent && apply_filters( 'hrm_send_new_user_notification', false, $new_id ) ) {
-                        wp_new_user_notification( $new_id, null, 'both' );
-                    }
-                }
-            }
-        }
-
-        // 3. Manejo de Errores antes de guardar en BD Local
-        if ( $error_wp ) {
-            // Si hubo error creando el usuario WP, NO creamos el empleado y mostramos el error
-            wp_redirect( add_query_arg( ['tab' => 'new', 'message_error' => rawurlencode("Error Usuario WP: $error_wp")], $base_url ) );
-            exit;
-        }
-
-        // 3.5. VALIDACIÓN: Verificar que el RUT no exista ya en la tabla de empleados
         global $wpdb;
-        $table_empleados = $wpdb->prefix . 'rrhh_empleados';
-        
-        $rut_existente = $wpdb->get_var(
-            $wpdb->prepare(
-                "SELECT id_empleado FROM {$table_empleados} WHERE rut = %s",
-                $rut
-            )
+        $wpdb->update( 
+            $wpdb->prefix . 'rrhh_empleados', 
+            array('estado' => $nuevo_estado), 
+            array('id_empleado' => $emp_id) 
         );
         
-        if ( $rut_existente ) {
-            // El RUT ya existe, NO crear el empleado
-            wp_redirect( add_query_arg( ['tab' => 'new', 'message_error' => rawurlencode("El RUT $rut ya existe en el sistema. No se puede crear empleado duplicado.")], $base_url ) );
-            exit;
-        }
-
-        // 4. Preparar datos para la tabla personalizada
-        $data = $_POST;
-        
-        // Si se creó usuario WP, añadimos el ID al array para guardarlo
-        if ( $wp_user_id ) {
-            $data['user_id'] = $wp_user_id;
-        }
-        
-        // Log para debugging de años
-        error_log( "HRM DEBUG create_employee - anos_en_la_empresa: " . ($data['anos_en_la_empresa'] ?? 'NO ENVIADO') );
-        error_log( "HRM DEBUG create_employee - anos_totales_trabajados: " . ($data['anos_totales_trabajados'] ?? 'NO ENVIADO') );
-
-        // 5. Guardar en tabla rrhh_empleados
-        if ( $db_emp->create( $data ) ) {
-            // Obtener el ID del empleado recién creado usando la BD de WordPress
-            global $wpdb;
-            $nuevo_id_empleado = $wpdb->insert_id;
-            
-            // ACTIVACIÓN: Ejecutar hook para actualizar años y días de vacaciones
-            do_action( 'hrm_after_employee_update', $nuevo_id_empleado );
-            
-            // ACTIVACIÓN: Ejecutar hook específico para empleado NUEVO (inicializar días disponibles)
-            do_action( 'hrm_after_employee_create', $nuevo_id_empleado );
-            
-            // 5.5. Si es Gerente, guardar departamentos a cargo
-            $puesto = isset( $data['puesto'] ) ? sanitize_text_field( $data['puesto'] ) : '';
-            $area_gerencia = isset( $data['area_gerencia'] ) ? sanitize_text_field( $data['area_gerencia'] ) : '';
-            $deptos_a_cargo = isset( $_POST['deptos_a_cargo'] ) ? (array) $_POST['deptos_a_cargo'] : [];
-            
-            // Si no se proporcionan departamentos, usar los predefinidos según el área gerencial
-            if ( empty( $deptos_a_cargo ) && ! empty( $area_gerencia ) ) {
-                $deptos_a_cargo = hrm_get_deptos_predefinidos_por_area( $area_gerencia );
-                error_log( "HRM: Departamentos predefinidos para {$area_gerencia}: " . implode( ', ', $deptos_a_cargo ) );
-            }
-            
-            if ( strtolower( $puesto ) === 'gerente' && ! empty( $area_gerencia ) && ! empty( $deptos_a_cargo ) ) {
-                // Obtener nombre y correo del gerente
-                $nombre_gerente = '';
-                $correo_gerente = '';
-                if ( isset( $data['nombre'] ) && isset( $data['apellido'] ) ) {
-                    $nombre = sanitize_text_field( $data['nombre'] );
-                    $apellido = sanitize_text_field( $data['apellido'] );
-                    $nombre_gerente = trim( "$nombre $apellido" );
-                }
-                if ( isset( $data['email'] ) ) {
-                    $correo_gerente = sanitize_email( $data['email'] );
-                }
-                
-                require_once plugin_dir_path( __FILE__ ) . 'db/class-hrm-db-gerencia-deptos.php';
-                $db_gerencia = new HRM_DB_Gerencia_Deptos();
-                $db_gerencia->save_area_deptos( $area_gerencia, $deptos_a_cargo, $nombre_gerente, $correo_gerente );
-                error_log( "HRM: Departamentos a cargo guardados para área: $area_gerencia (Gerente: $nombre_gerente - $correo_gerente)" );
-                
-                // LIMPIAR CACHÉS DE VACACIONES
-                global $wpdb;
-                $users = $wpdb->get_results( "SELECT ID FROM {$wpdb->users}" );
-                foreach ( $users as $user ) {
-                    $cache_patterns = array(
-                        'hrm_all_vacaciones_' . md5( '' . '' . $user->ID ),
-                        'hrm_all_vacaciones_' . md5( '' . 'PENDIENTE' . $user->ID ),
-                        'hrm_all_vacaciones_' . md5( '' . 'APROBADA' . $user->ID ),
-                        'hrm_all_vacaciones_' . md5( '' . 'RECHAZADA' . $user->ID ),
-                    );
-                    foreach ( $cache_patterns as $pattern ) {
-                        wp_cache_delete( $pattern );
-                    }
-                }
-            }
-            
-            // 6. Incrementar total_empleados en el departamento
-            global $wpdb;
-            
-            $departamento = isset( $data['departamento'] ) ? sanitize_text_field( $data['departamento'] ) : '';
-            
-            if ( ! empty( $departamento ) ) {
-                // Incrementar total_empleados en Bu6K9_rrhh_departamentos
-                $wpdb->query(
-                    $wpdb->prepare(
-                        "UPDATE {$wpdb->prefix}rrhh_departamentos 
-                         SET total_empleados = total_empleados + 1 
-                         WHERE nombre_departamento = %s",
-                        $departamento
-                    )
-                );
-                
-                error_log( "HRM: Incrementado total_empleados para departamento '$departamento'" );
-                // Limpiar caché de departamentos para obtener datos frescos
-                hrm_clear_departamentos_cache();
-            }
-            
-            $msg = 'Empleado creado correctamente.';
-            if ( $wp_user_id ) $msg .= ' (Usuario web generado).';
-
-            wp_redirect( add_query_arg( ['tab' => 'list', 'message_success' => rawurlencode($msg)], $base_url ) );
-            exit;
-        } else {
-            // ROLLBACK: Si falló la base de datos local, borramos el usuario WP para no dejar "huérfanos"
-            if ( $wp_user_id ) wp_delete_user( $wp_user_id );
-
-            wp_redirect( add_query_arg( ['tab' => 'new', 'message_error' => rawurlencode('Error SQL al guardar empleado. Revise si el RUT está duplicado.')], $base_url ) );
-            exit;
-        }
-    }
-
-    // =========================================================================
-    // ACCIÓN C: SUBIR DOCUMENTOS
-    // =========================================================================
-    if ( $action === 'upload_document' && check_admin_referer( 'hrm_upload_file', 'hrm_upload_nonce' ) ) {
-        $emp_id = absint( $_POST['employee_id'] );
-        $tipo   = wp_kses_post( trim( $_POST['tipo_documento'] ?? 'Generico' ) );
-        $anio_raw = isset($_POST['anio_documento']) ? trim($_POST['anio_documento']) : '';
-        $anio   = ! empty($anio_raw) ? (int)$anio_raw : 0;
-        
-        $empleado_obj = $db_emp->get( $emp_id );
-        $files        = $_FILES['archivos_subidos'] ?? [];
-
-        // Validaciones
-        if ( ! $empleado_obj ) {
-            wp_redirect( add_query_arg( ['tab' => 'upload', 'id' => $emp_id, 'message_error' => rawurlencode('Empleado no encontrado.')], $base_url ) );
-            exit;
-        }
-
-        if ( empty( $files ) || empty( $files['name'][0] ) ) {
-            wp_redirect( add_query_arg( ['tab' => 'upload', 'id' => $emp_id, 'message_error' => rawurlencode('No seleccionaste archivos.')], $base_url ) );
-            exit;
-        }
-
-        if ( empty($anio_raw) || $anio === 0 ) {
-            wp_redirect( add_query_arg( ['tab' => 'upload', 'id' => $emp_id, 'message_error' => rawurlencode('Debes seleccionar el año del documento.')], $base_url ) );
-            exit;
-        }
-
-        if ( $anio < 1900 || $anio > (int)date('Y') + 1 ) {
-            wp_redirect( add_query_arg( ['tab' => 'upload', 'id' => $emp_id, 'message_error' => rawurlencode('El año seleccionado no es válido.')], $base_url ) );
-            exit;
-        }
-
-        // Configuración de carpetas: /uploads/hrm_docs/{año}/RUT/Tipo
-        $upload_dir_info = wp_upload_dir();
-        $base_dir        = $upload_dir_info['basedir'] . '/hrm_docs';
-        $base_url_img    = $upload_dir_info['baseurl'] . '/hrm_docs';
-
-        $folder_year = $anio;
-        $folder_user = sanitize_file_name( $empleado_obj->rut );
-        $folder_type = sanitize_file_name( $tipo );
-
-        $relative_path    = '/' . $folder_year . '/' . $folder_user . '/' . $folder_type;
-        $final_target_dir = $base_dir . $relative_path;
-        $final_target_url = $base_url_img . $relative_path;
-
-        // Crear carpeta si no existe
-        if ( ! file_exists( $final_target_dir ) ) {
-            wp_mkdir_p( $final_target_dir );
-        }
-
-        $count_ok = 0;
-        $count_err = 0;
-        $total_files = count( $files['name'] );
-
-        // Bucle de subida
-        for ( $i = 0; $i < $total_files; $i++ ) {
-            if ( $files['error'][$i] !== UPLOAD_ERR_OK ) { $count_err++; continue; }
-
-            $filename = sanitize_file_name( $files['name'][$i] );
-            // Evitar sobrescritura usando timestamp
-            $final_filename = file_exists( $final_target_dir . '/' . $filename ) ? time() . '_' . $filename : $filename;
-
-            $file_path = $final_target_dir . '/' . $final_filename;
-            $file_url  = $final_target_url . '/' . $final_filename;
-
-            // Mover archivo y guardar en BD
-            if ( move_uploaded_file( $files['tmp_name'][$i], $file_path ) ) {
-                $saved = $db_docs->create([
-                    'rut'    => $empleado_obj->rut,
-                    'tipo'   => $tipo,
-                    'anio'   => $anio,
-                    'nombre' => $final_filename,
-                    'url'    => $file_url
-                ]);
-                if ( $saved ) {
-                    $count_ok++;
-                } else {
-                    $count_err++;
-                    error_log( "HRM: Error guardando documento en BD - RUT: {$empleado_obj->rut}, Archivo: $final_filename" );
-                }
-            } else {
-                $count_err++;
-                error_log( "HRM: Error moviendo archivo - {$files['name'][$i]} a $file_path" );
-            }
-        }
-
-        // Mensajes de resultado
-        $msgs = [];
-        if ( $count_ok > 0 ) $msgs[] = "$count_ok documento(s) subido(s) en la carpeta del año $folder_year.";
-        if ( $count_err > 0 ) $msgs[] = "$count_err fallo(s).";
-
-        $redirect_args = ['tab' => 'upload', 'id' => $emp_id];
-        if ( $count_ok > 0 ) $redirect_args['message_success'] = rawurlencode( implode(' ', $msgs) );
-        if ( $count_err > 0 ) $redirect_args['message_error']   = rawurlencode( implode(' ', $msgs) );
-
-        wp_redirect( add_query_arg( $redirect_args, $base_url ) );
+        wp_redirect( add_query_arg( ['id'=>$emp_id, 'tab'=>'profile', 'message_success'=>'Estado actualizado'], $redirect_base ) );
         exit;
     }
-
-    // =========================================================================
-    // ACCIÓN D: ELIMINAR DOCUMENTO
-    // =========================================================================
-    if ( $action === 'delete_document' && check_admin_referer( 'hrm_delete_file', 'hrm_delete_nonce' ) ) {
-        $doc_id = absint( $_POST['doc_id'] );
-        $doc    = $db_docs->get( $doc_id );
-
-        if ( $doc ) {
-            $upload_dir = wp_upload_dir();
-            $base_url_wp = $upload_dir['baseurl'];
-            $base_dir_wp = $upload_dir['basedir'];
-            
-            // Convertir URL a ruta física para borrar
-            $file_path = str_replace( $base_url_wp, $base_dir_wp, $doc->url );
-            
-            if ( file_exists( $file_path ) ) {
-                unlink( $file_path );
-            }
-            
-            $db_docs->delete( $doc_id );
-            
-            wp_redirect( add_query_arg( ['tab'=>'upload', 'id'=>absint($_POST['employee_id']), 'message_success'=>rawurlencode('Archivo eliminado.')], $base_url ) );
-            exit;
-        } else {
-            wp_redirect( add_query_arg( ['tab'=>'upload', 'id'=>absint($_POST['employee_id']), 'message_error'=>rawurlencode('Archivo no encontrado.')], $base_url ) );
-            exit;
-        }
-    }
 }
-
-// Enganchar la función al inicio de admin para procesar los POST
 add_action( 'admin_init', 'hrm_handle_employees_post' );
+

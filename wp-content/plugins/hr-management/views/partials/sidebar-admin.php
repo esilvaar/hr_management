@@ -95,21 +95,21 @@ $logo_url = esc_url(
                     </a>
                 </li>
                 <li>
-                    <a class="nav-link px-3 py-2 <?= hrm_is_active_sidebar('hrm-empleados', 'new'); ?>"
-                       href="<?= esc_url( admin_url('admin.php?page=hrm-empleados&tab=new') ); ?>">
-                        Nuevo empleado
-                    </a>
-                </li>
-                <li>
                     <a class="nav-link px-3 py-2 <?= hrm_is_active_sidebar('hrm-empleados', 'profile'); ?>"
-                       href="<?= esc_url( $profile_url ); ?>">
-                        Perfil del empleado
+                    href="<?= esc_url( $profile_url ); ?>">
+                    Perfil del empleado
                     </a>
                 </li>
                 <li>
                     <a class="nav-link px-3 py-2 <?= hrm_is_active_sidebar('hrm-empleados', 'upload'); ?>"
-                       href="<?= esc_url( $upload_url ); ?>">
-                        Documentos del empleado
+                    href="<?= esc_url( $upload_url ); ?>">
+                    Documentos del empleado
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-link px-3 py-2 <?= hrm_is_active_sidebar('hrm-empleados', 'new'); ?>"
+                    href="<?= esc_url( admin_url('admin.php?page=hrm-empleados&tab=new') ); ?>">
+                        Nuevo empleado
                     </a>
                 </li>
             </ul>
@@ -129,6 +129,21 @@ $logo_url = esc_url(
                     </a>
                 </li>
             </ul>
+        </details>
+        <details <?= $section === 'empresa' ? 'open' : ''; ?>>
+            <summary class="d-flex align-items-center gap-2 px-3 py-2 fw-semibold">
+                <span class="dashicons dashicons-chart-bar"></span>
+                <span class="flex-grow-1">Gestión Empresa</span>
+            </summary>
+            <ul class="list-unstyled px-2 mb-2">
+                <li>
+                    <a class="nav-link px-3 py-2 <?= hrm_is_active_sidebar('hrm-reportes'); ?>"
+                       href="">
+                        Crear Documentos Empresa
+                    </a>
+                </li>
+            </ul>
+
         </details>
 
         <!-- Centramos la sección 'Mi Perfil' verticalmente usando flexbox (no absoluto) -->

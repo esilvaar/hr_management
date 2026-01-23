@@ -52,7 +52,11 @@ if ( ! empty( $lista_empleados ) ) {
                     <?= $view_all ? 'Ver por Área' : 'Ver Todos' ?>
                 </a>
             <?php endif; ?>
-            <a href="?page=hrm-empleados&tab=new<?= $fullscreen ?>" class="btn text-black btn-light btn-sm">
+            <?php
+            $create_url = add_query_arg( array( 'page' => 'hrm-empleados', 'tab' => 'new' ), admin_url('admin.php') );
+            if ( $fullscreen ) $create_url = add_query_arg( 'fullscreen', '1', $create_url );
+            ?>
+            <a href="<?= esc_url( $create_url ) ?>" class="btn text-black btn-light btn-sm">
                 <span class="dashicons dashicons-plus-alt2"></span> Nuevo Empleado
             </a>
         </div>

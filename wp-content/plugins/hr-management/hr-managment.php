@@ -142,24 +142,30 @@ function hrm_redirect_non_admin_after_login( $redirect_to, $request, $user ) {
     if ( isset( $user->errors ) && ! empty( $user->errors ) ) {
         return $redirect_to;
     }
-    
+
     // Si no es un objeto de usuario válido, no redirigir
     if ( ! is_a( $user, 'WP_User' ) ) {
         return $redirect_to;
     }
-    
+
     // Si es administrador de WordPress, dejar el comportamiento por defecto (dashboard)
-    if ( in_array( 'administrator', (array) $user->roles ) ) {
+    if ( in_array( 'administrator', (array) $user->roles, true ) ) {
         return $redirect_to;
     }
-    
+
     // Si es administrador_anaconda, redirigir a la vista de empleados del plugin (admin views)
-    if ( in_array( 'administrador_anaconda', (array) $user->roles ) ) {
+    if ( in_array( 'administrador_anaconda', (array) $user->roles, true ) ) {
         return admin_url( 'admin.php?page=hrm-empleados' );
     }
-    
-    // Para cualquier otro usuario, redirigir a su perfil
-    return admin_url( 'admin.php?page=hrm-mi-perfil-info' );
+
+    // Si es un usuario "empleado" puro, llevarlo a su perfil dentro del plugin
+    if ( in_array( 'empleado', (array) $user->roles, true ) ) {
+        return admin_url( 'admin.php?page=hrm-mi-perfil-info' );
+    }
+
+    // Para otros roles (supervisor, editor_vacaciones, etc.) — no forzar redirección aquí,
+    // permitir que otros filtros (o la lógica por defecto) decidan.
+    return $redirect_to;
 }
 add_filter( 'login_redirect', 'hrm_redirect_non_admin_after_login', 10, 3 );
 

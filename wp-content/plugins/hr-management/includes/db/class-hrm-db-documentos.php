@@ -243,4 +243,31 @@ class HRM_DB_Documentos extends HRM_DB_Table {
 
         return (int) $this->db->insert_id;
     }
+
+    /**
+     * Eliminar un tipo de documento por ID
+     * Retorna true en caso de éxito, WP_Error si existen documentos asociados, false en error.
+     * @param int $id
+     * @return bool|WP_Error
+     */
+    public function delete_type( $id ) {
+        $id = intval( $id );
+        if ( ! $id ) return false;
+
+        $table = $this->resolve_tipo_table();
+
+        // Verificar que no existan documentos asociados a este tipo
+        $count = $this->db->get_var( $this->db->prepare( "SELECT COUNT(*) FROM {$this->table()} WHERE {$this->col('tipo')} = %d", $id ) );
+        if ( $count && intval( $count ) > 0 ) {
+            return new WP_Error( 'has_documents', 'Existen documentos asociados a este tipo' );
+        }
+
+        $deleted = $this->db->delete( $table, [ 'id' => $id ], [ '%d' ] );
+        if ( $deleted === false ) {
+            error_log( 'HRM_DB_Documentos::delete_type failed - ' . $this->db->last_error . ' - ID: ' . $id );
+            return false;
+        }
+
+        return (bool) $deleted;
+    }
 }

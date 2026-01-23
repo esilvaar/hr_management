@@ -626,6 +626,45 @@ function hrm_ajax_create_document_type() {
 add_action( 'wp_ajax_hrm_create_document_type', 'hrm_ajax_create_document_type' );
 
 /**
+ * Endpoint AJAX: Eliminar un tipo de documento
+ */
+function hrm_ajax_delete_document_type() {
+    if ( ! is_user_logged_in() ) {
+        wp_send_json_error( [ 'message' => 'No autorizado' ], 401 );
+    }
+
+    // Verificar permisos
+    if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'edit_hrm_employees' ) ) {
+        wp_send_json_error( [ 'message' => 'No tienes permisos para eliminar tipos' ], 403 );
+    }
+
+    $nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
+    if ( ! $nonce || ! wp_verify_nonce( $nonce, 'hrm_delete_type' ) ) {
+        wp_send_json_error( [ 'message' => 'Token de seguridad inválido' ], 403 );
+    }
+
+    $id = isset( $_POST['id'] ) ? intval( $_POST['id'] ) : 0;
+    if ( ! $id ) {
+        wp_send_json_error( [ 'message' => 'ID inválido' ], 400 );
+    }
+
+    hrm_ensure_db_classes();
+    $db_docs = new HRM_DB_Documentos();
+
+    $res = $db_docs->delete_type( $id );
+    if ( is_wp_error( $res ) ) {
+        wp_send_json_error( [ 'message' => $res->get_error_message() ], 400 );
+    }
+
+    if ( $res === false ) {
+        wp_send_json_error( [ 'message' => 'No se pudo eliminar el tipo' ], 500 );
+    }
+
+    wp_send_json_success( [ 'id' => $id ] );
+}
+add_action( 'wp_ajax_hrm_delete_document_type', 'hrm_ajax_delete_document_type' );
+
+/**
  * Endpoint AJAX: Comprobar si un email ya existe en WP
  * Retorna JSON { success: true, data: { exists: bool, user_id: int|null } }
  */
@@ -705,6 +744,9 @@ function hrm_ajax_check_email() {
     wp_send_json_success( $response );
 }
 add_action( 'wp_ajax_hrm_check_email', 'hrm_ajax_check_email' );
+
+
+
 add_action( 'wp_ajax_hrm_delete_employee_document', 'hrm_ajax_delete_employee_document' );
 add_action( 'wp_ajax_hrm_aprobar_solicitud_supervisor', 'hrm_ajax_aprobar_solicitud_supervisor' );
 add_action( 'wp_ajax_hrm_rechazar_solicitud_supervisor', 'hrm_ajax_rechazar_solicitud_supervisor' );

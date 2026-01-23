@@ -53,6 +53,7 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
     'ajaxUrl' => admin_url( 'admin-ajax.php' ),
     'nonce' => wp_create_nonce( 'hrm_get_documents' ),
     'createTypeNonce' => wp_create_nonce( 'hrm_create_type' ),
+    'deleteTypeNonce' => wp_create_nonce( 'hrm_delete_type' ),
     'types' => $doc_types_js,
 ) );
 ?>
@@ -108,13 +109,23 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
                     <?= ! $has_employee ? 'disabled aria-disabled="true"' : '' ?>
                     title="<?= ! $has_employee ? 'Selecciona un usuario para habilitar' : 'Nuevo Documento' ?>"
                 >
-                    <span class="dashicons dashicons-plus-alt"></span> Nuevo Documento
+                Nuevo Documento
+                </button>
+            </div>
+            <div class="col-md-auto mt-3 mt-md-0">
+                <button
+                    class="btn btn-secondary btn-sm"
+                    id="btn-nuevo-directorio"
+                    data-has-employee="1"
+                    data-employee-id=""
+                    title="Nuevo Directorio"
+                >
+                    Nuevo Directorio
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Alert pequeña eliminada: usamos la alerta grande central en #hrm-documents-container -->
 
     <!-- Panel de subida de documentos -->
     <div id="hrm-upload-panel" class="border rounded shadow p-4 mb-4 bg-white" style="max-width: 600px; margin: 0 auto; display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); z-index: 9999;">
@@ -159,8 +170,6 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
                 </div>
                 <div class="d-flex gap-2 mt-2">
                     <input type="hidden" id="hrm_tipo_documento" name="tipo_documento" required>
-                    <button type="button" id="btn-crear-tipo" class="btn btn-outline-primary btn-sm">Crear tipo</button>
-                    <small class="text-muted d-block mt-1">Selecciona el tipo de documento a subir (o crea uno nuevo)</small>
                 </div>
             </div>
             <div class="mb-3">
@@ -182,10 +191,9 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
                     </div>
                 </div>
                 <input type="hidden" id="hrm_anio_documento" name="anio_documento" required>
-                <small class="text-muted d-block mt-1">Selecciona el año del documento</small>
             </div>
             <div class="mb-3">
-                <label for="hrm_archivos_subidos" class="form-label fw-bold">Archivos (PDF, DOC, DOCX) *</label>
+                <label for="hrm_archivos_subidos" class="form-label fw-bold">Archivos (PDF) *</label>
                 <input id="hrm_archivos_subidos"
                        type="file"
                        name="archivos_subidos[]"
@@ -193,7 +201,6 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
                        required
                        accept=".pdf"
                        class="form-control">
-                <small class="text-muted d-block mt-1">Puedes seleccionar varios archivos a la vez</small>
             </div>
             <div id="hrm-upload-message" class="mt-3"></div>
             <div class="d-flex justify-content-end gap-2 mt-4">
@@ -201,6 +208,58 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
                 <button type="submit" class="btn btn-success">
                     <span class="dashicons dashicons-upload"></span> Subir Documentos
                 </button>
+            </div>
+        </form>
+    </div>
+    <!-- Panel de Creacion de Directorios (modal similar a Subir) -->
+    <div id="hrm-create-type-panel" class="border rounded shadow p-4 mb-4 bg-white" style="max-width: 520px; margin: 0 auto; display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); z-index: 9999;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0"><span ></span> Gestión de Directorios</h5>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold">Tipos existentes</label>
+            <div id="hrm-create-type-list" style="max-height:260px; overflow-y:auto; border:1px solid #e9ecef; padding:8px;">
+                <?php foreach ( $hrm_tipos_documento as $k => $v ) :
+                    if ( is_int( $k ) || ctype_digit( (string) $k ) ) {
+                        $tipo_id = (int) $k;
+                        $tipo_name = (string) $v;
+                    } elseif ( is_array( $v ) && isset( $v['id'] ) ) {
+                        $tipo_id = (int) $v['id'];
+                        $tipo_name = (string) ( $v['nombre'] ?? $v['name'] ?? '' );
+                    } else {
+                        $tipo_id = '';
+                        $tipo_name = (string) $v;
+                    }
+                ?>
+                    <div class="d-flex align-items-center justify-content-between py-1 hrm-type-row" data-type-id="<?= esc_attr( $tipo_id ) ?>">
+                        <div class="text-start"><?= esc_html( $tipo_name ) ?></div>
+                        <div>
+                            <?php if ( $tipo_id ) : ?>
+                                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-type" data-type-id="<?= esc_attr( $tipo_id ) ?>" title="Eliminar tipo">Eliminar</button>
+                            <?php else : ?>
+                                <button type="button" class="btn btn-sm btn-secondary" disabled>Legacy</button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+        <hr>
+
+        <form id="hrm-create-type-form">
+            <?php wp_nonce_field( 'hrm_create_type', 'hrm_create_type_nonce' ); ?>
+            <div class="mb-3">
+                <label class="form-label fw-bold" for="hrm-create-tipo-name">Crear nuevo tipo</label>
+                <div class="input-group">
+                    <input type="text" id="hrm-create-tipo-name" class="form-control" required placeholder="Escribe el nombre...">
+                    <button type="button" class="btn btn-success" id="btn-crear-tipo-dir">Crear tipo</button>
+                </div>
+            </div>
+            <div id="hrm-create-type-message" class="mt-1"></div>
+            <div class="d-flex justify-content-end gap-2 mt-2">
+                <button type="button" class="btn btn-secondary" id="btn-cancelar-create-type">Cerrar</button>
             </div>
         </form>
     </div>
@@ -214,6 +273,9 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
     </div>
 </div>
 
+<div>
+
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -320,6 +382,245 @@ document.addEventListener('DOMContentLoaded', function() {
         if (hrmDocsListData.employeeId) {
             window.hrmDocumentsSetEmployee(hrmDocsListData.employeeId);
         }
+    }
+
+    // Nuevo Directorio (crear tipo) - panel y lógica
+    const btnNuevoDir = document.getElementById('btn-nuevo-directorio');
+    const createTypePanel = document.getElementById('hrm-create-type-panel');
+    const btnCerrarCreate = document.getElementById('btn-cerrar-create-type');
+    const btnCancelarCreate = document.getElementById('btn-cancelar-create-type');
+    const createTypeMsg = document.getElementById('hrm-create-type-message');
+    const createTypeInput = document.getElementById('hrm-create-tipo-name');
+    const btnCrearTipoDir = document.getElementById('btn-crear-tipo-dir');
+
+    if (btnNuevoDir) {
+        const hasEmployeeDir = btnNuevoDir.dataset.hasEmployee === '1';
+        if (!hasEmployeeDir) {
+            btnNuevoDir.setAttribute('disabled', 'disabled');
+            btnNuevoDir.setAttribute('aria-disabled', 'true');
+            btnNuevoDir.title = 'Selecciona un usuario para habilitar';
+        } else {
+            btnNuevoDir.removeAttribute('disabled');
+            btnNuevoDir.removeAttribute('aria-disabled');
+            btnNuevoDir.title = 'Nuevo Directorio';
+        }
+
+        btnNuevoDir.addEventListener('click', function(e) {
+            // Permitir abrir el panel de creación de directorio siempre, sin exigir
+            // que se haya seleccionado un empleado.
+            e.preventDefault();
+            if (createTypePanel) createTypePanel.style.display = 'block';
+            if (createTypeInput) createTypeInput.value = '';
+            if (createTypeMsg) createTypeMsg.innerHTML = '';
+        });
+    }
+
+    if (btnCerrarCreate) btnCerrarCreate.onclick = function() { if (createTypePanel) createTypePanel.style.display = 'none'; };
+    if (btnCancelarCreate) btnCancelarCreate.onclick = function() { if (createTypePanel) createTypePanel.style.display = 'none'; };
+
+    function showCreateTypeMessage(message, type) {
+        if (!createTypeMsg) return;
+        const alertClass = type === 'error' ? 'alert-danger' : 'alert-success';
+        createTypeMsg.innerHTML = '<div class="alert ' + alertClass + ' alert-dismissible fade show" role="alert">' + message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+        setTimeout(() => { createTypeMsg.innerHTML = ''; }, 5000);
+    }
+
+    function attachDeleteHandlers() {
+        const delButtons = createTypePanel ? createTypePanel.querySelectorAll('.btn-delete-type') : [];
+        delButtons.forEach( btn => {
+            // Avoid adding double handlers
+            if (btn.dataset.attached === '1') return;
+            btn.dataset.attached = '1';
+            btn.addEventListener('click', function() {
+                const deleteBtn = this;
+                const id = deleteBtn.getAttribute('data-type-id');
+                const row = deleteBtn.closest('.hrm-type-row');
+                const name = row ? row.querySelector(':first-child').textContent.trim() : '';
+
+                // Evitar múltiples confirmaciones en la misma fila
+                if ( row.querySelector('.hrm-inline-confirm') ) return;
+
+                // Ocultar el botón eliminar y mostrar confirmación inline HTML
+                deleteBtn.style.display = 'none';
+
+                const container = row.querySelector('div:last-child');
+                const confirmDiv = document.createElement('div');
+                confirmDiv.className = 'hrm-inline-confirm d-flex gap-2 align-items-center';
+                confirmDiv.style.marginLeft = '8px';
+                confirmDiv.innerHTML = '<small class="text-muted">¿Eliminar "' + name + '"? </small>' +
+                    '<button type="button" class="btn btn-sm btn-danger hrm-inline-confirm-yes">Confirmar</button>' +
+                    '<button type="button" class="btn btn-sm btn-secondary hrm-inline-confirm-no">Cancelar</button>';
+
+                container.appendChild(confirmDiv);
+
+                const btnYes = confirmDiv.querySelector('.hrm-inline-confirm-yes');
+                const btnNo = confirmDiv.querySelector('.hrm-inline-confirm-no');
+
+                btnNo.addEventListener('click', function() {
+                    // cancelar: quitar confirmación y mostrar botón eliminar
+                    confirmDiv.remove();
+                    deleteBtn.style.display = '';
+                });
+
+                btnYes.addEventListener('click', function() {
+                    btnYes.disabled = true;
+                    btnYes.textContent = 'Eliminando...';
+
+                    const data = new URLSearchParams();
+                    data.append('action', 'hrm_delete_document_type');
+                    data.append('id', id);
+                    data.append('nonce', hrmDocsListData.deleteTypeNonce || '');
+
+                    fetch(hrmDocsListData.ajaxUrl, { method: 'POST', headers: { 'Content-Type':'application/x-www-form-urlencoded' }, body: data })
+                    .then( r => r.json() )
+                    .then( json => {
+                        if ( json && json.success ) {
+                            // remover de la lista visual
+                            const rowToRemove = createTypePanel.querySelector('.hrm-type-row[data-type-id="' + id + '"]');
+                            if ( rowToRemove ) rowToRemove.remove();
+
+                            // remover del selector de upload
+                            const items = document.querySelectorAll('#hrm-tipo-items .hrm-tipo-item');
+                            items.forEach( it => {
+                                if ( it.getAttribute('data-tipo-id') == id ) it.remove();
+                            });
+
+                            // remover del filtro
+                            const fitems = document.querySelectorAll('#hrm-doc-type-filter-items .hrm-doc-type-item');
+                            fitems.forEach( it => {
+                                if ( it.getAttribute('data-type-id') == id ) it.remove();
+                            });
+
+                            // actualizar cache local
+                            if ( window.hrmDocsListData && Array.isArray( hrmDocsListData.types ) ) {
+                                hrmDocsListData.types = hrmDocsListData.types.filter( t => String(t.id) !== String(id) );
+                            }
+
+                            showCreateTypeMessage('Tipo eliminado', 'success');
+                            // limpiar confirm
+                            confirmDiv.remove();
+                        } else {
+                            let msg = 'No se pudo eliminar el tipo';
+                            if ( json && json.data && json.data.message ) msg = json.data.message;
+                            showCreateTypeMessage(msg, 'error');
+                            // restaurar UI
+                            confirmDiv.remove();
+                            deleteBtn.style.display = '';
+                        }
+                    })
+                    .catch( e => {
+                        console.error('Error eliminar tipo:', e);
+                        showCreateTypeMessage('Error al eliminar tipo', 'error');
+                        confirmDiv.remove();
+                        deleteBtn.style.display = '';
+                    });
+                });
+            });
+        });
+    }
+
+    if (btnCrearTipoDir) {
+        btnCrearTipoDir.addEventListener('click', function() {
+            const nombre = (createTypeInput && createTypeInput.value.trim()) || '';
+            if (!nombre) {
+                showCreateTypeMessage('Por favor escribe el nombre del nuevo tipo', 'error');
+                return;
+            }
+            btnCrearTipoDir.disabled = true;
+            btnCrearTipoDir.textContent = 'Creando...';
+
+            const data = new URLSearchParams();
+            data.append('action', 'hrm_create_document_type');
+            data.append('name', nombre);
+            data.append('nonce', hrmDocsListData.createTypeNonce || '');
+
+            fetch(hrmDocsListData.ajaxUrl, { method: 'POST', headers: { 'Content-Type':'application/x-www-form-urlencoded' }, body: data })
+            .then(r => r.json())
+            .then(json => {
+                if (json && json.success) {
+                    const id = json.data.id;
+                    const name = json.data.name;
+
+                    // Añadir a la lista de gestión
+                    const list = document.getElementById('hrm-create-type-list');
+                    if ( list ) {
+                        const div = document.createElement('div');
+                        div.className = 'd-flex align-items-center justify-content-between py-1 hrm-type-row';
+                        div.setAttribute('data-type-id', id);
+                        div.innerHTML = '<div class="text-start">' + name + '</div><div><button type="button" class="btn btn-sm btn-outline-danger btn-delete-type" data-type-id="' + id + '">Eliminar</button></div>';
+                        list.insertBefore(div, list.firstChild);
+                    }
+
+                    // Añadir al selector de upload si existe
+                    const itemsContainer = document.getElementById('hrm-tipo-items');
+                    if (itemsContainer) {
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.className = 'dropdown-item py-2 px-3 hrm-tipo-item';
+                        a.setAttribute('data-tipo-id', id);
+                        a.setAttribute('data-tipo-name', name);
+                        a.innerHTML = '<strong>' + name + '</strong>';
+                        itemsContainer.insertBefore(a, itemsContainer.firstChild);
+                        a.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            const searchInput = document.getElementById('hrm-tipo-search');
+                            const hiddenInput = document.getElementById('hrm_tipo_documento');
+                            if (searchInput) searchInput.value = name;
+                            if (hiddenInput) hiddenInput.value = id;
+                            itemsContainer.style.display = 'none';
+                            if ( typeof updateFilterClearVisibility === 'function' ) updateFilterClearVisibility();
+                        });
+                    }
+
+                    // Añadir al filtro de tipos si existe
+                    const filterItems = document.getElementById('hrm-doc-type-filter-items');
+                    if (filterItems) {
+                        const f = document.createElement('a');
+                        f.href = '#';
+                        f.className = 'dropdown-item py-2 px-3 hrm-doc-type-item';
+                        f.setAttribute('data-type-id', id );
+                        f.setAttribute('data-type-name', name );
+                        f.textContent = name;
+                        f.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            const searchInputFilter = document.getElementById('hrm-doc-type-filter-search');
+                            if ( searchInputFilter ) searchInputFilter.value = name;
+                            filterItems.style.display = 'none';
+                            if ( typeof filterDocumentsByType === 'function' ) filterDocumentsByType( id );
+                        });
+                        filterItems.insertBefore( f, filterItems.firstChild );
+                    }
+
+                    // Actualizar cache local de tipos
+                    if ( window.hrmDocsListData && Array.isArray( hrmDocsListData.types ) ) {
+                        hrmDocsListData.types.unshift( { id: id, name: name } );
+                    }
+
+                    showCreateTypeMessage('Tipo creado: ' + name, 'success');
+
+                    // Adjuntar handler al nuevo botón de eliminar
+                    attachDeleteHandlers();
+
+                    // Mantener modal abierto para gestión
+                    if (createTypeInput) createTypeInput.value = '';
+                } else {
+                    let msg = 'No se pudo crear el tipo';
+                    if ( json && json.data && json.data.message ) msg = json.data.message;
+                    showCreateTypeMessage(msg, 'error');
+                }
+            })
+            .catch(e => {
+                console.error('Error crear tipo:', e);
+                showCreateTypeMessage('Error al crear tipo', 'error');
+            })
+            .finally(() => {
+                btnCrearTipoDir.disabled = false;
+                btnCrearTipoDir.textContent = 'Crear tipo';
+            });
+        });
+
+        // inicializar handlers de eliminar existentes
+        attachDeleteHandlers();
     }
 });
 </script>
