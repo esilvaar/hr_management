@@ -11,6 +11,14 @@ $id  = absint( $_GET['id'] ?? 0 );
 $message_success = '';
 $message_error   = '';
 
+// Mostrar mensajes enviados por redirects centrales (hrm_redirect_with_message)
+if ( isset( $_GET['message_success'] ) && ! empty( $_GET['message_success'] ) ) {
+    $message_success = rawurldecode( sanitize_text_field( wp_unslash( $_GET['message_success'] ) ) );
+}
+if ( isset( $_GET['message_error'] ) && ! empty( $_GET['message_error'] ) ) {
+    $message_error = rawurldecode( sanitize_text_field( wp_unslash( $_GET['message_error'] ) ) );
+}
+
 // 2. CONTROLADOR (Procesamiento de Formularios)
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
     $action = $_POST['hrm_action'] ?? '';
@@ -42,16 +50,102 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
             $message_error = 'No tienes permisos para editar este perfil.';
             error_log( 'HRM Controller - Permission denied' );
         } else {
-            error_log( 'HRM Controller - Calling update' );
-            $update_result = $db_emp->update( $emp_id, $_POST );
-            error_log( 'HRM Controller - Update result: ' . print_r( $update_result, true ) );
-            if ( $update_result ) {
-                $message_success = 'Datos actualizados correctamente.';
-                $employee = $db_emp->get( $emp_id ); // Recargar datos
-                error_log( 'HRM Controller - Update success' );
+            error_log( 'HRM Controller - Calling controlled update' );
+
+            // SERVER-SIDE: limitar campos que pueden actualizarse según permisos
+            $current_user_id = get_current_user_id();
+            $is_admin = current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' );
+            $is_supervisor = current_user_can( 'edit_hrm_employees' );
+            $is_own_profile = ( $employee_obj && intval( $employee_obj->user_id ) === $current_user_id );
+
+            // Override para roles restringidos ('empleado' y 'editor_vacaciones') y control de 'supervisor'
+            $current_user_obj = wp_get_current_user();
+            $restricted_roles = array( 'empleado', 'editor_vacaciones' );
+            $is_role_supervisor = in_array( 'supervisor', (array) $current_user_obj->roles, true );
+            if ( $is_role_supervisor && $is_own_profile && ! ( current_user_can( 'manage_options' ) ) ) {
+                // Supervisores SOLO pueden editar campos personales en su propio perfil
+                $allowed_fields = array('nombre','apellido','telefono','email','fecha_nacimiento');
+            } elseif ( array_intersect( $restricted_roles, (array) $current_user_obj->roles ) && ! $is_admin && ! $is_supervisor ) {
+                if ( $is_own_profile ) {
+                    $allowed_fields = array('nombre','apellido','telefono','email','fecha_nacimiento');
+                } else {
+                    $allowed_fields = array();
+                }
+            } elseif ( $is_admin ) {
+                $allowed_fields = array('nombre','apellido','telefono','email','departamento','puesto','estado','anos_acreditados_anteriores','fecha_ingreso','salario');
+            } elseif ( hrm_can_edit_employee( $emp_id ) && ! $is_own_profile ) {
+                $allowed_fields = array('nombre','apellido','telefono','email','departamento','puesto','anos_acreditados_anteriores','fecha_ingreso');
+            } elseif ( $is_own_profile ) {
+                $allowed_fields = array('nombre','apellido','telefono','email','fecha_nacimiento');
             } else {
-                $message_error = 'No se realizaron cambios.';
-                error_log( 'HRM Controller - Update failed' );
+                $allowed_fields = array();
+            }
+
+            $update_data = array();
+            foreach ( $allowed_fields as $field ) {
+                if ( isset( $_POST[ $field ] ) ) {
+                    switch ( $field ) {
+                        case 'email':
+                            $update_data['email'] = sanitize_email( $_POST['email'] );
+                            break;
+                        case 'fecha_nacimiento':
+                            $fecha_nac = sanitize_text_field( $_POST['fecha_nacimiento'] );
+                            if ( preg_match( '/^\\d{4}-\\d{2}-\\d{2}$/', $fecha_nac ) ) {
+                                $update_data['fecha_nacimiento'] = $fecha_nac;
+                            }
+                            break;
+                        case 'salario':
+                            $update_data['salario'] = floatval( $_POST['salario'] );
+                            break;
+                        case 'anos_acreditados_anteriores':
+                            $update_data['anos_acreditados_anteriores'] = floatval( $_POST['anos_acreditados_anteriores'] );
+                            break;
+                        case 'estado':
+                            $update_data['estado'] = intval( $_POST['estado'] );
+                            break;
+                        case 'fecha_ingreso':
+                            $fecha = sanitize_text_field( $_POST['fecha_ingreso'] );
+                            if ( preg_match( '/^\\d{4}-\\d{2}-\\d{2}$/', $fecha ) ) {
+                                $update_data['fecha_ingreso'] = $fecha;
+                            }
+                            break;
+                        default:
+                            $update_data[ $field ] = sanitize_text_field( $_POST[ $field ] );
+                    }
+                }
+            }
+
+            // Recalcular años si corresponde
+            if ( isset( $update_data['fecha_ingreso'] ) || isset( $update_data['anos_acreditados_anteriores'] ) ) {
+                $fecha_ingreso_final = isset( $update_data['fecha_ingreso'] ) ? $update_data['fecha_ingreso'] : ( $employee_obj->fecha_ingreso ?? '' );
+                $anos_empresa = 0;
+                if ( $fecha_ingreso_final && $fecha_ingreso_final !== '0000-00-00' ) {
+                    $fecha_obj = DateTime::createFromFormat( 'Y-m-d', $fecha_ingreso_final );
+                    if ( $fecha_obj ) {
+                        $today = new DateTime( 'today' );
+                        $diff = $today->diff( $fecha_obj );
+                        $anos_empresa = intval( $diff->y );
+                    }
+                }
+                $update_data['anos_en_la_empresa'] = $anos_empresa;
+                $anos_anteriores = isset( $update_data['anos_acreditados_anteriores'] ) ? floatval( $update_data['anos_acreditados_anteriores'] ) : floatval( $employee_obj->anos_acreditados_anteriores ?? 0 );
+                $update_data['anos_totales_trabajados'] = $anos_anteriores + $anos_empresa;
+            }
+
+            if ( empty( $update_data ) ) {
+                $message_error = 'No tienes permiso para modificar los campos enviados.';
+                error_log( 'HRM Controller - No allowed fields in POST' );
+            } else {
+                $update_result = $db_emp->update( $emp_id, $update_data );
+                error_log( 'HRM Controller - Update result: ' . print_r( $update_result, true ) );
+                if ( $update_result ) {
+                    $message_success = 'Datos actualizados correctamente.';
+                    $employee = $db_emp->get( $emp_id ); // Recargar datos
+                    error_log( 'HRM Controller - Update success' );
+                } else {
+                    $message_error = 'No se realizaron cambios.';
+                    error_log( 'HRM Controller - Update failed' );
+                }
             }
         }
     }
@@ -319,15 +413,31 @@ $hrm_puestos = apply_filters( 'hrm_puestos', array(
     'Diseñador Gráfico',
     'Practicante',
 ) );
-$hrm_tipos_documento = apply_filters( 'hrm_tipos_documento', array( 'Contrato', 'Liquidaciones', 'Licencia' ) );
+// Obtener tipos de documento desde BD (si existen), fallback a lista estática
+hrm_ensure_db_classes();
+$db_docs = new HRM_DB_Documentos();
+$hrm_tipos_documento = $db_docs->get_all_types();
+if ( empty( $hrm_tipos_documento ) ) {
+    $hrm_tipos_documento = apply_filters( 'hrm_tipos_documento', array( 'Contrato', 'Liquidaciones', 'Licencia' ) );
+}
 $hrm_tipos_contrato = apply_filters( 'hrm_tipos_contrato', array( 'Indefinido', 'Plazo Fijo', 'Por Proyecto' ) );
 
 // Detectar filtro de estado (activos/inactivos)
 $show_inactive = isset( $_GET['show_inactive'] ) && $_GET['show_inactive'] === '1';
+// Detectar toggle 'view_all' (solo aplicable para administrador_anaconda)
+$view_all = isset( $_GET['view_all'] ) && $_GET['view_all'] === '1';
 
 if ( $tab === 'list' ) {
-    // Por defecto mostrar solo activos (estado=1), a menos que se solicite inactivos
-    $employees = $show_inactive ? $db_emp->get_by_status( 0 ) : $db_emp->get_by_status( 1 );
+    // Si se solicita ver todo y el usuario es administrador_anaconda, devolver todos (filtrados por estado si aplica)
+    $current_user = wp_get_current_user();
+    $is_anaconda = in_array( 'administrador_anaconda', (array) $current_user->roles, true );
+
+    if ( $view_all && $is_anaconda ) {
+        $employees = $show_inactive ? $db_emp->get_by_status( 0 ) : $db_emp->get_by_status( 1 );
+    } else {
+        // Por defecto mostrar solo activos (estado=1), a menos que se solicite inactivos
+        $employees = $show_inactive ? $db_emp->get_visible_for_user( get_current_user_id(), 0 ) : $db_emp->get_visible_for_user( get_current_user_id(), 1 );
+    }
 } elseif ( $id ) {
     $employee = $db_emp->get( $id );
     if ( $employee && $tab === 'upload' ) {
@@ -338,7 +448,7 @@ if ( $tab === 'list' ) {
 // Preparar lista de empleados para el selector
 $all_emps = array();
 if ( $tab !== 'list' ) {
-    $all_emps = $db_emp->get_all();
+    $all_emps = $db_emp->get_visible_for_user( get_current_user_id(), null );
 }
 ?>
 
@@ -377,7 +487,7 @@ if ( $tab !== 'list' ) {
 
                 <?php hrm_get_template_part( 'employees-detail', '', compact( 'employee', 'hrm_departamentos', 'hrm_puestos', 'hrm_tipos_contrato', 'message_success', 'message_error' ) ); ?>
 
-            <?php elseif ( $tab === 'upload' && $id ) : ?>
+            <?php elseif ( $tab === 'upload' ) : ?>
 
                 <?php hrm_get_template_part( 'employees-documents', '', compact( 'employee', 'documents', 'hrm_tipos_documento', 'message_success', 'message_error' ) ); ?>
 
@@ -385,7 +495,7 @@ if ( $tab !== 'list' ) {
 
                 <?php hrm_get_template_part( 'employees-create', '', compact( 'hrm_departamentos', 'hrm_puestos', 'hrm_tipos_contrato', 'message_success', 'message_error' ) ); ?>
 
-            <?php elseif ( ( $tab === 'profile' || $tab === 'upload' ) && ! $id ) : ?>
+            <?php elseif ( $tab === 'profile' && ! $id ) : ?>
                 <div class="d-flex align-items-center justify-content-center" style="min-height: 400px;">
                     <h2 style="font-size: 24px; color: #856404; text-align: center; max-width: 500px;"><strong>⚠️ Atención:</strong> Por favor selecciona un usuario para continuar.</h2>
                 </div>

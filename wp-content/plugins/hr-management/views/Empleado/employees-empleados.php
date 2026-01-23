@@ -9,13 +9,7 @@ $current_user_id = get_current_user_id();
 $employee = null;
 
 // Obtener el empleado vinculado al usuario actual
-$employees_list = $db_emp->get_all();
-foreach ( $employees_list as $emp ) {
-    if ( intval( $emp->user_id ) === $current_user_id ) {
-        $employee = $emp;
-        break;
-    }
-}
+$employee = $db_emp->get_by_wp_user( $current_user_id );
 
 // Si no encuentra vinculación, mostrar error
 if ( ! $employee ) {
@@ -27,6 +21,14 @@ $tab = sanitize_key( $_GET['tab'] ?? 'profile' );
 
 $message_success = '';
 $message_error   = '';
+
+// Mostrar mensajes enviados por redirects centrales (hrm_redirect_with_message)
+if ( isset( $_GET['message_success'] ) && ! empty( $_GET['message_success'] ) ) {
+    $message_success = rawurldecode( sanitize_text_field( wp_unslash( $_GET['message_success'] ) ) );
+}
+if ( isset( $_GET['message_error'] ) && ! empty( $_GET['message_error'] ) ) {
+    $message_error = rawurldecode( sanitize_text_field( wp_unslash( $_GET['message_error'] ) ) );
+}
 
 // 2. CONTROLADOR (Procesamiento de Formularios)
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {

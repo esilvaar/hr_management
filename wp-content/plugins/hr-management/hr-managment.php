@@ -909,6 +909,18 @@ function hrm_register_admin_menus() {
             );
 
             error_log( '[HRM-DEBUG] Registered Convivencia and Mis Vacaciones as submenus for administrador_anaconda user_id=' . get_current_user_id() );
+        } else {
+            // Registrar Convivencia para cualquier usuario autenticado (capacidad 'read')
+            add_menu_page(
+                'Convivencia',
+                'Convivencia',
+                'read',
+                'hrm-convivencia',
+                'hrm_render_reglamento_interno_page',
+                'dashicons-groups',
+                60
+            );
+            error_log( '[HRM-DEBUG] Registered Convivencia top-level for logged-in user_id=' . get_current_user_id() );
         }
     }
 
@@ -991,6 +1003,10 @@ add_action( 'admin_menu', 'hrm_register_admin_menus' );
  * Renderizar página de Reglamento Interno.
  */
 function hrm_render_reglamento_interno_page() {
+    if ( ! is_user_logged_in() ) {
+        wp_die( 'Debes iniciar sesión para ver esta página.', 'Acceso denegado', array( 'response' => 403 ) );
+    }
+
     echo '<div class="wrap">';
     echo '<div class="hrm-admin-layout">';
         hrm_get_template_part( 'partials/sidebar-loader' );

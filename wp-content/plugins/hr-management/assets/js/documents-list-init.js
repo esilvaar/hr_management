@@ -16,8 +16,8 @@
         const container = document.getElementById('hrm-documents-container');
         if ( ! container ) return;
 
-        // Cargar documentos via AJAX
-        loadEmployeeDocuments();
+        // Cargar documentos via AJAX (delegado para evitar race conditions si el core no se ha cargado)
+        initLoadEmployeeDocumentsDelegate();
     }
 })();
 

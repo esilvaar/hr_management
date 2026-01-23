@@ -22,7 +22,23 @@ $logo_url = esc_url(
 );
 ?>
 
-<aside class="hrm-sidebar d-flex flex-column flex-shrink-0 border-end bg-light">
+<style>
+/* Sidebar profile/convivencia responsive: center on desktop, move to bottom on mobile */
+.hrm-nav.d-flex { display: flex; flex-direction: column; }
+.hrm-nav .hrm-profile-mid, .hrm-nav .hrm-convivencia-mid { margin: 0; }
+
+@media (max-width: 767.98px) {
+  /* Small screens: place profile/convivencia section at the bottom */
+  .hrm-nav .hrm-profile-mid, .hrm-nav .hrm-convivencia-mid { margin-top: auto; margin-bottom: 0; }
+}
+
+@media (min-width: 768px) {
+  /* Medium+ screens: center vertically */
+  .hrm-nav .hrm-profile-mid, .hrm-nav .hrm-convivencia-mid { margin: auto 0; }
+}
+</style>
+
+<aside class="hrm-sidebar d-flex flex-column flex-shrink-0 border-end bg-light" style="position: relative;">
 
     <!-- Header -->
     <div class="hrm-sidebar-header d-flex align-items-center justify-content-center p-3 border-bottom">
@@ -30,7 +46,7 @@ $logo_url = esc_url(
     </div>
 
     <!-- Navegación -->
-    <nav class="hrm-nav flex-grow-1 py-2">
+    <nav class="hrm-nav flex-grow-1 py-2 pb-5 d-flex flex-column">
 
         <!-- Gestión de Vacaciones -->
         <details <?= $section === 'vacaciones' ? 'open' : ''; ?>>
@@ -38,7 +54,7 @@ $logo_url = esc_url(
                 <span class="dashicons dashicons-calendar-alt"></span>
                 <span class="flex-grow-1">Gestión de Vacaciones</span>
             </summary>
-            <ul class="list-unstyled px-2 mb-2">
+            <ul class="list-unstyled px-2 mb-0">
                 <li>
                     <a class="nav-link px-3 py-2 <?= hrm_edvac_is_active('hrm-vacaciones'); ?>"
                        href="<?= esc_url( admin_url('admin.php?page=hrm-vacaciones') ); ?>">
@@ -48,9 +64,9 @@ $logo_url = esc_url(
             </ul>
         </details>
 
-        <div class="mt-auto pt-2">
-            <!-- Mi Perfil -->
-            <details <?= $section === 'perfil' ? 'open' : ''; ?>>
+        <!-- Mi Perfil (debajo de Gestión de Vacaciones) -->
+        <div class="hrm-profile-mid" style="padding: 0; margin-top: 0;">
+            <details <?= $section === 'perfil' ? 'open' : ''; ?> >
                 <summary class="d-flex align-items-center gap-2 px-3 py-2 fw-semibold">
                     <span class="dashicons dashicons-admin-users"></span>
                     <span class="flex-grow-1">Mi Perfil</span>
@@ -85,12 +101,14 @@ $logo_url = esc_url(
                     </li>                    
                 </ul>
             </details>
+        </div>
 
-            <!-- Convivencia -->
+        <!-- Convivencia centrada verticalmente -->
+        <div class="hrm-convivencia-mid" style="margin: auto 0; padding: .5rem 0;">
             <details>
                 <summary class="d-flex align-items-center gap-2 px-3 py-2 fw-semibold">
                     <span class="dashicons dashicons-book-alt"></span>
-                    <span class="flex-grow-1">Convivencia</span>
+                    <span class="flex-grow-1">Documentos-Reglamentos</span>
                 </summary>
                 <ul class="list-unstyled px-2 mb-2">
                     <li>

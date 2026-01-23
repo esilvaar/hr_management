@@ -20,16 +20,38 @@ if ( ! empty( $lista_empleados ) ) {
         <div class="d-flex gap-2">
             <?php 
             $show_inactive = isset( $_GET['show_inactive'] ) && $_GET['show_inactive'] === '1';
+            $fullscreen = isset( $_GET['fullscreen'] ) && $_GET['fullscreen'] === '1';
+
+            // URL de toggle para ver inactivos
             $toggle_url = $show_inactive 
-                ? '?page=hrm-empleados&tab=list' 
-                : '?page=hrm-empleados&tab=list&show_inactive=1';
-            $fullscreen = isset( $_GET['fullscreen'] ) ? '&fullscreen=1' : '';
-            $toggle_url .= $fullscreen;
+                ? add_query_arg( array( 'page' => 'hrm-empleados', 'tab' => 'list' ), admin_url('admin.php') )
+                : add_query_arg( array( 'page' => 'hrm-empleados', 'tab' => 'list', 'show_inactive' => '1' ), admin_url('admin.php') );
+            if ( $fullscreen ) $toggle_url = add_query_arg( 'fullscreen', '1', $toggle_url );
+
+            // Botón para administradores Anaconda: ver todos los empleados (view_all)
+            $current_user = wp_get_current_user();
+            $is_anaconda = in_array( 'administrador_anaconda', (array) $current_user->roles, true );
+            $view_all = isset( $_GET['view_all'] ) && $_GET['view_all'] === '1';
+
+            if ( $is_anaconda ) {
+                $view_all_url = $view_all 
+                    ? add_query_arg( array( 'page' => 'hrm-empleados', 'tab' => 'list' ), admin_url('admin.php') )
+                    : add_query_arg( array( 'page' => 'hrm-empleados', 'tab' => 'list', 'view_all' => '1' ), admin_url('admin.php') );
+                if ( $show_inactive ) $view_all_url = add_query_arg( 'show_inactive', '1', $view_all_url );
+                if ( $fullscreen ) $view_all_url = add_query_arg( 'fullscreen', '1', $view_all_url );
+            }
             ?>
             <a href="<?= esc_url( $toggle_url ) ?>" class="btn text-black btn-light btn-sm <?= $show_inactive ? 'active' : '' ?>">
                 <span class="dashicons dashicons-<?= $show_inactive ? 'visibility' : 'hidden' ?>"></span>
                 <?= $show_inactive ? 'Ver Activos' : 'Ver Inactivos' ?>
             </a>
+
+            <?php if ( $is_anaconda ) : ?>
+                <a href="<?= esc_url( $view_all_url ) ?>" class="btn text-black btn-light btn-sm <?= $view_all ? 'active' : '' ?>">
+                    <span class="dashicons dashicons-<?= $view_all ? 'visibility' : 'hidden' ?>"></span>
+                    <?= $view_all ? 'Ver por Área' : 'Ver Todos' ?>
+                </a>
+            <?php endif; ?>
             <a href="?page=hrm-empleados&tab=new<?= $fullscreen ?>" class="btn text-black btn-light btn-sm">
                 <span class="dashicons dashicons-plus-alt2"></span> Nuevo Empleado
             </a>

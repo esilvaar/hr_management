@@ -104,6 +104,86 @@ class HRM_DB_Empleados extends HRM_DB_Table {
         return $this->db->get_row( $this->db->prepare( "SELECT {$select} FROM {$this->table()} WHERE {$this->col('email')} = %s", $email ) );
     }
 
+    /**
+     * Obtener empleados visibles para un usuario dado.
+     * Usuarios con rol 'administrador_anaconda' o 'supervisor' que además sean gerentes
+     * solo verán empleados con la misma `area_gerencia`.
+     *
+     * @param int|null $user_id
+     * @param int|null $estado 1 = activos, 0 = inactivos, null = todos
+     * @return array|object
+     */
+    public function get_visible_for_user( $user_id = null, $estado = 1 ) {
+        if ( $user_id === null ) {
+            $user_id = get_current_user_id();
+        }
+
+        $wp_user = get_userdata( $user_id );
+        if ( ! $wp_user ) {
+            return $estado === null ? $this->get_all() : $this->get_by_status( $estado );
+        }
+
+        $roles = (array) ( $wp_user->roles ?? array() );
+        $restricted_roles = array( 'administrador_anaconda', 'supervisor' );
+
+        // Si el usuario no tiene rol restringido, devolver lista normal
+        if ( empty( array_intersect( $roles, $restricted_roles ) ) ) {
+            return $estado === null ? $this->get_all() : $this->get_by_status( $estado );
+        }
+
+        // Obtener empleado vinculado al usuario WP
+        $empleado = $this->get_by_wp_user( $user_id );
+        if ( ! $empleado ) {
+            return $estado === null ? $this->get_all() : $this->get_by_status( $estado );
+        }
+
+        // Requerimos que el empleado sea 'Gerente' (puesto) o su departamento sea 'Gerencia'
+        $es_gerente = false;
+        if ( isset( $empleado->puesto ) && strcasecmp( trim( $empleado->puesto ), 'Gerente' ) === 0 ) {
+            $es_gerente = true;
+        }
+        if ( isset( $empleado->departamento ) && strcasecmp( trim( $empleado->departamento ), 'Gerencia' ) === 0 ) {
+            $es_gerente = true;
+        }
+
+        if ( ! $es_gerente ) {
+            return $estado === null ? $this->get_all() : $this->get_by_status( $estado );
+        }
+
+        $area = trim( $empleado->area_gerencia ?? '' );
+        if ( $area === '' ) {
+            // Sin área definida: no aplicamos restricción para evitar bloquear al usuario
+            return $estado === null ? $this->get_all() : $this->get_by_status( $estado );
+        }
+
+        // Intentar obtener departamentos predefinidos para esta área (mapa centralizado)
+        $deptos_predefinidos = function_exists( 'hrm_get_deptos_predefinidos_por_area' ) ? hrm_get_deptos_predefinidos_por_area( $area ) : array();
+
+        $select = $this->get_select_columns();
+
+        // Si existen departamentos predefinidos, filtrar por departamento IN (...)
+        if ( ! empty( $deptos_predefinidos ) ) {
+            $placeholders = implode( ', ', array_fill( 0, count( $deptos_predefinidos ), '%s' ) );
+            $sql = "SELECT {$select} FROM {$this->table()} WHERE {$this->col('departamento')} IN ($placeholders)";
+            $params = $deptos_predefinidos;
+
+            if ( $estado !== null ) {
+                $sql .= " AND {$this->col('estado')} = %d";
+                $params[] = (int) $estado;
+            }
+
+            // Preparar parámetros para $this->db->prepare
+            return call_user_func_array( array( $this->db, 'get_results' ), array( call_user_func_array( array( $this->db, 'prepare' ), array_merge( array( $sql ), $params ) ) ) );
+        }
+
+        // Fallback: si no hay departamentos predefinidos, filtrar por área_gerencia como antes
+        if ( $estado !== null ) {
+            return $this->db->get_results( $this->db->prepare( "SELECT {$select} FROM {$this->table()} WHERE {$this->col('area_gerencia')} = %s AND {$this->col('estado')} = %d", $area, (int) $estado ) );
+        }
+
+        return $this->db->get_results( $this->db->prepare( "SELECT {$select} FROM {$this->table()} WHERE {$this->col('area_gerencia')} = %s", $area ) );
+    }
+
     public function create( $data ) {
         $insert_data = [
             $this->col('rut')              => sanitize_text_field( $data['rut'] ),

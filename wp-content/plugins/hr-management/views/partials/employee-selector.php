@@ -7,7 +7,7 @@ if ( isset( $tab ) && $tab === 'list' ) return;
 // Obtener empleados si no fueron provistos por el scope
 if ( ! isset( $all_emps ) ) {
     if ( isset( $db_emp ) && is_object( $db_emp ) ) {
-        $all_emps = $db_emp->get_all();
+        $all_emps = $db_emp->get_visible_for_user( get_current_user_id(), null );
     } else {
         $all_emps = array();
     }

@@ -38,7 +38,23 @@ $logo_url = esc_url(
 );
 ?>
 
-<aside class="hrm-sidebar d-flex flex-column flex-shrink-0 border-end bg-light">
+<style>
+/* Sidebar profile responsive: center on desktop, move to bottom on mobile */
+.hrm-nav.d-flex { display: flex; flex-direction: column; }
+.hrm-nav .hrm-profile-mid { margin: 0; }
+
+@media (max-width: 767.98px) {
+  /* Small screens: place profile section at the bottom */
+  .hrm-nav .hrm-profile-mid { margin-top: auto; margin-bottom: 0; }
+}
+
+@media (min-width: 768px) {
+  /* Medium+ screens: center vertically */
+  .hrm-nav .hrm-profile-mid { margin: auto 0; }
+}
+</style>
+
+<aside class="hrm-sidebar d-flex flex-column flex-shrink-0 border-end bg-light" style="position: relative;">
 
     <!-- Header -->
     <div class="hrm-sidebar-header d-flex align-items-center justify-content-center p-3 border-bottom">
@@ -46,7 +62,7 @@ $logo_url = esc_url(
     </div>
 
     <!-- Navegación -->
-    <nav class="hrm-nav flex-grow-1 py-2">
+    <nav class="hrm-nav flex-grow-1 py-2 pb-5 d-flex flex-column">
 
         <!-- Gestión de Empleados -->
         <details <?= $section === 'empleados' ? 'open' : ''; ?>>
@@ -92,7 +108,8 @@ $logo_url = esc_url(
             </ul>
         </details>
 
-        <div class="mt-auto pt-2">
+        <!-- Centramos la sección 'Mi Perfil' verticalmente usando flexbox (no absoluto) -->
+        <div class="hrm-profile-mid" style="margin: auto 0; padding: .5rem 0;">
             <!-- Mi Perfil -->
             <details <?= $section === 'perfil' ? 'open' : ''; ?>>
                 <summary class="d-flex align-items-center gap-2 px-3 py-2 fw-semibold">
@@ -127,11 +144,11 @@ $logo_url = esc_url(
                 </ul>
             </details>
 
-            <!-- Convivencia -->
+            <!-- Documentos-Reglamentos  -->
             <details>
                 <summary class="d-flex align-items-center gap-2 px-3 py-2 fw-semibold">
                     <span class="dashicons dashicons-book-alt"></span>
-                    <span class="flex-grow-1">Convivencia</span>
+                    <span class="flex-grow-1">Documentos-Reglamentos</span>
                 </summary>
                 <ul class="list-unstyled px-2 mb-2">
                     <li>

@@ -126,6 +126,14 @@ function hrm_handle_employees_post() {
 
         hrm_debug_log( 'Update employee action triggered', $_POST );
 
+        // Trazas adicionales: garantizar escritura directa en wp-content/debug.log
+        try {
+            $trace_file = WP_CONTENT_DIR . '/debug.log';
+            @file_put_contents( $trace_file, "HRM-TRACE: update_employee triggered at " . date('c') . "\nPOST: " . print_r( $_POST, true ) . "\n\n", FILE_APPEND | LOCK_EX );
+        } catch ( Exception $e ) {
+            // No hacer nada si falla (evitar romper flujo)
+        }
+
         // Verificar permisos
         if ( ! hrm_can_edit_employee( $emp_id ) ) {
             hrm_redirect_with_message(
@@ -222,7 +230,239 @@ function hrm_handle_employees_post() {
             }
         }
 
-        $update_result = $db_emp->update( $emp_id, $_POST );
+        // Cargar objeto empleado actual para validaciones adicionales
+        $employee_obj = $db_emp->get( $emp_id );
+
+        // ----------------------
+        // Validación de permisos por campo (server-side)
+        // ----------------------
+        $current_user_id = get_current_user_id();
+        $is_admin = current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' );
+        $is_supervisor = current_user_can( 'edit_hrm_employees' );
+        $is_own_profile = ( $employee_obj && intval( $employee_obj->user_id ) === $current_user_id );
+
+        // Override: usuarios con rol 'empleado' o 'editor_vacaciones' (no admin/supervisor) solo pueden editar campos personales en su propio perfil
+        $current_user_obj = wp_get_current_user();
+        $restricted_roles = array( 'empleado', 'editor_vacaciones' );
+        // Detectar rol 'supervisor' explícitamente para bloquear edición propia
+        $is_role_supervisor = in_array( 'supervisor', (array) $current_user_obj->roles, true );
+        if ( $is_role_supervisor && $is_own_profile && ! ( current_user_can( 'manage_options' ) ) ) {
+            // Supervisores SOLO pueden editar campos personales en su propio perfil
+            $allowed_fields = array('nombre','apellido','telefono','email','fecha_nacimiento');
+        } elseif ( array_intersect( $restricted_roles, (array) $current_user_obj->roles ) && ! $is_admin && ! $is_supervisor ) {
+            if ( $is_own_profile ) {
+                $allowed_fields = array('nombre','apellido','telefono','email','fecha_nacimiento');
+            } else {
+                $allowed_fields = array();
+            }
+        } elseif ( $is_admin ) {
+            $allowed_fields = array('nombre','apellido','telefono','email','departamento','puesto','estado','anos_acreditados_anteriores','fecha_ingreso','salario');
+        } elseif ( hrm_can_edit_employee( $emp_id ) && ! $is_own_profile ) {
+            $allowed_fields = array('nombre','apellido','telefono','email','departamento','puesto','anos_acreditados_anteriores','fecha_ingreso');
+        } elseif ( $is_own_profile ) {
+            $allowed_fields = array('nombre','apellido','telefono','email','fecha_nacimiento');
+        } else {
+            $allowed_fields = array();
+        }
+
+        $update_data = array();
+        foreach ( $allowed_fields as $field ) {
+            if ( isset( $_POST[ $field ] ) ) {
+                switch ( $field ) {
+                    case 'email':
+                        $update_data['email'] = sanitize_email( $_POST['email'] );
+                        break;
+                    case 'fecha_nacimiento':
+                        $fecha_nac = sanitize_text_field( $_POST['fecha_nacimiento'] );
+                        if ( preg_match( '/^\\d{4}-\\d{2}-\\d{2}$/', $fecha_nac ) ) {
+                            $update_data['fecha_nacimiento'] = $fecha_nac;
+                        }
+                        break;
+                    case 'salario':
+                        $update_data['salario'] = floatval( $_POST['salario'] );
+                        break;
+                    case 'anos_acreditados_anteriores':
+                        $update_data['anos_acreditados_anteriores'] = floatval( $_POST['anos_acreditados_anteriores'] );
+                        break;
+                    case 'estado':
+                        $update_data['estado'] = intval( $_POST['estado'] );
+                        break;
+                    case 'fecha_ingreso':
+                        $fecha = sanitize_text_field( $_POST['fecha_ingreso'] );
+                        if ( preg_match( '/^\\d{4}-\\d{2}-\\d{2}$/', $fecha ) ) {
+                            $update_data['fecha_ingreso'] = $fecha;
+                        }
+                        break;
+                    default:
+                        $update_data[ $field ] = sanitize_text_field( $_POST[ $field ] );
+                }
+            }
+        }
+
+        // Recalcular años en servidor para evitar manipulación desde cliente
+        if ( isset( $update_data['fecha_ingreso'] ) || isset( $update_data['anos_acreditados_anteriores'] ) ) {
+            $fecha_ingreso_final = isset( $update_data['fecha_ingreso'] ) ? $update_data['fecha_ingreso'] : ( $employee_obj->fecha_ingreso ?? '' );
+            $anos_empresa = 0;
+            if ( $fecha_ingreso_final && $fecha_ingreso_final !== '0000-00-00' ) {
+                $fecha_obj = DateTime::createFromFormat( 'Y-m-d', $fecha_ingreso_final );
+                if ( $fecha_obj ) {
+                    $today = new DateTime( 'today' );
+                    $diff = $today->diff( $fecha_obj );
+                    $anos_empresa = intval( $diff->y );
+                }
+            }
+            $update_data['anos_en_la_empresa'] = $anos_empresa;
+            $anos_anteriores = isset( $update_data['anos_acreditados_anteriores'] ) ? floatval( $update_data['anos_acreditados_anteriores'] ) : floatval( $employee_obj->anos_acreditados_anteriores ?? 0 );
+            $update_data['anos_totales_trabajados'] = $anos_anteriores + $anos_empresa;
+        }
+
+        hrm_debug_log( 'Allowed update fields', $allowed_fields );
+        hrm_debug_log( 'Update payload (sanitized)', $update_data );
+
+        if ( empty( $update_data ) ) {
+            hrm_redirect_with_message(
+                $redirect_base,
+                __( 'No tienes permiso para modificar los campos enviados.', 'hr-management' ),
+                'error'
+            );
+        }
+
+        // -----------------------------
+        // Manejo opcional de cambio de contraseña
+        // Solo a partir de edición por Admin / Administrador_Anaconda / Supervisor
+        // -----------------------------
+        $password_changed = false;
+        $password_msgs = array();
+
+        if ( isset( $_POST['hrm_new_password'] ) && strlen( trim( $_POST['hrm_new_password'] ) ) > 0 ) {
+            $new_pass = $_POST['hrm_new_password'];
+            $confirm_pass = isset( $_POST['hrm_confirm_password'] ) ? $_POST['hrm_confirm_password'] : '';
+
+            // Permisos: admin, administrador_anaconda o supervisor (edit_hrm_employees)
+            $can_change_pass = current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) || current_user_can( 'view_hrm_admin_views' ) || in_array( 'administrador_anaconda', (array) $current_user_obj->roles, true );
+
+            if ( ! $can_change_pass ) {
+                hrm_redirect_with_message( $redirect_base, __( 'No tienes permisos para cambiar la contraseña de usuarios.', 'hr-management' ), 'error' );
+            }
+
+            if ( empty( $employee_obj ) || empty( $employee_obj->user_id ) ) {
+                hrm_redirect_with_message( $redirect_base, __( 'El empleado no tiene una cuenta WordPress asociada.', 'hr-management' ), 'error' );
+            }
+
+            if ( $new_pass !== $confirm_pass ) {
+                hrm_redirect_with_message( $redirect_base, __( 'Las contraseñas no coinciden.', 'hr-management' ), 'error' );
+            }
+
+            if ( strlen( $new_pass ) < 8 ) {
+                hrm_redirect_with_message( $redirect_base, __( 'La contraseña debe tener al menos 8 caracteres.', 'hr-management' ), 'error' );
+            }
+
+            // Depuración: registrar intento de cambio de contraseña
+            error_log( 'HRM: Intentando cambiar contraseña WP para empleado ID ' . $emp_id . ' (WP user id: ' . intval( $employee_obj->user_id ) . ') por usuario ' . get_current_user_id() );
+            // También escribir traza directa en debug.log para asegurar visibilidad
+            @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: Intento cambio pass para emp_id={$emp_id}, wp_user_id=" . intval( $employee_obj->user_id ) . " por usuario=" . get_current_user_id() . " at " . date('c') . "\n", FILE_APPEND | LOCK_EX );
+
+            // Actualizar contraseña en WP
+            $wp_user_id = intval( $employee_obj->user_id );
+
+            // Registrar estado previo y metadatos del usuario para diagnóstico
+            $user_obj_before = get_userdata( $wp_user_id );
+            @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: Pre-change user data for wp_user_id={$wp_user_id} at " . date('c') . "\n" . print_r( $user_obj_before, true ) . "\nUser meta: " . print_r( get_user_meta( $wp_user_id ), true ) . "\n", FILE_APPEND | LOCK_EX );
+
+            // Usar wp_set_password y registrar en log
+            if ( function_exists( 'wp_set_password' ) ) {
+                wp_set_password( $new_pass, $wp_user_id );
+                error_log( 'HRM: wp_set_password ejecutado para WP user id ' . $wp_user_id );
+
+                // Verificar si el usuario existe y anotar en logs
+                $user_obj_after = get_userdata( $wp_user_id );
+                if ( $user_obj_after ) {
+                    error_log( 'HRM: Usuario encontrado tras cambio: ' . $user_obj_after->user_login . ' <' . $user_obj_after->user_email . '>' );
+                    // Verificar que la contraseña coincida usando wp_check_password
+                    $pw_ok = function_exists('wp_check_password') ? wp_check_password( $new_pass, $user_obj_after->user_pass, $wp_user_id ) : false;
+                    @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: wp_check_password returns: " . ( $pw_ok ? 'true' : 'false' ) . " for user_id={$wp_user_id} at " . date('c') . "\nUser after data:" . print_r( $user_obj_after, true ) . "\n", FILE_APPEND | LOCK_EX );
+                } else {
+                    error_log( 'HRM: Usuario no encontrado tras intento de cambio de contraseña para WP id ' . $wp_user_id );
+                    @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: Usuario no encontrado tras intento de cambio de contraseña para WP id {$wp_user_id} at " . date('c') . "\n", FILE_APPEND | LOCK_EX );
+                }
+            } else {
+                // Fallback: intentar wp_update_user
+                $res = wp_update_user( array( 'ID' => $wp_user_id, 'user_pass' => $new_pass ) );
+                error_log( 'HRM: wp_set_password no disponible, wp_update_user resultado: ' . print_r( $res, true ) );
+                @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: wp_update_user result: " . print_r( $res, true ) . " at " . date('c') . "\n", FILE_APPEND | LOCK_EX );
+            }
+
+            $password_changed = true;
+            $password_msgs[] = __( 'Contraseña actualizada.', 'hr-management' );
+
+            // Guardar la nueva contraseña temporalmente en un transient asociado al usuario que hace el cambio
+            // TTL corto (60 segundos) para poder mostrarla una vez y permitir copia al portapapeles
+            $admin_user_id = get_current_user_id();
+            if ( $admin_user_id ) {
+                set_transient( 'hrm_temp_new_pass_' . $admin_user_id, $new_pass, 60 );
+            }
+
+            // Envío de email opcional
+            if ( isset( $_POST['hrm_notify_user'] ) && intval( $_POST['hrm_notify_user'] ) === 1 ) {
+                $user_obj = get_userdata( $wp_user_id );
+                $to = ( $user_obj && ! empty( $user_obj->user_email ) ) ? $user_obj->user_email : ( ! empty( $employee_obj->email ) ? $employee_obj->email : '' );
+
+                error_log( 'HRM: hrm_notify_user solicitado. Mail destinatario calculado: ' . ( $to ?: '[vacío]' ) );
+
+                if ( $to ) {
+                    $site_name = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+                    $login_url = wp_login_url();
+                    $subject = sprintf( '[%s] %s', $site_name, __( 'Tu acceso ha sido actualizado', 'hr-management' ) );
+                    $message = sprintf( "%s\n\n%s: %s\n%s: %s\n\n%s: %s",
+                        sprintf( __( 'Hola %s,', 'hr-management' ), $employee_obj->nombre ),
+                        __( 'Usuario', 'hr-management' ), ( $user_obj ? $user_obj->user_login : '' ),
+                        __( 'Contraseña', 'hr-management' ), $new_pass,
+                        __( 'Podrás iniciar sesión en', 'hr-management' ), $login_url
+                    );
+
+                    // Trazas directas antes de enviar email
+                    @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: Preparando wp_mail to={$to} subject=" . str_replace("\n", " ", $subject) . " at " . date('c') . "\nMessage: " . str_replace("\n", " ", $message) . "\n", FILE_APPEND | LOCK_EX );
+
+                    // Registrar cabeceras From calculadas por filtros (útil si el servidor bloquea envíos sin From válido)
+                    $from_email = apply_filters( 'wp_mail_from', get_option( 'admin_email' ) );
+                    $from_name = apply_filters( 'wp_mail_from_name', get_bloginfo( 'name' ) );
+                    @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: wp_mail from={$from_email} from_name=" . str_replace("\n", " ", $from_name) . "\n", FILE_APPEND | LOCK_EX );
+
+                    // Añadir logger para fallos en wp_mail
+                    function hrm_wp_mail_failed_logger( $wp_error ) {
+                        @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: wp_mail_failed: " . print_r( $wp_error->get_error_messages(), true ) . " | data: " . print_r( $wp_error->get_error_data(), true ) . " at " . date('c') . "\n", FILE_APPEND | LOCK_EX );
+                    }
+                    add_action( 'wp_mail_failed', 'hrm_wp_mail_failed_logger' );
+
+                    // Construir cabeceras explícitas para mejorar compatibilidad con algunos MTAs
+                    $headers = array();
+                    if ( ! empty( $from_name ) && ! empty( $from_email ) ) {
+                        $headers[] = 'From: ' . $from_name . ' <' . $from_email . '>';
+                    }
+                    $headers[] = 'Content-Type: text/plain; charset=' . get_option( 'blog_charset' );
+
+                    @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: wp_mail headers: " . print_r( $headers, true ) . " at " . date('c') . "\n", FILE_APPEND | LOCK_EX );
+
+                    $mail_sent = wp_mail( $to, $subject, $message, $headers );
+
+                    // Remover el logger para evitar múltiples registros inesperados
+                    remove_action( 'wp_mail_failed', 'hrm_wp_mail_failed_logger' );
+                    error_log( 'HRM: wp_mail() returns: ' . ( $mail_sent ? 'true' : 'false' ) );
+                    // Registrar también en debug.log para visibilidad
+                    @file_put_contents( WP_CONTENT_DIR . '/debug.log', "HRM-TRACE: wp_mail() returns: " . ( $mail_sent ? 'true' : 'false' ) . " to={$to} at " . date('c') . "\n", FILE_APPEND | LOCK_EX );
+
+                    if ( $mail_sent ) {
+                        $password_msgs[] = __( 'Se envió un correo al usuario.', 'hr-management' );
+                    } else {
+                        $password_msgs[] = __( 'No se envió correo: error en wp_mail().', 'hr-management' );
+                    }
+                } else {
+                    $password_msgs[] = __( 'No se envió correo: usuario sin email.', 'hr-management' );
+                }
+            }
+        }
+
+        $update_result = $db_emp->update( $emp_id, $update_data );
         hrm_debug_log( 'Update result', $update_result ? 'success' : 'failed' );
 
         // ★ Actualizar años en la empresa y total de años trabajados
@@ -271,15 +511,30 @@ function hrm_handle_employees_post() {
         }
 
         if ( $update_result ) {
+            $success_msg = __( 'Datos actualizados.', 'hr-management' );
+            if ( ! empty( $password_msgs ) ) {
+                $success_msg .= ' ' . implode( ' ', $password_msgs );
+            }
+
+            // Si la contraseña fue cambiada, añadir flag en la URL para mostrar confirmación inline
+            if ( $password_changed ) {
+                $redirect_base = add_query_arg( 'password_changed', '1', $redirect_base );
+            }
+
             hrm_redirect_with_message(
                 $redirect_base,
-                __( 'Datos actualizados.', 'hr-management' ),
+                $success_msg,
                 'success'
             );
         } else {
+            $error_msg = __( 'No se realizaron cambios o error en actualización.', 'hr-management' );
+            if ( ! empty( $password_msgs ) && $password_changed ) {
+                // Si hubo cambio de contraseña pero fallo en update_data, notificarlo como success parcial
+                $error_msg = implode( ' ', $password_msgs ) . ' ' . $error_msg;
+            }
             hrm_redirect_with_message(
                 $redirect_base,
-                __( 'No se realizaron cambios o error en actualización.', 'hr-management' ),
+                $error_msg,
                 'error'
             );
         }
@@ -585,7 +840,7 @@ function hrm_handle_employees_post() {
                 exit;
             }
         } else {
-            wp_redirect( add_query_arg( ['message_error' => rawurlencode('No seleccionaste un archivo.')], $redirect_base ) );
+            wp_redirect( $redirect_base );
             exit;
         }
     }

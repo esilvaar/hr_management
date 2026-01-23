@@ -157,21 +157,48 @@ function hrm_ajax_get_employee_documents() {
         wp_send_json_error( array( 'message' => 'El empleado no tiene RUT asignado.' ) );
     }
 
-    // Obtener documentos del empleado
-    $documents = $db_docs->get_by_rut( $employee->rut );
-    
-    // Filtrar por tipo de documento si se especifica
-    if ( $doc_type !== 'all' ) {
-        $documents = array_filter( $documents, function( $doc ) use ( $doc_type ) {
-            return strtolower( $doc->tipo ) === strtolower( $doc_type );
-        } );
+    // --------------------------------------------------
+    // Endpoint AJAX para crear un nuevo tipo de documento
+    // --------------------------------------------------
+    // (esto permite crear el tipo desde el panel sin subir un archivo primero)
+    if ( isset( $_POST['action'] ) && $_POST['action'] === 'hrm_create_document_type' ) {
+        // Se maneja en función separada abajo; devolver si fue llamada
+        if ( function_exists( 'hrm_ajax_create_document_type' ) ) {
+            return hrm_ajax_create_document_type();
+        }
     }
 
-    // Si no hay documentos, enviar respuesta vacía con HTML apropiado
+    // Obtener documentos del empleado
+    $documents = $db_docs->get_by_rut( $employee->rut );
+
+    // También exponer endpoint para crear tipos desde la UI (si no existe ya)
+
+    
+    // Filtrar por tipo de documento si se especifica (acepta ID o nombre)
+    if ( $doc_type !== 'all' ) {
+        if ( is_numeric( $doc_type ) ) {
+            $doc_type_id = (int) $doc_type;
+            $documents = array_filter( $documents, function( $doc ) use ( $doc_type_id ) {
+                return isset( $doc->tipo_id ) && (int) $doc->tipo_id === $doc_type_id;
+            } );
+        } else {
+            $documents = array_filter( $documents, function( $doc ) use ( $doc_type ) {
+                return isset( $doc->tipo ) && strtolower( $doc->tipo ) === strtolower( $doc_type );
+            } );
+        }
+    }
+
+    // Si no hay documentos, enviar respuesta vacía con HTML más amigable
     if ( empty( $documents ) ) {
         ob_start();
         ?>
-        <p>No hay documentos registrados para este empleado.</p>
+        <div style="max-width:900px; margin:0 auto;">
+            <div class="d-flex align-items-center justify-content-center" style="min-height: 240px;">
+                <h3 style="font-size:20px; color: #856404; text-align:center; max-width: 700px;">
+                    <strong>⚠️ Sin documentos:</strong> Este empleado no tiene documentos registrados.
+                </h3>
+            </div>
+        </div>
         <?php
         $html = ob_get_clean();
         wp_send_json_success( $html );
@@ -218,51 +245,70 @@ function hrm_ajax_get_employee_documents() {
 
     ob_start();
     ?>
-    
-    <table class="table table-striped table-bordered ">
-        <thead class="table-dark">
-            <tr>
-                <th>Año</th>
-                <th>Archivo</th>
-                <th>Descargar</th>
-                <th>Eliminar</th>
-            </tr>
-        </thead>
-        <tbody class="hrm-document-list">
-            <?php foreach ( $documents as $doc ) : ?>
-                <tr class="table-secondary" data-type="<?= esc_attr( strtolower( $doc->tipo ) ) ?>" data-year="<?= esc_attr( $doc->anio ) ?>">
-                    <td>
-                        <?= esc_html( $doc->anio ) ?>
-                    </td>
-                    <td>
-                        <span class="dashicons dashicons-media-document"></span>
-                        <?= esc_html( $doc->nombre ) ?>
-                    </td>
-                    <td>
-                        <a href="<?= esc_url( $doc->url ) ?>" 
-                           class="btn btn-sm btn-outline-primary" 
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           title="Descargar documento">
-                            <span class="dashicons dashicons-download"></span> Descargar
-                        </a>                        
-                    </td>
-                    <td>
-                        <?php if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) ) : ?>
-                            <form method="post" class="d-inline hrm-delete-form">
-                                <?php wp_nonce_field( 'hrm_delete_file', 'hrm_delete_nonce' ); ?>
-                                <input type="hidden" name="hrm_action" value="delete_document">
-                                <input type="hidden" name="doc_id" value="<?= esc_attr( $doc->id ) ?>">
-                                <input type="hidden" name="employee_id" value="<?= esc_attr( $employee->id ) ?>">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                    Eliminar
-                                </button>
-                            </form>
-                        <?php endif; ?>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+    <div style="">
+        <style>
+            /* Styling focused on centering table content for better UX */
+            .hrm-documents-table th, .hrm-documents-table td { text-align: center !important; vertical-align: middle !important; }
+            .hrm-documents-table .d-flex.align-items-center { justify-content: center; }
+            .hrm-documents-table .flex-column { text-align: center; }
+            /* Alineación de menú dentro de la celda (acciones) */
+            .hrm-documents-table td.text-end { text-align: center !important; }
+            /* Mantener enlaces del menú alineados a la izquierda dentro del dropdown */
+            .hrm-documents-table .hrm-actions-menu a, .hrm-documents-table .hrm-actions-menu button { text-align: left; display:block; }
+        </style>
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered table-sm mb-0 hrm-documents-table">
+                <thead class="table-dark small">
+                    <tr>
+                        <th style="width:80px;">Año</th>
+                        <th style="width:160px;">Tipo</th>
+                        <th>Archivo</th>
+                        <th style="width:120px;" class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="hrm-document-list">
+                    <?php foreach ( $documents as $doc ) : ?>
+                        <tr class="align-middle" data-type="<?= esc_attr( strtolower( $doc->tipo ) ) ?>" data-type-id="<?= esc_attr( $doc->tipo_id ) ?>" data-year="<?= esc_attr( $doc->anio ) ?>">
+                            <td style="vertical-align: middle;"><?= esc_html( $doc->anio ) ?></td>
+                            <td style="vertical-align: middle;"><small class="text-muted"><?= esc_html( ucfirst( $doc->tipo ) ?: '—' ) ?></small></td>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="dashicons dashicons-media-document text-secondary" aria-hidden="true"></span>
+                                    <div class="d-flex flex-column text-start">
+                                        <strong><?= esc_html( $doc->nombre ) ?></strong>
+                                        <small class="text-muted"><?= esc_html( date( 'd M Y', strtotime( $doc->fecha ) ) ) ?></small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex align-items-center" style="gap:6px;">
+                                    <div class="hrm-actions-dropdown" style="position:relative; display:inline-block;">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary hrm-actions-toggle" aria-expanded="false" aria-controls="hrm-actions-menu-<?= esc_attr( $doc->id ) ?>" title="Acciones">
+                                            <span class="dashicons dashicons-menu" aria-hidden="true"></span>
+                                            <span class="visually-hidden">Acciones</span>
+                                        </button>
+                                        <div id="hrm-actions-menu-<?= esc_attr( $doc->id ) ?>" class="hrm-actions-menu" style="position:absolute; right:0; top:calc(100% + 6px); background:#fff; border:1px solid #ddd; box-shadow:0 6px 18px rgba(0,0,0,0.08); display:none; min-width:160px; z-index:1100;">
+                                            <a class="d-block px-3 py-2 hrm-action-download" href="<?= esc_url( $doc->url ) ?>" target="_blank" rel="noopener noreferrer">Descargar</a>
+                                            <?php if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) ) : ?>
+                                                <div style="height:1px; background:#e9ecef; margin:4px 0;"></div>
+                                                <form method="post" class="hrm-delete-form m-0 p-0" style="display:block;">
+                                                    <?php wp_nonce_field( 'hrm_delete_file', 'hrm_delete_nonce' ); ?>
+                                                    <input type="hidden" name="hrm_action" value="delete_document">
+                                                    <input type="hidden" name="doc_id" value="<?= esc_attr( $doc->id ) ?>">
+                                                    <input type="hidden" name="employee_id" value="<?= esc_attr( $employee->id ) ?>">
+                                                    <button type="submit" class="d-block w-100 text-start px-3 py-2 text-danger" style="background:transparent; border:none;">Eliminar</button>
+                                                </form>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
     <?php
     $html = ob_get_clean();
     wp_send_json_success( $html );
@@ -542,6 +588,42 @@ function hrm_ajax_rechazar_solicitud_supervisor() {
 
 // Enganchar las funciones AJAX
 add_action( 'wp_ajax_hrm_get_employee_documents', 'hrm_ajax_get_employee_documents' );
+
+/**
+ * Endpoint AJAX: Crear nuevo tipo de documento desde el panel
+ */
+function hrm_ajax_create_document_type() {
+    if ( ! is_user_logged_in() ) {
+        wp_send_json_error( [ 'message' => 'No autorizado' ], 401 );
+    }
+
+    // Verificar permisos: admin o editar empleados
+    if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'edit_hrm_employees' ) ) {
+        wp_send_json_error( [ 'message' => 'No tienes permisos para crear tipos' ], 403 );
+    }
+
+    $nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
+    if ( ! $nonce || ! wp_verify_nonce( $nonce, 'hrm_create_type' ) ) {
+        wp_send_json_error( [ 'message' => 'Token de seguridad inválido' ], 403 );
+    }
+
+    $nombre = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '';
+    if ( empty( $nombre ) ) {
+        wp_send_json_error( [ 'message' => 'Nombre inválido' ], 400 );
+    }
+
+    hrm_ensure_db_classes();
+    $db_docs = new HRM_DB_Documentos();
+
+    $id = $db_docs->create_type( $nombre );
+    if ( ! $id ) {
+        wp_send_json_error( [ 'message' => 'No se pudo crear el tipo' ], 500 );
+    }
+
+    wp_send_json_success( [ 'id' => $id, 'name' => $nombre ] );
+}
+
+add_action( 'wp_ajax_hrm_create_document_type', 'hrm_ajax_create_document_type' );
 
 /**
  * Endpoint AJAX: Comprobar si un email ya existe en WP

@@ -565,6 +565,23 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // IMPORTANTE: Sincronizar valores justo antes de enviar el formulario
     const form = document.querySelector('form');
+
+    // Evitar que la tecla Enter confirme el formulario accidentalmente
+    // Permitimos Enter únicamente en `textarea` y en botones/inputs tipo submit
+    form.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            const tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
+            const type = e.target && e.target.type ? e.target.type.toLowerCase() : '';
+
+            // Si estamos en un textarea o en un botón/submit, permitir Enter
+            if (tag === 'textarea' || type === 'submit' || type === 'button') return;
+
+            // En cualquier otro campo, prevenir el comportamiento por defecto
+            e.preventDefault();
+            return false;
+        }
+    });
+
     form.addEventListener('submit', function(e) {
         // Asegurar que los valores estén actualizados antes de enviar
         document.getElementById('hrm_anos_en_la_empresa_hidden').value = anosEmpresaInput.value;
