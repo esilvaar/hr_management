@@ -86,7 +86,7 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
     }
 </style>
 
-<aside class="hrm-sidebar d-flex flex-column flex-shrink-0 border-end bg-light" style="position: relative;">
+<aside class="hrm-sidebar d-flex flex-column flex-shrink-0 border-end bg-light">
 
     <!-- Header -->
     <div class="hrm-sidebar-header d-flex align-items-center justify-content-center p-3 border-bottom">

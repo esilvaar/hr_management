@@ -369,10 +369,14 @@ function hrm_enqueue_fullscreen_styles()
             true
         );
 
-        // Pasar datos al JS: userId y control de redirección automática (por defecto: deshabilitada para pruebas)
+        // Pasar datos al JS: userId y control de redirección automática.
+        // Debug log temporal: mostrar userId y valor de autoRedirect
+        error_log('[HRM-FS] enqueue fullscreen user_id=' . get_current_user_id() . ' autoRedirect=' . (get_current_user_id() !== 1 ? '1' : '0'));
+        // Por defecto forzamos redirección automática a fullscreen para usuarios cuyo ID != 1,
+        // pero permitimos sobreescribirlo mediante el filtro `hrm_fullscreen_auto_redirect`.
         wp_localize_script('hrm-fullscreen', 'hrmFullscreenData', array(
             'userId' => get_current_user_id(),
-            'autoRedirect' => apply_filters('hrm_fullscreen_auto_redirect', false),
+            'autoRedirect' => apply_filters('hrm_fullscreen_auto_redirect', get_current_user_id() !== 1),
         ));
 
         // Nota: `wp_localize_script` ya fue llamado arriba con `userId` y `autoRedirect`.
