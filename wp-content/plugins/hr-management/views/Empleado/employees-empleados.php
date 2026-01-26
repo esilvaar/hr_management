@@ -149,7 +149,13 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                 $final_target_dir = $base_dir . $relative_path;
                 $final_target_url = $base_url . $relative_path;
 
-                if ( ! file_exists( $final_target_dir ) ) wp_mkdir_p( $final_target_dir );
+                if ( ! file_exists( $final_target_dir ) ) {
+                    wp_mkdir_p( $final_target_dir );
+                    // Crear index.html para evitar ejecución de ficheros y listado
+                    if ( function_exists( 'hrm_ensure_placeholder_index' ) ) {
+                        hrm_ensure_placeholder_index( $final_target_dir );
+                    }
+                }
 
                 $count_ok = 0; 
                 $count_err = 0;

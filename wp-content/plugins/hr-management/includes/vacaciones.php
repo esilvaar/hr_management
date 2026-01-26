@@ -1301,6 +1301,10 @@ function hrm_handle_aprobar_rechazar_solicitud() {
     }
 
     hrm_enviar_notificacion_vacaciones( $id_solicitud, $estado ); // ← Pasar el estado correcto
+    // Crear notificación UI para Gerencia / Supervisores (APROBADA / RECHAZADA)
+    if ( function_exists( 'hrm_add_notification_for_solicitud' ) ) {
+        hrm_add_notification_for_solicitud( $id_solicitud, $estado );
+    }
 
     wp_safe_redirect(
         admin_url( 'admin.php?page=hrm-vacaciones&updated=1' )
@@ -1728,6 +1732,281 @@ function hrm_enviar_notificacion_vacaciones( $id_solicitud, $estado ) {
         $headers
     );
 }
+
+    /**
+     * BACKEND MÍNIMO: Notificaciones UI (sin tablas nuevas)
+     * - Almacena notificaciones en option 'hrm_notifications'
+     * - Registra lecturas por usuario en usermeta 'hrm_notifications_read'
+     */
+    if ( ! function_exists( 'hrm_add_notification_for_solicitud' ) ) {
+        function hrm_add_notification_for_solicitud( $id_solicitud, $estado ) {
+            global $wpdb;
+
+            if ( empty( $id_solicitud ) || empty( $estado ) ) {
+                return;
+            }
+
+            $table_solicitudes = $wpdb->prefix . 'rrhh_solicitudes_ausencia';
+            $table_empleados = $wpdb->prefix . 'rrhh_empleados';
+
+            $row = $wpdb->get_row( $wpdb->prepare(
+                "SELECT s.id_solicitud, e.nombre, e.apellido, e.departamento
+                 FROM {$table_solicitudes} s
+                 JOIN {$table_empleados} e ON s.id_empleado = e.id_empleado
+                 WHERE s.id_solicitud = %d LIMIT 1",
+                $id_solicitud
+            ), ARRAY_A );
+
+            if ( ! $row ) {
+                return;
+            }
+
+            $notifications = get_option( 'hrm_notifications', array() );
+
+            $uid = 'hrm_notif_' . $id_solicitud . '_' . sanitize_text_field( $estado ) . '_' . time();
+
+            $notif = array(
+                'uid' => $uid,
+                'id_solicitud' => intval( $row['id_solicitud'] ),
+                'estado' => sanitize_text_field( $estado ),
+                'nombre' => sanitize_text_field( $row['nombre'] ),
+                'apellido' => sanitize_text_field( $row['apellido'] ),
+                'departamento' => sanitize_text_field( $row['departamento'] ),
+                'created' => current_time( 'mysql' ),
+                'url' => admin_url( 'admin.php?page=hr-management-vacaciones&view=solicitud&id=' . intval( $row['id_solicitud'] ) ),
+            );
+
+            $notifications[ $uid ] = $notif;
+            update_option( 'hrm_notifications', $notifications );
+        }
+    }
+
+    if ( ! function_exists( 'hrm_user_is_gerente_supervisor' ) ) {
+        function hrm_user_is_gerente_supervisor( $user_id = 0 ) {
+            if ( ! $user_id ) {
+                $user_id = get_current_user_id();
+            }
+
+            if ( ! $user_id ) {
+                return false;
+            }
+
+            // Capacidad directa
+            if ( user_can( $user_id, 'manage_hrm_vacaciones' ) ) {
+                return true;
+            }
+
+            global $wpdb;
+
+            // Buscar en rrhh_empleados por puesto
+            $table_empleados = $wpdb->prefix . 'rrhh_empleados';
+            $puesto = $wpdb->get_var( $wpdb->prepare( "SELECT puesto FROM {$table_empleados} WHERE user_id = %d LIMIT 1", $user_id ) );
+            if ( $puesto ) {
+                $puesto_lower = mb_strtolower( $puesto );
+                if ( strpos( $puesto_lower, 'gerent' ) !== false || strpos( $puesto_lower, 'supervisor' ) !== false ) {
+                    return true;
+                }
+            }
+
+            // Buscar si es gerente registrado en rrhh_gerencia_deptos
+            $table_gerencia = $wpdb->prefix . 'rrhh_gerencia_deptos';
+            $user = get_userdata( $user_id );
+            if ( $user && ! empty( $user->user_email ) ) {
+                $count = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table_gerencia} WHERE correo_gerente = %s AND estado = 1", $user->user_email ) );
+                if ( intval( $count ) > 0 ) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    if ( ! function_exists( 'hrm_get_user_departamentos' ) ) {
+        function hrm_get_user_departamentos( $user_id = 0 ) {
+            global $wpdb;
+            if ( ! $user_id ) {
+                $user_id = get_current_user_id();
+            }
+            $depts = array();
+            if ( ! $user_id ) {
+                return $depts;
+            }
+
+            $user = get_userdata( $user_id );
+            $table_gerencia = $wpdb->prefix . 'rrhh_gerencia_deptos';
+            if ( $user && ! empty( $user->user_email ) ) {
+                $rows = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT depto_a_cargo FROM {$table_gerencia} WHERE correo_gerente = %s AND estado = 1", $user->user_email ) );
+                if ( $rows ) {
+                    foreach ( $rows as $r ) {
+                        $depts[] = mb_strtolower( trim( $r ) );
+                    }
+                }
+            }
+
+            // También incluir departamento propio si tiene puesto de gerente/supervisor
+            $table_empleados = $wpdb->prefix . 'rrhh_empleados';
+            $dept = $wpdb->get_var( $wpdb->prepare( "SELECT departamento FROM {$table_empleados} WHERE user_id = %d LIMIT 1", $user_id ) );
+            if ( $dept ) {
+                $depts[] = mb_strtolower( trim( $dept ) );
+            }
+
+            $depts = array_unique( array_filter( $depts ) );
+            return $depts;
+        }
+    }
+
+    if ( ! function_exists( 'hrm_get_notifications_for_current_user' ) ) {
+        function hrm_get_notifications_for_current_user() {
+            $user_id = get_current_user_id();
+            if ( ! $user_id ) {
+                return array();
+            }
+
+            if ( ! hrm_user_is_gerente_supervisor( $user_id ) ) {
+                return array();
+            }
+
+            $notifications = get_option( 'hrm_notifications', array() );
+            if ( empty( $notifications ) ) {
+                return array();
+            }
+
+            $depts = hrm_get_user_departamentos( $user_id );
+            if ( empty( $depts ) ) {
+                return array();
+            }
+
+            $read = get_user_meta( $user_id, 'hrm_notifications_read', true );
+            if ( ! is_array( $read ) ) {
+                $read = array();
+            }
+
+            $res = array();
+            foreach ( $notifications as $n ) {
+                if ( in_array( mb_strtolower( trim( $n['departamento'] ) ), $depts, true ) ) {
+                    if ( ! in_array( $n['uid'], $read, true ) ) {
+                        $res[] = $n;
+                    }
+                }
+            }
+
+            // Order by created desc
+            usort( $res, function( $a, $b ) {
+                return strcmp( $b['created'], $a['created'] );
+            } );
+
+            return $res;
+        }
+    }
+
+    if ( ! function_exists( 'hrm_mark_notification_read_handler' ) ) {
+        function hrm_mark_notification_read_handler() {
+            if ( ! is_user_logged_in() ) {
+                wp_safe_redirect( wp_get_referer() ?: admin_url() );
+                exit;
+            }
+
+            $uid = isset( $_REQUEST['uid'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['uid'] ) ) : '';
+            $redirect = isset( $_REQUEST['redirect'] ) ? esc_url_raw( wp_unslash( $_REQUEST['redirect'] ) ) : wp_get_referer();
+
+            if ( empty( $uid ) ) {
+                wp_safe_redirect( $redirect ?: admin_url() );
+                exit;
+            }
+
+            $user_id = get_current_user_id();
+            $read = get_user_meta( $user_id, 'hrm_notifications_read', true );
+            if ( ! is_array( $read ) ) {
+                $read = array();
+            }
+            if ( ! in_array( $uid, $read, true ) ) {
+                $read[] = $uid;
+                update_user_meta( $user_id, 'hrm_notifications_read', $read );
+            }
+
+            wp_safe_redirect( $redirect ?: admin_url() );
+            exit;
+        }
+        add_action( 'admin_post_hrm_mark_notification_read', 'hrm_mark_notification_read_handler' );
+    }
+
+    // Agregar badge al submenu "Vacaciones"
+    if ( ! function_exists( 'hrm_admin_menu_vacaciones_badge' ) ) {
+        function hrm_admin_menu_vacaciones_badge() {
+            global $submenu;
+            $user_id = get_current_user_id();
+            if ( ! $user_id ) {
+                return;
+            }
+
+            $count = count( hrm_get_notifications_for_current_user() );
+            if ( $count <= 0 ) {
+                return;
+            }
+
+            if ( ! empty( $submenu ) && is_array( $submenu ) ) {
+                foreach ( $submenu as $parent => &$items ) {
+                    foreach ( $items as &$it ) {
+                        if ( isset( $it[2] ) && $it[2] === 'hr-management-vacaciones' ) {
+                            $it[0] = $it[0] . ' <span class="hrm-badge">' . intval( $count ) . '</span>';
+                            // only update first match
+                            break 2;
+                        }
+                    }
+                }
+            }
+        }
+        add_action( 'admin_menu', 'hrm_admin_menu_vacaciones_badge', 999 );
+    }
+
+    // Mostrar panel con lista limitada de notificaciones en la página HR -> Vacaciones
+    if ( ! function_exists( 'hrm_render_vacaciones_notifications_panel' ) ) {
+        function hrm_render_vacaciones_notifications_panel() {
+            $screen = isset( $_GET['page'] ) ? sanitize_text_field( $_GET['page'] ) : '';
+            if ( $screen !== 'hr-management-vacaciones' ) {
+                return;
+            }
+
+            $user_id = get_current_user_id();
+            if ( ! $user_id || ! hrm_user_is_gerente_supervisor( $user_id ) ) {
+                return;
+            }
+
+            $notes = hrm_get_notifications_for_current_user();
+            if ( empty( $notes ) ) {
+                return;
+            }
+
+            $max = 10;
+            $slice = array_slice( $notes, 0, $max );
+
+            echo '<div class="notice notice-info is-dismissible hrm-notifications-panel" style="padding:12px;">
+                    <h3 style="margin-top:0;">Notificaciones de Vacaciones</h3>
+                    <ul style="margin:6px 0 0 18px;">';
+            foreach ( $slice as $n ) {
+                $label = strtoupper( $n['estado'] );
+                $text = esc_html( $n['nombre'] . ' ' . $n['apellido'] ) . ' — ' . esc_html( $label );
+                $uid = rawurlencode( $n['uid'] );
+                $redirect = rawurlencode( $n['url'] );
+                $link = admin_url( 'admin-post.php?action=hrm_mark_notification_read&uid=' . $uid . '&redirect=' . $redirect );
+                echo '<li style="margin:6px 0;"><a href="' . esc_url( $link ) . '">' . $text . '</a> <small style="color:#666;">(' . esc_html( date_i18n( 'd/m/Y H:i', strtotime( $n['created'] ) ) ) . ')</small></li>';
+            }
+            echo '</ul></div>';
+        }
+        add_action( 'admin_notices', 'hrm_render_vacaciones_notifications_panel' );
+    }
+
+    // Estilos mínimos para badge y panel
+    if ( ! function_exists( 'hrm_admin_styles' ) ) {
+        function hrm_admin_styles() {
+            echo "<style>
+                .hrm-badge{ display:inline-block; background:#d9534f; color:#fff; padding:2px 6px; border-radius:12px; font-size:12px; margin-left:6px; }
+                .hrm-notifications-panel ul{ list-style: disc; }
+            </style>";
+        }
+        add_action( 'admin_head', 'hrm_admin_styles' );
+    }
 
 /**
  * =====================================================

@@ -23,7 +23,9 @@
         const isInFullscreen = isFullscreenMode();
         
         // Para usuarios que no sean ID 1, activar automáticamente pantalla completa
-        if (!isAdmin && !isInFullscreen) {
+        // Nota: Esto puede forzar redirecciones que causen problemas visuales. Controlado por hrmFullscreenData.autoRedirect
+        const autoRedirect = ( typeof hrmFullscreenData !== 'undefined' && hrmFullscreenData.autoRedirect ) ? true : false;
+        if ( autoRedirect && !isAdmin && !isInFullscreen) {
             // Redirigir a versión fullscreen
             urlParams.set('fullscreen', '1');
             const newUrl = window.location.pathname + '?' + urlParams.toString();
@@ -36,6 +38,44 @@
         // Preservar modo fullscreen al navegar
         if (isFullscreenMode()) {
             preserveFullscreenOnLinks();
+            // Comprobar layout: detectar duplicados y mostrar aviso si existe un problema
+            checkLayoutDuplication();
+        }
+
+        /**
+         * Detecta duplicación de elementos de layout en pantalla completa
+         * y muestra un aviso temporal para debugging
+         */
+        function checkLayoutDuplication() {
+            try {
+                const layouts = document.querySelectorAll('.hrm-admin-layout');
+                const wrapCount = document.querySelectorAll('.wrap.hrm-admin-wrap').length;
+                if ( layouts.length > 1 || wrapCount > 1 ) {
+                    console.warn('[HRM-DEBUG] Multiple HRM layouts detected', { layouts: layouts.length, hrmWraps: wrapCount });
+                    // Añadir aviso visual solo para administradores
+                    const userId = window.hrmFullscreenData && parseInt(window.hrmFullscreenData.userId);
+                    const isAdmin = userId === 1;
+                    if ( isAdmin ) {
+                        const banner = document.createElement('div');
+                        banner.style.position = 'fixed';
+                        banner.style.top = '8px';
+                        banner.style.left = '50%';
+                        banner.style.transform = 'translateX(-50%)';
+                        banner.style.zIndex = '99999';
+                        banner.style.background = 'rgba(255, 75, 75, 0.95)';
+                        banner.style.color = '#fff';
+                        banner.style.padding = '10px 18px';
+                        banner.style.borderRadius = '6px';
+                        banner.style.fontWeight = '600';
+                        banner.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
+                        banner.textContent = 'HRM DEBUG: Se detectaron ' + layouts.length + ' layouts y ' + wrapCount + ' wraps. Revisa la consola para más detalles.';
+                        document.body.appendChild(banner);
+                        setTimeout(() => banner.remove(), 12000);
+                    }
+                }
+            } catch(e) {
+                console.error('[HRM-DEBUG] checkLayoutDuplication error', e);
+            }
         }
         
         // Manejar tecla F11 para toggle (opcional)

@@ -82,7 +82,30 @@
     width: calc(100vw - 260px) !important;
     height: 100vh !important;
     top: 0 !important;
+    overflow: auto !important; /* permitir scroll interno */
+    box-sizing: border-box;
 }
+
+/* Limitar tamaño de previsualización para que no se salga del área de contenido */
+.hrm-fullscreen-mode .hrm-preview-panel {
+    max-width: calc(100% - 40px) !important;
+    max-height: calc(100vh - 160px) !important; /* dejar espacio para header/top */
+    overflow: auto !important;
+    box-sizing: border-box !important;
+    margin: 0 20px 20px 0 !important;
+}
+.hrm-fullscreen-mode .hrm-preview-panel iframe {
+    max-width: 100% !important;
+    max-height: calc(100vh - 220px) !important;
+    width: 100% !important;
+    height: auto !important;
+    display: block;
+}
+
+/* Si el preview está visible por defecto, asegurar que no cubra la sidebar */
+.hrm-fullscreen-mode .hrm-panel.hrm-panel-body,
+.hrm-fullscreen-mode .hrm-panel { width: auto; max-width: calc(100% - 20px); }
+
 
 /* Botón para activar/desactivar pantalla completa */
 .hrm-fullscreen-toggle {

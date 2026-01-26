@@ -188,6 +188,147 @@ function hrm_get_template_part( $slug, $name = '', $vars = [] ) {
 }
 
 /**
+ * Ensure a safe index.html exists in a directory to prevent execution or listing.
+ *
+ * @param string $dir Absolute path to directory
+ * @param string $contents Optional contents for index file
+ * @return bool True on success or already exists, false on failure
+ */
+function hrm_ensure_placeholder_index( $dir, $contents = null ) {
+    if ( empty( $dir ) ) return false;
+    $dir = wp_normalize_path( $dir );
+    if ( ! is_dir( $dir ) ) return false;
+
+    $index_file = rtrim( $dir, '/' ) . '/index.html';
+    if ( file_exists( $index_file ) ) return true;
+
+    if ( $contents === null ) {
+        $contents = '<!doctype html><meta charset="utf-8"><title>Directorio</title><meta name="robots" content="noindex,nofollow"><!-- HRM placeholder -->';
+    }
+
+    $result = @file_put_contents( $index_file, $contents );
+    if ( $result === false ) {
+        error_log( "HRM Helper - failed to create index file at {$index_file}" );
+        return false;
+    }
+    @chmod( $index_file, 0644 );
+    return true;
+}
+
+/**
+ * Remove a directory and its contents recursively.
+ * Returns true if removed or didn't exist; false on failure.
+ *
+ * @param string $dir Absolute path
+ * @return bool
+ */
+function hrm_recursive_rmdir( $dir ) {
+    $dir = wp_normalize_path( $dir );
+    if ( ! file_exists( $dir ) ) return true;
+    if ( ! is_dir( $dir ) ) return @unlink( $dir );
+
+    $items = scandir( $dir );
+    if ( $items === false ) return false;
+
+    foreach ( $items as $item ) {
+        if ( $item === '.' || $item === '..' ) continue;
+        $path = $dir . '/' . $item;
+        if ( is_dir( $path ) ) {
+            if ( ! hrm_recursive_rmdir( $path ) ) {
+                return false;
+            }
+        } else {
+            @chmod( $path, 0644 );
+            if ( ! @unlink( $path ) ) {
+                error_log( "HRM Helper - failed to unlink file: {$path}" );
+                // continue trying to remove others
+            }
+        }
+    }
+
+    @chmod( $dir, 0755 );
+    $result = @rmdir( $dir );
+    if ( $result === false ) {
+        error_log( "HRM Helper - failed to rmdir: {$dir}" );
+    }
+    return $result;
+}
+
+/**
+ * Attempt to remove per-type view stub file (views/mis-documentos-tipo-{id}.php)
+ *
+ * @param int $type_id
+ * @return bool True if removed or not found
+ */
+function hrm_remove_type_view_stub( $type_id ) {
+    hrm_ensure_db_classes();
+    $db = new HRM_DB_Documentos();
+
+    // Try to resolve type name/slug
+    $types = $db->get_all_types();
+    $slug = isset( $types[ $type_id ] ) ? sanitize_title( $types[ $type_id ] ) : '';
+
+    // Candidate paths (slug preferred, then slug-id, then legacy id)
+    $candidates = array();
+    if ( $slug ) {
+        $candidates[] = HRM_PLUGIN_DIR . "views/mis-documentos-tipo-" . $slug . ".php";
+        $candidates[] = HRM_PLUGIN_DIR . "views/mis-documentos-tipo-" . $slug . "-" . intval( $type_id ) . ".php";
+    }
+    $candidates[] = HRM_PLUGIN_DIR . "views/mis-documentos-tipo-" . intval( $type_id ) . ".php";
+    $found_any = false;
+    $deleted_any = false;
+    $failed_any = false;
+
+    foreach ( $candidates as $stub_path ) {
+        if ( file_exists( $stub_path ) ) {
+            $found_any = true;
+            @chmod( $stub_path, 0644 );
+            if ( @unlink( $stub_path ) ) {
+                $deleted_any = true;
+                error_log( "HRM Helper - removed type view stub: {$stub_path}" );
+            } else {
+                $failed_any = true;
+                error_log( "HRM Helper - failed to remove type view stub: {$stub_path}" );
+            }
+        }
+    }
+
+    // Si no se encontraron archivos, retornar true (no es error). Si alguno falló al borrar, retornar false.
+    if ( ! $found_any ) return true;
+    if ( $failed_any ) return false;
+    return true;
+}
+
+// Helper: write plugin-local debug logs in a file writable by the web user.
+if ( ! function_exists( 'hrm_local_debug_log' ) ) {
+    function hrm_local_debug_log( $msg ) {
+        // Prefer writing to uploads dir (writable by web server) and fallback to plugin dir.
+        $ts = date( 'c' );
+        $current = wp_get_current_user();
+        $uid = isset( $current->ID ) ? intval( $current->ID ) : 0;
+        $line = "[{$ts}] user_id={$uid} msg={$msg}\n";
+
+        $upload_dir = wp_get_upload_dir();
+        $file_candidates = array();
+        if ( ! empty( $upload_dir['basedir'] ) ) {
+            $file_candidates[] = rtrim( $upload_dir['basedir'], '/' ) . '/hrm-debug.log';
+        }
+        $file_candidates[] = rtrim( HRM_PLUGIN_DIR, '/' ) . '/hrm-debug.log';
+
+        foreach ( $file_candidates as $file ) {
+            $res = @file_put_contents( $file, $line, FILE_APPEND | LOCK_EX );
+            if ( $res !== false ) {
+                return true;
+            }
+        }
+
+        // Last resort: write to PHP error log
+        error_log( '[HRM-DEBUG] Failed to write hrm_local_debug_log to disk. Message: ' . $msg );
+        return false;
+    }
+}
+
+/**
  * Valida un RUT chileno usando el algoritmo del Módulo 11
  * 
  * Formato aceptado: 12345678-9 (SIN puntos, obligatorio guión)

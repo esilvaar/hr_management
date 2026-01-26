@@ -107,6 +107,7 @@ wp_localize_script( 'hrm-mis-documentos', 'hrmMisDocsData', array(
                     </div>
 
                     <!-- PREVISUALIZACIÓN -->
+                    <?php if ( empty( $GLOBALS['hrm_doc_preview_rendered'] ) ) : $GLOBALS['hrm_doc_preview_rendered'] = true; ?>
                     <div class="mt-4" id="hrm-preview-panel" style="display:none;">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <h6 class="fw-bold mb-0">Previsualización de documento</h6>
@@ -117,6 +118,7 @@ wp_localize_script( 'hrm-mis-documentos', 'hrmMisDocsData', array(
                         <iframe id="hrm-preview-iframe"
                                 style="width:100%;min-height:600px;border:1px solid #ccc;background:#fff;"></iframe>
                     </div>
+                    <?php else: error_log('[HRM-DEBUG] Skipping duplicated liquidations preview render for employee id=' . intval( $employee->id ) ); endif; ?>
 
                 </div>
             </div>

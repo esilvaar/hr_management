@@ -153,9 +153,16 @@ function hrm_redirect_non_admin_after_login( $redirect_to, $request, $user ) {
         return $redirect_to;
     }
 
-    // Si es administrador_anaconda, redirigir a la vista de empleados del plugin (admin views)
-    if ( in_array( 'administrador_anaconda', (array) $user->roles, true ) ) {
-        return admin_url( 'admin.php?page=hrm-empleados' );
+    // Si es administrador_anaconda o supervisor (o tiene capability para editar empleados), redirigir a la lista de empleados
+    if ( in_array( 'administrador_anaconda', (array) $user->roles, true ) || in_array( 'supervisor', (array) $user->roles, true ) || user_can( $user, 'edit_hrm_employees' ) ) {
+        error_log( '[HRM-DEBUG] Redirecting admin_anaconda/supervisor/edit_hrm_employees to employee list for user_id=' . intval( $user->ID ) );
+        return admin_url( 'admin.php?page=hrm-empleados&tab=list' );
+    }
+
+    // Editor de Vacaciones: forzar a panel de Vacaciones (fallback cuando otros filtros o plugins sobreescriben)
+    if ( in_array( 'editor_vacaciones', (array) $user->roles, true ) || user_can( $user, 'manage_hrm_vacaciones' ) ) {
+        error_log( '[HRM-DEBUG] Redirecting editor_vacaciones to hrm-vacaciones for user_id=' . intval( $user->ID ) );
+        return admin_url( 'admin.php?page=hrm-vacaciones' );
     }
 
     // Si es un usuario "empleado" puro, llevarlo a su perfil dentro del plugin
@@ -351,6 +358,12 @@ function hrm_enqueue_fullscreen_styles() {
             HRM_PLUGIN_VERSION,
             true
         );
+
+        // Pasar datos al JS: userId y control de redirección automática (por defecto: deshabilitada para pruebas)
+        wp_localize_script( 'hrm-fullscreen', 'hrmFullscreenData', array(
+            'userId' => get_current_user_id(),
+            'autoRedirect' => apply_filters( 'hrm_fullscreen_auto_redirect', false ),
+        ) );
         
         // Pasar datos del usuario actual al JS
         wp_localize_script(
@@ -922,12 +935,83 @@ function hrm_register_admin_menus() {
                 60
             );
 
+            // Registrar "Mis Documentos" y subpáginas para administradores (para permitir acceso por URL)
+            add_submenu_page(
+                'hrm-empleados',
+                'Mis Documentos',
+                'Mis Documentos',
+                'manage_options',
+                'hrm-mi-documentos',
+                'hrm_render_mis_documentos_page'
+            );
+
+            add_submenu_page(
+                'hrm-empleados',
+                'Mis Contratos',
+                'Contratos',
+                'manage_options',
+                'hrm-mi-documentos-contratos',
+                'hrm_render_mis_documentos_contratos_page'
+            );
+
+            add_submenu_page(
+                'hrm-empleados',
+                'Mis Liquidaciones',
+                'Liquidaciones',
+                'manage_options',
+                'hrm-mi-documentos-liquidaciones',
+                'hrm_render_mis_documentos_liquidaciones_page'
+            );
+
+            add_submenu_page(
+                'hrm-empleados',
+                'Mis Licencias',
+                'Licencias',
+                'manage_options',
+                'hrm-mi-documentos-licencias',
+                'hrm_render_mis_documentos_licencias_page'
+            );
+
+            // Registrar dinámicamente tipos por id para admins
+            hrm_ensure_db_classes();
+            $db_docs_temp = new HRM_DB_Documentos();
+            $doc_types_temp = $db_docs_temp->get_all_types();
+            if ( ! empty( $doc_types_temp ) ) {
+                foreach ( $doc_types_temp as $t_id => $t_name ) {
+                    $slug = 'hrm-mi-documentos-type-' . intval( $t_id );
+                    add_submenu_page(
+                        'hrm-empleados',
+                        $t_name,
+                        $t_name,
+                        'manage_options',
+                        $slug,
+                        'hrm_render_mis_documentos_tipo_page'
+                    );
+                }
+            }
+
             // NOTA: No registrar "Mis Vacaciones" como top-level para administradores
             // para evitar duplicados; se registra más abajo como submenú bajo
             // 'hrm-empleados' (mismo slug 'hrm-mi-perfil-vacaciones').
             error_log( '[HRM-DEBUG] Registered top-level Convivencia for admin user_id=' . get_current_user_id() );
         } elseif ( $is_anaconda ) {
             // Intentar añadir como submenús bajo HR Management para mantener UI
+            // Ensure parent menu exists for administrador_anaconda: if the parent
+            // 'hrm-empleados' wasn't registered earlier (due to capability checks),
+            // register a minimal top-level menu so submenus can be attached and
+            // the page slug becomes routable (avoids 403 "not allowed to access").
+            if ( empty( $GLOBALS['submenu']['hrm-empleados'] ) ) {
+                add_menu_page(
+                    'HR Management',
+                    'HR Management',
+                    'view_hrm_employee_admin',
+                    'hrm-empleados',
+                    'hrm_render_employees_admin_page',
+                    'dashicons-businessman',
+                    6
+                );
+            }
+
             add_submenu_page(
                 'hrm-empleados',
                 'Convivencia',
@@ -945,6 +1029,44 @@ function hrm_register_admin_menus() {
                 'hrm-mi-perfil-vacaciones',
                 'hrm_render_vacaciones_empleado_page'
             );
+
+            // Añadir Mis Documentos y tipos para administrador_anaconda (como subpáginas bajo hrm-empleados)
+            add_submenu_page(
+                'hrm-empleados',
+                'Mis Documentos',
+                'Mis Documentos',
+                'view_hrm_admin_views',
+                'hrm-mi-documentos',
+                'hrm_render_mis_documentos_page'
+            );
+
+            // Submenú: Documentos empresa (administrador_anaconda)
+            add_submenu_page(
+                'hrm-empleados',
+                'Documentos empresa',
+                'Documentos empresa',
+                'view_hrm_admin_views',
+                'hrm-anaconda-documents',
+                'hrm_render_anaconda_documents_page'
+            );
+
+            // Registrar tipos dinámicos también para administrador_anaconda
+            hrm_ensure_db_classes();
+            $db_docs_temp2 = new HRM_DB_Documentos();
+            $doc_types_temp2 = $db_docs_temp2->get_all_types();
+            if ( ! empty( $doc_types_temp2 ) ) {
+                foreach ( $doc_types_temp2 as $t_id => $t_name ) {
+                    $slug = 'hrm-mi-documentos-type-' . intval( $t_id );
+                    add_submenu_page(
+                        'hrm-empleados',
+                        $t_name,
+                        $t_name,
+                        'view_hrm_admin_views',
+                        $slug,
+                        'hrm_render_mis_documentos_tipo_page'
+                    );
+                }
+            }
 
             error_log( '[HRM-DEBUG] Registered Convivencia and Mis Vacaciones as submenus for administrador_anaconda user_id=' . get_current_user_id() );
         } else {
@@ -1064,7 +1186,7 @@ function hrm_render_mis_documentos_page() {
         wp_die( 'Debes iniciar sesión para ver esta página.' );
     }
 
-    echo '<div class="wrap">';
+    echo '<div class="wrap hrm-admin-wrap">';
     echo '<div class="hrm-admin-layout">';
         hrm_get_template_part( 'partials/sidebar-loader' );
         echo '<main class="hrm-content">';
@@ -1075,6 +1197,62 @@ function hrm_render_mis_documentos_page() {
 }
 
 /**
+ * Renderizar página de Documentos Empresa (Anaconda) - Acceso por admin / administrador_anaconda
+ */
+function hrm_render_anaconda_documents_page() {
+    if ( ! is_user_logged_in() ) {
+        wp_die( 'Debes iniciar sesión para ver esta página.', 'Acceso denegado', array( 'response' => 403 ) );
+    }
+
+    // Comprobar permisos: admins, rol administrador_anaconda o capability view_hrm_admin_views
+    $current_user = wp_get_current_user();
+    $has_manage = current_user_can( 'manage_options' );
+    $can_view_admin = current_user_can( 'view_hrm_admin_views' );
+    $is_anaconda = in_array( 'administrador_anaconda', (array) $current_user->roles, true );
+
+    error_log( '[HRM-DEBUG] hrm_render_anaconda_documents_page permission check - user_id=' . intval( $current_user->ID ) . ' roles=' . json_encode( $current_user->roles ) . ' has_manage=' . ( $has_manage ? 'YES' : 'NO' ) . ' can_view_admin=' . ( $can_view_admin ? 'YES' : 'NO' ) . ' is_anaconda=' . ( $is_anaconda ? 'YES' : 'NO' ) );
+    if ( function_exists( 'hrm_local_debug_log' ) ) {
+        hrm_local_debug_log( '[HRM-DEBUG] hrm_render_anaconda_documents_page permission check - user_id=' . intval( $current_user->ID ) . ' roles=' . json_encode( $current_user->roles ) . ' has_manage=' . ( $has_manage ? 'YES' : 'NO' ) . ' can_view_admin=' . ( $can_view_admin ? 'YES' : 'NO' ) . ' is_anaconda=' . ( $is_anaconda ? 'YES' : 'NO' ) );
+    }
+
+    if ( ! ( $has_manage || $can_view_admin || $is_anaconda ) ) {
+        // Log detail and show useful hint when WP_DEBUG is enabled
+        $debug = '[HRM-DEBUG] Access denied to anaconda documents page: user_id=' . intval( $current_user->ID ) . ' roles=' . json_encode( $current_user->roles ) . ' has_manage=' . ( $has_manage ? 'YES' : 'NO' ) . ' can_view_admin=' . ( $can_view_admin ? 'YES' : 'NO' ) . ' is_anaconda=' . ( $is_anaconda ? 'YES' : 'NO' );
+        error_log( $debug );
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            wp_die( 'No tienes permisos para ver esta página. Detalles: ' . esc_html( $debug ), 'Acceso denegado', array( 'response' => 403 ) );
+        }
+        wp_die( 'No tienes permisos para ver esta página.', 'Acceso denegado', array( 'response' => 403 ) );
+    }
+
+    // Render counter + guard para evitar duplicados
+    $GLOBALS['hrm_render_count'] = isset( $GLOBALS['hrm_render_count'] ) ? $GLOBALS['hrm_render_count'] + 1 : 1;
+    error_log( '[HRM-DEBUG] hrm_render_anaconda_documents_page called. render_count=' . intval( $GLOBALS['hrm_render_count'] ) );
+
+    if ( isset( $GLOBALS['hrm_render_count'] ) && intval( $GLOBALS['hrm_render_count'] ) > 1 ) {
+        if ( empty( $GLOBALS['hrm_view_rendered']['anaconda-documents'] ) ) {
+            $GLOBALS['hrm_view_rendered']['anaconda-documents'] = true;
+            hrm_get_template_part( 'anaconda-documents-create' );
+        } else {
+            error_log( '[HRM-DEBUG] Already rendered anaconda-documents, skipping duplicate call.' );
+        }
+        return;
+    }
+
+    echo '<div class="wrap hrm-admin-wrap">';
+    echo '<div class="hrm-admin-layout">';
+        hrm_get_template_part( 'partials/sidebar-loader' );
+        echo '<main class="hrm-content">';
+            $GLOBALS['hrm_view_rendered']['anaconda-documents'] = true;
+            hrm_get_template_part( 'anaconda-documents-create' );
+        echo '</main>';
+    echo '</div>';
+    echo '</div>';
+}
+
+
+
+/**
  * Renderizar página de Mis Documentos - Contratos
  */
 function hrm_render_mis_documentos_contratos_page() {
@@ -1083,12 +1261,29 @@ function hrm_render_mis_documentos_contratos_page() {
         wp_die( 'Debes iniciar sesión para ver esta página.' );
     }
 
-    echo '<div class="wrap">';
+    // Render counter for debugging duplicates
+    $GLOBALS['hrm_render_count'] = isset( $GLOBALS['hrm_render_count'] ) ? $GLOBALS['hrm_render_count'] + 1 : 1;
+    error_log( '[HRM-DEBUG] hrm_render_mis_documentos_contratos_page called. render_count=' . intval( $GLOBALS['hrm_render_count'] ) );
+
+    // If a previous HRM layout was already rendered in this request, avoid rendering another wrapper
+    if ( isset( $GLOBALS['hrm_render_count'] ) && intval( $GLOBALS['hrm_render_count'] ) > 1 ) {
+        error_log( '[HRM-DEBUG] Skipping outer wrapper to avoid duplicate layout (contracts).' );
+        if ( empty( $GLOBALS['hrm_view_rendered']['mis-documentos-contratos'] ) ) {
+            $GLOBALS['hrm_view_rendered']['mis-documentos-contratos'] = true;
+            hrm_get_template_part( 'mis-documentos-contratos' );
+        } else {
+            error_log( '[HRM-DEBUG] Already rendered mis-documentos-contratos, skipping duplicate call.' );
+        }
+        return;
+    }
+
+    echo '<div class="wrap hrm-admin-wrap">';
     echo '<div class="hrm-admin-layout">';
         hrm_get_template_part( 'partials/sidebar-loader' );
         echo '<main class="hrm-content">';
+            $GLOBALS['hrm_view_rendered']['mis-documentos-contratos'] = true;
             hrm_get_template_part( 'mis-documentos-contratos' );
-        echo '</main>';
+        echo '</main>'; 
     echo '</div>';
     echo '</div>';
 }
@@ -1102,12 +1297,29 @@ function hrm_render_mis_documentos_liquidaciones_page() {
         wp_die( 'Debes iniciar sesión para ver esta página.' );
     }
 
-    echo '<div class="wrap">';
+    // Render counter for debugging duplicates
+    $GLOBALS['hrm_render_count'] = isset( $GLOBALS['hrm_render_count'] ) ? $GLOBALS['hrm_render_count'] + 1 : 1;
+    error_log( '[HRM-DEBUG] hrm_render_mis_documentos_liquidaciones_page called. render_count=' . intval( $GLOBALS['hrm_render_count'] ) );
+
+    // If a previous HRM layout was already rendered in this request, avoid rendering another wrapper
+    if ( isset( $GLOBALS['hrm_render_count'] ) && intval( $GLOBALS['hrm_render_count'] ) > 1 ) {
+        error_log( '[HRM-DEBUG] Skipping outer wrapper to avoid duplicate layout (liquidations).' );
+        if ( empty( $GLOBALS['hrm_view_rendered']['mis-documentos-liquidaciones'] ) ) {
+            $GLOBALS['hrm_view_rendered']['mis-documentos-liquidaciones'] = true;
+            hrm_get_template_part( 'mis-documentos-liquidaciones' );
+        } else {
+            error_log( '[HRM-DEBUG] Already rendered mis-documentos-liquidaciones, skipping duplicate call.' );
+        }
+        return;
+    }
+
+    echo '<div class="wrap hrm-admin-wrap">';
     echo '<div class="hrm-admin-layout">';
         hrm_get_template_part( 'partials/sidebar-loader' );
         echo '<main class="hrm-content">';
+            $GLOBALS['hrm_view_rendered']['mis-documentos-liquidaciones'] = true;
             hrm_get_template_part( 'mis-documentos-liquidaciones' );
-        echo '</main>';
+        echo '</main>'; 
     echo '</div>';
     echo '</div>';
 }
@@ -1121,7 +1333,7 @@ function hrm_render_mis_documentos_licencias_page() {
         wp_die( 'Debes iniciar sesión para ver esta página.' );
     }
 
-    echo '<div class="wrap">';
+    echo '<div class="wrap hrm-admin-wrap">';
     echo '<div class="hrm-admin-layout">';
         hrm_get_template_part( 'partials/sidebar-loader' );
         echo '<main class="hrm-content">';
@@ -1140,11 +1352,96 @@ function hrm_render_mis_documentos_tipo_page() {
         wp_die( 'Debes iniciar sesión para ver esta página.' );
     }
 
-    echo '<div class="wrap">';
+    // Resolver type_id desde el slug (hrm-mi-documentos-type-<ID>) o GET
+    $page_slug = isset( $_GET['page'] ) ? sanitize_text_field( $_GET['page'] ) : '';
+    $type_id = 0;
+    if ( preg_match( '/hrm-mi-documentos-type-(\d+)/', $page_slug, $m ) ) {
+        $type_id = intval( $m[1] );
+    }
+    if ( isset( $_GET['type_id'] ) ) {
+        $type_id = intval( $_GET['type_id'] );
+    }
+
+    // Soportar visualización de documentos de otro empleado (solo para admins/editores)
+    $employee_id = 0;
+    if ( isset( $_GET['employee_id'] ) ) {
+        $employee_id = absint( $_GET['employee_id'] );
+        if ( $employee_id && ! ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) ) ) {
+            wp_die( 'No tienes permisos para ver documentos de otros empleados.' );
+        }
+    }
+
+    // Render counter for debugging duplicates
+    $GLOBALS['hrm_render_count'] = isset( $GLOBALS['hrm_render_count'] ) ? $GLOBALS['hrm_render_count'] + 1 : 1;
+    error_log( '[HRM-DEBUG] hrm_render_mis_documentos_tipo_page called. render_count=' . intval( $GLOBALS['hrm_render_count'] ) );
+
+    // If a previous HRM layout was already rendered in this request, avoid rendering another wrapper
+    if ( isset( $GLOBALS['hrm_render_count'] ) && intval( $GLOBALS['hrm_render_count'] ) > 1 ) {
+        error_log( '[HRM-DEBUG] Skipping outer wrapper to avoid duplicate layout (type).' );
+        $view_key = 'mis-documentos-tipo-' . intval( $type_id );
+        if ( $type_id ) {
+            hrm_ensure_db_classes();
+            $db_docs_local = new HRM_DB_Documentos();
+            $all_types_local = $db_docs_local->get_all_types();
+            $type_slug_local = isset( $all_types_local[ $type_id ] ) ? sanitize_title( $all_types_local[ $type_id ] ) : '';
+
+            $slug_path = $type_slug_local ? HRM_PLUGIN_DIR . "views/mis-documentos-tipo-" . $type_slug_local . ".php" : '';
+            $id_path   = HRM_PLUGIN_DIR . "views/mis-documentos-tipo-" . intval( $type_id ) . ".php";
+
+            if ( empty( $GLOBALS['hrm_view_rendered'][ $view_key ] ) ) {
+                $GLOBALS['hrm_view_rendered'][ $view_key ] = true;
+                if ( $slug_path && file_exists( $slug_path ) ) {
+                    hrm_get_template_part( 'mis-documentos-tipo', $type_slug_local, compact( 'type_id', 'employee_id' ) );
+                } elseif ( file_exists( $id_path ) ) {
+                    hrm_get_template_part( 'mis-documentos-tipo', $type_id, compact( 'type_id', 'employee_id' ) );
+                } else {
+                    hrm_get_template_part( 'mis-documentos-tipo', '', compact( 'type_id', 'employee_id' ) );
+                }
+            } else {
+                error_log( '[HRM-DEBUG] Already rendered ' . $view_key . ', skipping duplicate call.' );
+            }
+        } else {
+            $view_key = 'mis-documentos-tipo-0';
+            if ( empty( $GLOBALS['hrm_view_rendered'][ $view_key ] ) ) {
+                $GLOBALS['hrm_view_rendered'][ $view_key ] = true;
+                hrm_get_template_part( 'mis-documentos-tipo', '', compact( 'type_id', 'employee_id' ) );
+            } else {
+                error_log( '[HRM-DEBUG] Already rendered ' . $view_key . ', skipping duplicate call.' );
+            }
+        }
+        return;
+    }
+
+    // Debug: registrar acceso a la página con contexto
+    error_log( '[HRM-DEBUG] hrm_render_mis_documentos_tipo_page called - type_id=' . intval( $type_id ) . ' employee_id=' . intval( $employee_id ) . ' current_user_id=' . get_current_user_id() . ' roles=' . json_encode( wp_get_current_user()->roles ) );
+
+    echo '<div class="wrap hrm-admin-wrap">';
     echo '<div class="hrm-admin-layout">';
         hrm_get_template_part( 'partials/sidebar-loader' );
         echo '<main class="hrm-content">';
-            hrm_get_template_part( 'mis-documentos-tipo' );
+            // Intentar cargar plantilla específica por tipo (prefiere slug-nombre, fallback id)
+            if ( $type_id ) {
+                hrm_ensure_db_classes();
+                $db_docs_local = new HRM_DB_Documentos();
+                $all_types_local = $db_docs_local->get_all_types();
+                $type_slug_local = isset( $all_types_local[ $type_id ] ) ? sanitize_title( $all_types_local[ $type_id ] ) : '';
+
+                $slug_path = $type_slug_local ? HRM_PLUGIN_DIR . "views/mis-documentos-tipo-" . $type_slug_local . ".php" : '';
+                $id_path   = HRM_PLUGIN_DIR . "views/mis-documentos-tipo-" . intval( $type_id ) . ".php";
+
+                if ( $slug_path && file_exists( $slug_path ) ) {
+                    $GLOBALS['hrm_view_rendered']['mis-documentos-tipo-' . intval( $type_id )] = true;
+                    hrm_get_template_part( 'mis-documentos-tipo', $type_slug_local, compact( 'type_id', 'employee_id' ) );
+                } elseif ( file_exists( $id_path ) ) {
+                    $GLOBALS['hrm_view_rendered']['mis-documentos-tipo-' . intval( $type_id )] = true;
+                    hrm_get_template_part( 'mis-documentos-tipo', $type_id, compact( 'type_id', 'employee_id' ) );
+                } else {
+                    $GLOBALS['hrm_view_rendered']['mis-documentos-tipo-' . intval( $type_id )] = true;
+                    hrm_get_template_part( 'mis-documentos-tipo', '', compact( 'type_id', 'employee_id' ) );
+                }
+            } else {
+                hrm_get_template_part( 'mis-documentos-tipo', '', compact( 'type_id', 'employee_id' ) );
+            }
         echo '</main>';
     echo '</div>';
     echo '</div>';

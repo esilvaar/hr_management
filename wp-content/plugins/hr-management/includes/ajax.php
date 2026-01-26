@@ -398,6 +398,24 @@ function hrm_ajax_delete_employee_document() {
             // usar @unlink para evitar warnings sin control; log si falla
             if ( @unlink( $file_path ) ) {
                 $deleted_file = true;
+
+                // Intentar limpiar directorios vacíos (subir hasta 3 niveles: tipo, usuario, año)
+                if ( function_exists( 'hrm_recursive_rmdir' ) ) {
+                    $parent = dirname( $file_path );
+                    $levels = 0;
+                    while ( $levels < 3 && is_dir( $parent ) ) {
+                        $items = array_diff( scandir( $parent ), array( '.', '..' ) );
+                        $only_index = ( empty( $items ) || ( count( $items ) === 1 && in_array( 'index.html', $items ) ) );
+                        if ( $only_index ) {
+                            hrm_recursive_rmdir( $parent );
+                            $parent = dirname( $parent );
+                            $levels++;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+
             } else {
                 error_log( "HRM Delete Document - Failed to unlink file: {$file_path}" );
             }
@@ -622,23 +640,45 @@ function hrm_ajax_create_document_type() {
 
     // Attempt to create a per-type view stub so each type can have a dedicated template file
     $created_file = false;
+    $created_file_path = '';
     $create_stub = apply_filters( 'hrm_create_type_create_view_file', true, (int) $id, $nombre );
     if ( $create_stub ) {
-        $template_stub = "<?php\nif ( ! defined( 'ABSPATH' ) ) exit;\n// Plantilla stub para tipo de documento: " . str_replace("'", "\\'", $nombre) . " (ID: " . intval( $id ) . ")\n\n// Predefine \$type_id para que la plantilla genérica lo use\n\$type_id = " . intval( $id ) . ";\n\nrequire_once __DIR__ . '/mis-documentos-tipo.php';\n";
+        // Sanitize name into a slug to use in filename
+        $type_slug = sanitize_title( $nombre );
 
-        $stub_path = HRM_PLUGIN_DIR . "views/mis-documentos-tipo-" . intval( $id ) . ".php";
-        // Only attempt if not exists and directory writable
-        if ( ! file_exists( $stub_path ) ) {
+        $template_stub = "<?php\nif ( ! defined( 'ABSPATH' ) ) exit;\n// Plantilla stub para tipo de documento: " . str_replace("'", "\\'", $nombre) . " (ID: " . intval( $id ) . ")\n\n// Predefine \$type_id para que la plantilla genérica lo use\n\$type_id = " . intval( $id ) . ";\n// Nombre y slug del tipo predefinidos para la plantilla\n\$type_name = '" . str_replace("'", "\\'", $nombre) . "';\n\$type_slug = '" . $type_slug . "';\n\nrequire_once __DIR__ . '/mis-documentos-tipo.php';\n";
+
+        // Prefer filename with slug (desired by user). If exists, fall back to slug-ID, then to ID.
+        $possible_paths = array();
+        if ( $type_slug ) {
+            $possible_paths[] = HRM_PLUGIN_DIR . "views/mis-documentos-tipo-" . $type_slug . ".php";
+            $possible_paths[] = HRM_PLUGIN_DIR . "views/mis-documentos-tipo-" . $type_slug . "-" . intval( $id ) . ".php";
+        }
+        $possible_paths[] = HRM_PLUGIN_DIR . "views/mis-documentos-tipo-" . intval( $id ) . ".php";
+
+        foreach ( $possible_paths as $stub_path ) {
+            // If file already exists, skip creating but mark created_file true to indicate presence
+            if ( file_exists( $stub_path ) ) {
+                $created_file = true;
+                $created_file_path = $stub_path;
+                break;
+            }
+
             try {
                 file_put_contents( $stub_path, $template_stub );
-                // Make file readable
                 @chmod( $stub_path, 0644 );
-                $created_file = file_exists( $stub_path );
+                if ( file_exists( $stub_path ) ) {
+                    $created_file = true;
+                    $created_file_path = $stub_path;
+                    break;
+                }
             } catch ( Exception $e ) {
                 error_log( 'HRM: No se pudo crear stub para tipo id=' . intval( $id ) . ' - ' . $e->getMessage() );
             }
         }
     }
+
+    wp_send_json_success( [ 'id' => $id, 'name' => $nombre, 'created_file' => $created_file, 'created_file_path' => $created_file_path ] );
 
     wp_send_json_success( [ 'id' => $id, 'name' => $nombre, 'created_file' => $created_file ] );
 }
@@ -671,6 +711,13 @@ function hrm_ajax_delete_document_type() {
     hrm_ensure_db_classes();
     $db_docs = new HRM_DB_Documentos();
 
+    // Obtener nombre del tipo (si existe) para limpiar directorios relacionados
+    $type_name = '';
+    $all_types = $db_docs->get_all_types();
+    if ( isset( $all_types[ $id ] ) ) {
+        $type_name = sanitize_file_name( $all_types[ $id ] );
+    }
+
     $res = $db_docs->delete_type( $id );
     if ( is_wp_error( $res ) ) {
         wp_send_json_error( [ 'message' => $res->get_error_message() ], 400 );
@@ -680,7 +727,33 @@ function hrm_ajax_delete_document_type() {
         wp_send_json_error( [ 'message' => 'No se pudo eliminar el tipo' ], 500 );
     }
 
-    wp_send_json_success( [ 'id' => $id ] );
+    // Intentar eliminar la plantilla stub asociada (si existe)
+    $stub_deleted = false;
+    if ( function_exists( 'hrm_remove_type_view_stub' ) ) {
+        $stub_deleted = hrm_remove_type_view_stub( $id );
+    }
+
+    // Intentar limpiar carpetas en uploads/hrm_docs/*/*/{type_name} si están vacías o sólo contienen index.html
+    $deleted_dirs = array();
+    if ( ! empty( $type_name ) && function_exists( 'hrm_recursive_rmdir' ) ) {
+        $upload_dir = wp_upload_dir();
+        $base_dir = trailingslashit( $upload_dir['basedir'] ) . 'hrm_docs';
+        $pattern = $base_dir . '/*/*/' . $type_name;
+        $dirs = glob( $pattern, GLOB_ONLYDIR );
+        if ( $dirs && is_array( $dirs ) ) {
+            foreach ( $dirs as $d ) {
+                $items = array_diff( scandir( $d ), array( '.', '..' ) );
+                // Si está vacío o sólo contiene index.html, eliminar
+                if ( empty( $items ) || ( count( $items ) === 1 && in_array( 'index.html', $items ) ) ) {
+                    if ( hrm_recursive_rmdir( $d ) ) {
+                        $deleted_dirs[] = $d;
+                    }
+                }
+            }
+        }
+    }
+
+    wp_send_json_success( [ 'id' => $id, 'stub_deleted' => $stub_deleted, 'deleted_dirs' => $deleted_dirs ] );
 }
 add_action( 'wp_ajax_hrm_delete_document_type', 'hrm_ajax_delete_document_type' );
 

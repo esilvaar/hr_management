@@ -12,32 +12,9 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-// Determinar qué sidebar cargar según las capabilities del usuario
-// DEBUG: registrar roles y capabilities del usuario actual para investigar accesos
+// Carga la sidebar unificada según capabilities del usuario
 $current_user = wp_get_current_user();
-error_log( '[HRM-DEBUG] Sidebar loader: user_id=' . $current_user->ID . ', roles=' . json_encode( $current_user->roles ) . ', view_hrm_admin_views=' . ( current_user_can( 'view_hrm_admin_views' ) ? 'YES' : 'NO' ) . ', manage_hrm_vacaciones=' . ( current_user_can( 'manage_hrm_vacaciones' ) ? 'YES' : 'NO' ) );
+error_log( '[HRM-DEBUG] Sidebar loader (unified): user_id=' . $current_user->ID . ', roles=' . json_encode( $current_user->roles ) );
 
-if ( current_user_can( 'manage_options' ) || current_user_can( 'manage_hrm_employees' ) || current_user_can( 'view_hrm_admin_views' ) ) {
-    // Administrador, Administrador Anaconda o similar - Acceso a vistas admin
-    require_once __DIR__ . '/sidebar-admin.php';
-    
-} elseif ( current_user_can( 'edit_hrm_employees' ) ) {
-    // Supervisor - Gestión de empleados sin crear nuevos
-    require_once __DIR__ . '/sidebar-supervisor.php';
-    
-} elseif ( current_user_can( 'manage_hrm_vacaciones' ) ) {
-    // Editor de Vacaciones - Solo gestión de vacaciones
-    require_once __DIR__ . '/sidebar-editor-vacaciones.php';
-    
-} elseif ( current_user_can( 'view_hrm_own_profile' ) || is_user_logged_in() ) {
-    // Empleado - Solo su perfil y convivencia
-    require_once __DIR__ . '/sidebar-empleado.php';
-    
-} else {
-    // Fallback: Sin permisos
-    echo '<aside class="hrm-sidebar d-flex flex-column">';
-    echo '<div class="hrm-sidebar-header p-3">';
-    echo '<p class="text-muted">Sin permisos de acceso</p>';
-    echo '</div>';
-    echo '</aside>';
-}
+require_once __DIR__ . '/sidebar.php';
+

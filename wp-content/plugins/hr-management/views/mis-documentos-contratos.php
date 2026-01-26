@@ -70,6 +70,7 @@ if ( ! empty( $contracts ) ) {
 
                     <!-- PREVISUALIZACIÓN (mostrada inmediatamente si existe contrato) -->
                     <?php if ( $latest_contract ) : ?>
+                        <?php if ( empty( $GLOBALS['hrm_doc_preview_rendered'] ) ) : $GLOBALS['hrm_doc_preview_rendered'] = true; ?>
                         <div class="mb-4" id="hrm-preview-panel" style="display:block;">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <h6 class="fw-bold mb-0">Previsualización del contrato <?= '(' . esc_html( $latest_contract->anio ) . ')' ?></h6>
@@ -77,6 +78,7 @@ if ( ! empty( $contracts ) ) {
 
                             <iframe id="hrm-preview-iframe" src="<?= esc_url( $latest_contract->url ) ?>" style="width:100%;min-height:600px;border:1px solid #ccc;background:#fff;"></iframe>
                         </div>
+                        <?php else: error_log('[HRM-DEBUG] Skipping duplicated contract preview render for employee id=' . intval( $employee->id ) ); endif; ?>
                     <?php else : ?>
                         <div class="mb-4">
                             <div class="alert alert-info mb-0">Aún no tienes un contrato.</div>

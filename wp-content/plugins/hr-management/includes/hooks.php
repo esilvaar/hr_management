@@ -16,7 +16,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 function hrm_map_document_capabilities( $caps, $cap, $user_id, $args ) {
     // Obtener página solicitada
     $current_page = isset( $_GET['page'] ) ? sanitize_text_field( $_GET['page'] ) : '';
-    
+
+    // Debug: registrar llamada a map_meta_cap para inspección de accesos
+    error_log( '[HRM-DEBUG] map_meta_cap check - cap=' . $cap . ' page=' . $current_page . ' user_id=' . intval( $user_id ) . ' args=' . json_encode( $args ) );
+    if ( function_exists( 'hrm_local_debug_log' ) ) {
+        hrm_local_debug_log( '[HRM-DEBUG] map_meta_cap check - cap=' . $cap . ' page=' . $current_page . ' user_id=' . intval( $user_id ) . ' args=' . json_encode( $args ) );
+    }
+
     // Páginas de documentos que deben ser accesibles con 'read'
     $document_pages = array(
         'hrm-mi-documentos',
@@ -24,7 +30,24 @@ function hrm_map_document_capabilities( $caps, $cap, $user_id, $args ) {
         'hrm-mi-documentos-liquidaciones',
         'hrm-mi-documentos-licencias',
         'hrm-convivencia',
+        'hrm-anaconda-documents',
     );
+
+    // Permitir explicitamente que la capability 'view_hrm_admin_views' sea satisfecha
+    // por usuarios con rol 'administrator' o 'administrador_anaconda' cuando acceden
+    // a la página de Documentos empresa (evita el WP die por falta de capability).
+    if ( $cap === 'view_hrm_admin_views' && $current_page === 'hrm-anaconda-documents' ) {
+        $user = get_user_by( 'id', $user_id );
+        if ( $user ) {
+            $allowed_roles = array( 'administrator', 'administrador_anaconda' );
+            foreach ( (array) $user->roles as $role ) {
+                if ( in_array( $role, $allowed_roles, true ) ) {
+                    // Mapeamos a 'read' para permitir acceso si el usuario está autenticado
+                    return array( 'read' );
+                }
+            }
+        }
+    }
     
     // Si se está validando 'read' capability en una página de documentos
     if ( in_array( $current_page, $document_pages, true ) && $cap === 'read' ) {
@@ -54,7 +77,13 @@ function hrm_map_document_capabilities( $caps, $cap, $user_id, $args ) {
 function hrm_ensure_read_capability_for_documents( $allcaps, $caps, $args, $user ) {
     // Obtener página solicitada
     $current_page = isset( $_GET['page'] ) ? sanitize_text_field( $_GET['page'] ) : '';
-    
+
+    // Debug: registrar user roles y caps incoming
+    error_log( '[HRM-DEBUG] user_has_cap check - page=' . $current_page . ' user_id=' . intval( $user->ID ) . ' roles=' . json_encode( $user->roles ) . ' incoming_caps=' . json_encode( $caps ) );
+    if ( function_exists( 'hrm_local_debug_log' ) ) {
+        hrm_local_debug_log( '[HRM-DEBUG] user_has_cap check - page=' . $current_page . ' user_id=' . intval( $user->ID ) . ' roles=' . json_encode( $user->roles ) . ' incoming_caps=' . json_encode( $caps ) );
+    }
+
     // Páginas de documentos que deben ser accesibles con 'read'
     $document_pages = array(
         'hrm-mi-documentos',
@@ -62,6 +91,7 @@ function hrm_ensure_read_capability_for_documents( $allcaps, $caps, $args, $user
         'hrm-mi-documentos-liquidaciones',
         'hrm-mi-documentos-licencias',
         'hrm-convivencia',
+        'hrm-anaconda-documents',
     );
     
     // Si estamos en una página de documentos
@@ -109,6 +139,7 @@ function hrm_ensure_capabilities_on_admin_init() {
         'hrm-mi-documentos-liquidaciones',
         'hrm-mi-documentos-licencias',
         'hrm-convivencia',
+        'hrm-anaconda-documents',
     );
     
     // Si estamos intentando acceder a una página de documentos
@@ -117,8 +148,17 @@ function hrm_ensure_capabilities_on_admin_init() {
         $allowed_roles = array( 'empleado', 'supervisor', 'editor_vacaciones', 'administrador_anaconda' );
         
         // Debug logging
-        error_log( '[HRM-DEBUG] Intento de acceso a documento: user_id=' . $current_user->ID . ', roles=' . json_encode( $current_user->roles ) . ', page=' . $current_page );
+        error_log( '[HRM-DEBUG] Intento de acceso a documento: user_id=' . $current_user->ID . ', roles=' . json_encode( $current_user->roles ) . ', page=' . $current_page . ', GET=' . json_encode( $_GET ) );
+        if ( function_exists( 'hrm_local_debug_log' ) ) {
+            hrm_local_debug_log( '[HRM-DEBUG] Intento de acceso a documento: user_id=' . $current_user->ID . ', roles=' . json_encode( $current_user->roles ) . ', page=' . $current_page . ', GET=' . json_encode( $_GET ) );
+        }
         error_log( '[HRM-DEBUG] Has read capability: ' . ( $current_user->has_cap( 'read' ) ? 'YES' : 'NO' ) );
+        if ( $current_page === 'hrm-anaconda-documents' && isset( $_GET['fullscreen'] ) ) {
+            error_log( '[HRM-DEBUG] Access includes fullscreen param for user_id=' . $current_user->ID . ' fullscreen=' . esc_attr( $_GET['fullscreen'] ) );
+            if ( function_exists( 'hrm_local_debug_log' ) ) {
+                hrm_local_debug_log( '[HRM-DEBUG] Access includes fullscreen param for user_id=' . $current_user->ID . ' fullscreen=' . esc_attr( $_GET['fullscreen'] ) );
+            }
+        }
         
         // Si el usuario tiene uno de estos roles, asegurar que tenga 'read'
         if ( ! empty( $current_user->roles ) ) {
@@ -129,6 +169,15 @@ function hrm_ensure_capabilities_on_admin_init() {
                         $current_user->add_cap( 'read' );
                         error_log( '[HRM-DEBUG] Added read capability to user' );
                     }
+
+                    // Además forzar view_hrm_admin_views para usuarios con rol administrador_anaconda
+                    if ( 'administrador_anaconda' === $role ) {
+                        if ( ! $current_user->has_cap( 'view_hrm_admin_views' ) ) {
+                            $current_user->add_cap( 'view_hrm_admin_views' );
+                            error_log( '[HRM-DEBUG] Added view_hrm_admin_views capability to user with role administrador_anaconda' );
+                        }
+                    }
+
                     break;
                 }
             }
@@ -231,6 +280,13 @@ function hrm_redirect_wp_profile_page() {
 
     // No redirigir si ya estamos en una página autorizada del plugin
     $current_page = isset( $_GET['page'] ) ? sanitize_text_field( $_GET['page'] ) : '';
+
+    // Permitir dinámicamente páginas por tipo (ej: hrm-mi-documentos-type-10)
+    if ( strpos( $current_page, 'hrm-mi-documentos-type-' ) === 0 ) {
+        error_log( '[HRM-DEBUG] hrm_redirect_wp_profile_page - allowing dynamic doc type page: ' . $current_page );
+        return;
+    }
+
     $allowed_pages = array(
         'hrm-mi-perfil-info',
         'hrm-mi-perfil',
@@ -242,6 +298,7 @@ function hrm_redirect_wp_profile_page() {
         'hrm-vacaciones',
         'hrm-vacaciones-formulario',
         'hrm-convivencia',
+        'hrm-anaconda-documents',
         'hrm-empleados'
     );
     if ( in_array( $current_page, $allowed_pages, true ) ) {
@@ -279,3 +336,46 @@ function hrm_redirect_wp_profile_page() {
     }
 }
 add_action( 'admin_init', 'hrm_redirect_wp_profile_page' );
+
+/**
+ * Handler para crear Documentos Empresa enviado desde el formulario admin (admin-post)
+ */
+function hrm_handle_anaconda_documents_create() {
+    if ( ! is_user_logged_in() ) {
+        wp_die( 'Debes iniciar sesión para realizar esta acción.', 'Acceso denegado', array( 'response' => 403 ) );
+    }
+
+    // Permisos: admin o administrador_anaconda (view_hrm_admin_views o rol administrador_anaconda)
+    $current_user = wp_get_current_user();
+    $is_anaconda = in_array( 'administrador_anaconda', (array) $current_user->roles, true );
+    if ( ! ( current_user_can( 'manage_options' ) || current_user_can( 'view_hrm_admin_views' ) || $is_anaconda ) ) {
+        wp_die( 'No tienes permisos para crear documentos de empresa.', 'Acceso denegado', array( 'response' => 403 ) );
+    }
+
+    // Verificar nonce
+    if ( empty( $_POST['anaconda_documents_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['anaconda_documents_nonce'] ) ), 'anaconda_documents_create' ) ) {
+        wp_die( 'Nonce inválido.', 'Acceso denegado', array( 'response' => 403 ) );
+    }
+
+    if ( empty( $_FILES['doc_file'] ) || ! isset( $_FILES['doc_file']['tmp_name'] ) || ! is_uploaded_file( $_FILES['doc_file']['tmp_name'] ) ) {
+        wp_safe_redirect( add_query_arg( 'result', 'no_file', wp_get_referer() ?: admin_url( 'admin.php?page=hrm-anaconda-documents' ) ) );
+        exit;
+    }
+
+    require_once ABSPATH . 'wp-admin/includes/file.php';
+    $file = $_FILES['doc_file'];
+    $overrides = array( 'test_form' => false, 'mimes' => array( 'pdf' => 'application/pdf' ) );
+    $move = wp_handle_upload( $file, $overrides );
+
+    if ( isset( $move['error'] ) ) {
+        error_log( '[HRM-DEBUG] anaconda upload error: ' . $move['error'] );
+        wp_safe_redirect( add_query_arg( 'result', 'upload_error', wp_get_referer() ?: admin_url( 'admin.php?page=hrm-anaconda-documents' ) ) );
+        exit;
+    }
+
+    // TODO: Aquí se puede insertar un registro en la tabla HRM de documentos si se requiere.
+    // Por ahora redirigimos a la página con resultado de éxito.
+    wp_safe_redirect( add_query_arg( 'result', 'success', wp_get_referer() ?: admin_url( 'admin.php?page=hrm-anaconda-documents' ) ) );
+    exit;
+}
+add_action( 'admin_post_anaconda_documents_create', 'hrm_handle_anaconda_documents_create' );
