@@ -1641,8 +1641,8 @@ function hrm_enviar_notificacion_vacaciones( $id_solicitud, $estado ) {
     // Preparar headers por defecto (texto plano)
     $headers = array( 'Content-Type: text/plain; charset=UTF-8' );
 
-    // BEGIN: CC dinámicos por gerencia (solo cuando $estado === 'APROBADA')
-    if ( isset( $estado ) && $estado === 'APROBADA' ) {
+    // BEGIN: CC dinámicos por gerencia (ejecutar cuando $estado === 'APROBADA' o 'RECHAZADA')
+    if ( isset( $estado ) && in_array( $estado, array( 'APROBADA', 'RECHAZADA' ), true ) ) {
         $cc_emails = array();
 
         // 1) CC a todos los usuarios con rol editor_vacaciones
@@ -1664,16 +1664,10 @@ function hrm_enviar_notificacion_vacaciones( $id_solicitud, $estado ) {
             }
         }
 
-        // 2) Mapa oficial Gerencia -> Departamentos
-        $gerencia_map = array(
-            'Gerente de Operaciones' => array( 'Sistemas', 'Gerencia', 'Administración' ),
-            'Gerente de Proyectos'   => array( 'Desarrollo' ),
-            'Gerente Comercial'      => array( 'Soporte', 'Ventas' ),
-        );
-
-        // 3) Departamento del empleado solicitante (evaluado desde la solicitud)
+        // 2) Obtener los gerentes responsables del departamento del solicitante
         $table_solicitudes = $wpdb->prefix . 'rrhh_solicitudes_ausencia';
         $table_empleados   = $wpdb->prefix . 'rrhh_empleados';
+        $table_gerencia    = $wpdb->prefix . 'rrhh_gerencia_deptos';
 
         $id_empleado_solicitante = $wpdb->get_var(
             $wpdb->prepare(
@@ -1691,36 +1685,19 @@ function hrm_enviar_notificacion_vacaciones( $id_solicitud, $estado ) {
             );
 
             if ( $departamento_solicitante ) {
+                // Normalizar en minúsculas para comparación
                 $departamento_norm = mb_strtolower( trim( $departamento_solicitante ) );
 
-                // 4) Determinar puestos de gerente correspondientes
-                $puestos_objetivo = array();
-                foreach ( $gerencia_map as $puesto_gerente => $dept_list ) {
-                    foreach ( $dept_list as $dept_name ) {
-                        if ( mb_strtolower( trim( $dept_name ) ) === $departamento_norm ) {
-                            $puestos_objetivo[] = $puesto_gerente;
-                            break;
-                        }
-                    }
-                }
+                // Consultar la tabla rrhh_gerencia_deptos por depto_a_cargo (estado = 1)
+                $mgr_emails = $wpdb->get_col(
+                    $wpdb->prepare(
+                        "SELECT DISTINCT correo_gerente FROM {$table_gerencia} WHERE LOWER(TRIM(depto_a_cargo)) = %s AND estado = 1",
+                        $departamento_norm
+                    )
+                );
 
-                // 5) Obtener correos de los gerentes desde {prefix}_rrhh_empleados.correo
-                if ( ! empty( $puestos_objetivo ) ) {
-                    $escaped_puestos = array_map( function( $p ) use ( $wpdb ) {
-                        return "'" . esc_sql( $p ) . "'";
-                    }, $puestos_objetivo );
-                    $in_clause = implode( ',', $escaped_puestos );
-
-                    $mgr_emails = $wpdb->get_col(
-                        "SELECT DISTINCT correo FROM {$table_empleados}
-                         WHERE puesto IN ({$in_clause})
-                         AND correo IS NOT NULL
-                         AND TRIM(correo) <> ''"
-                    );
-
-                    if ( ! empty( $mgr_emails ) ) {
-                        $cc_emails = array_merge( $cc_emails, $mgr_emails );
-                    }
+                if ( ! empty( $mgr_emails ) ) {
+                    $cc_emails = array_merge( $cc_emails, $mgr_emails );
                 }
             }
         }
