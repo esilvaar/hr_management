@@ -51,7 +51,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             return data.success ? data.data : [];
         } catch(error) {
-            console.log('Error cargando departamentos:', error);
+            // Error cargando departamentos (silenciado en producción)
+            console.error('Error cargando departamentos:', error);
             return [];
         }
     }

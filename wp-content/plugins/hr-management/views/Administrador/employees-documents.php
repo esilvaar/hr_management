@@ -47,6 +47,15 @@ if ( ! empty( $hrm_tipos_documento ) ) {
     }
 }
 
+// Remove 'Empresa' type from JS and selectors so it is not used client-side
+if ( ! empty( $doc_types_js ) ) {
+    $doc_types_js = array_filter( $doc_types_js, function( $t ) {
+        return strtolower( trim( (string) ($t['name'] ?? '') ) ) !== 'empresa';
+    } );
+    // Reindex
+    $doc_types_js = array_values( $doc_types_js );
+}
+
 wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
     'employeeId' => $employee_id,
     'hasEmployee' => $has_employee,
@@ -150,22 +159,24 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
                         <?php
                         // $hrm_tipos_documento puede ser array asociativo id=>nombre o lista de strings (legacy)
                         foreach ( $hrm_tipos_documento as $k => $v ) :
-                            if ( is_int( $k ) || ctype_digit( (string) $k ) ) {
-                                $tipo_id = (int) $k;
-                                $tipo_name = (string) $v;
-                            } elseif ( is_array( $v ) && isset( $v['id'] ) ) {
-                                $tipo_id = (int) $v['id'];
-                                $tipo_name = (string) ( $v['nombre'] ?? $v['name'] ?? '' );
-                            } else {
-                                // Legacy: flat array of names
-                                $tipo_id = '';
-                                $tipo_name = (string) $v;
-                            }
-                        ?>
-                            <a class="dropdown-item py-2 px-3 hrm-tipo-item" href="#" data-tipo-id="<?= esc_attr( $tipo_id ) ?>" data-tipo-name="<?= esc_attr( $tipo_name ) ?>">
-                                <strong><?= esc_html( $tipo_name ) ?></strong>
-                            </a>
-                        <?php endforeach; ?>
+                                if ( is_int( $k ) || ctype_digit( (string) $k ) ) {
+                                    $tipo_id = (int) $k;
+                                    $tipo_name = (string) $v;
+                                } elseif ( is_array( $v ) && isset( $v['id'] ) ) {
+                                    $tipo_id = (int) $v['id'];
+                                    $tipo_name = (string) ( $v['nombre'] ?? $v['name'] ?? '' );
+                                } else {
+                                    // Legacy: flat array of names
+                                    $tipo_id = '';
+                                    $tipo_name = (string) $v;
+                                }
+                                // Omitir tipo 'Empresa' completamente en el selector de subida
+                                if ( strtolower( trim( $tipo_name ) ) === 'empresa' ) continue;
+                            ?>
+                                <a class="dropdown-item py-2 px-3 hrm-tipo-item" href="#" data-tipo-id="<?= esc_attr( $tipo_id ) ?>" data-tipo-name="<?= esc_attr( $tipo_name ) ?>">
+                                    <strong><?= esc_html( $tipo_name ) ?></strong>
+                                </a>
+                            <?php endforeach; ?>
                     </div>
                 </div>
                 <div class="d-flex gap-2 mt-2">
@@ -231,6 +242,8 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
                         $tipo_id = '';
                         $tipo_name = (string) $v;
                     }
+                    // Omitir 'Empresa' de la lista de gestión para que no aparezca en la UI
+                    if ( strtolower( trim( $tipo_name ) ) === 'empresa' ) continue;
                 ?>
                     <div class="d-flex align-items-center justify-content-between py-1 hrm-type-row" data-type-id="<?= esc_attr( $tipo_id ) ?>">
                         <div class="text-start"><?= esc_html( $tipo_name ) ?></div>
@@ -279,6 +292,9 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Exponer info de usuario actual y permisos al JS
+    const HRM_CURRENT_USER_ID = <?php echo intval( get_current_user_id() ); ?>;
+    const HRM_CAN_VIEW_OTHERS = <?php echo ( current_user_can('manage_options') || current_user_can('edit_hrm_employees') ) ? 'true' : 'false'; ?>;
     const uploadPanel = document.getElementById('hrm-upload-panel');
     const btnNuevo = document.getElementById('btn-nuevo-documento');
     const btnCerrar = document.getElementById('btn-cerrar-upload');
@@ -383,6 +399,56 @@ document.addEventListener('DOMContentLoaded', function() {
             window.hrmDocumentsSetEmployee(hrmDocsListData.employeeId);
         }
     }
+
+    // Helper: comprobar si el tipo es 'Empresa' (case-insensitive)
+    function isEmpresaType(name) {
+        return (typeof name === 'string' && name.trim().toLowerCase() === 'empresa');
+    }
+
+    // Mostrar mensaje breve en el panel de upload cuando se intenta seleccionar Empresa
+    function showUploadTypeBlockedMessage() {
+        const upMsg = document.getElementById('hrm-upload-message');
+        if (!upMsg) return;
+        upMsg.innerHTML = '<div class="alert alert-warning">El tipo "Empresa" no está disponible para subir documentos. Usa otro tipo.</div>';
+        setTimeout(() => { upMsg.innerHTML = ''; }, 4000);
+    }
+
+    // Deshabilitar entradas existentes con nombre 'Empresa' en los selectores y filtros
+    try {
+        const tipoItems = document.querySelectorAll('#hrm-tipo-items .hrm-tipo-item');
+        tipoItems.forEach(it => {
+            const nm = it.getAttribute('data-tipo-name') || it.textContent || '';
+            if ( isEmpresaType(nm) ) {
+                it.classList.add('hrm-type-disabled');
+                it.setAttribute('data-disabled', '1');
+                it.title = 'Este tipo no está disponible para selección';
+            }
+        });
+
+        const filterItems = document.querySelectorAll('#hrm-doc-type-filter-items .hrm-doc-type-item');
+        filterItems.forEach(it => {
+            const nm = it.getAttribute('data-type-name') || it.textContent || '';
+            if ( isEmpresaType(nm) ) {
+                it.classList.add('hrm-type-disabled');
+                it.setAttribute('data-disabled', '1');
+                it.title = 'Tipo no utilizable';
+            }
+        });
+    } catch (e) {
+        // no-op
+    }
+
+    // Delegación: interceptar clicks en items de tipo y bloquear Empresa
+    document.addEventListener('click', function(e) {
+        const a = e.target.closest && e.target.closest('.hrm-tipo-item');
+        if ( a ) {
+            const nm = a.getAttribute('data-tipo-name') || a.textContent || '';
+            if ( isEmpresaType(nm) ) {
+                e.preventDefault();
+                showUploadTypeBlockedMessage();
+            }
+        }
+    });
 
     // Nuevo Directorio (crear tipo) - panel y lógica
     const btnNuevoDir = document.getElementById('btn-nuevo-directorio');
@@ -549,6 +615,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         div.setAttribute('data-type-id', id);
                         div.innerHTML = '<div class="text-start">' + name + '</div><div><button type="button" class="btn btn-sm btn-outline-danger btn-delete-type" data-type-id="' + id + '">Eliminar</button></div>';
                         list.insertBefore(div, list.firstChild);
+                        // Attach handlers to the newly inserted delete button so it works immediately
+                        try { attachDeleteHandlers(); } catch (e) { console.error('attachDeleteHandlers error', e); }
                     }
 
                     // Añadir al selector de upload si existe
@@ -560,7 +628,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         a.setAttribute('data-tipo-id', id);
                         a.setAttribute('data-tipo-name', name);
                         a.innerHTML = '<strong>' + name + '</strong>';
-                        itemsContainer.insertBefore(a, itemsContainer.firstChild);
+                        // Do not add 'Empresa' to upload selector
+                        if ( ! isEmpresaType(name) ) {
+                            itemsContainer.insertBefore(a, itemsContainer.firstChild);
+                        }
                         a.addEventListener('click', function(e) {
                             e.preventDefault();
                             const searchInput = document.getElementById('hrm-tipo-search');
@@ -581,54 +652,106 @@ document.addEventListener('DOMContentLoaded', function() {
                         f.setAttribute('data-type-id', id );
                         f.setAttribute('data-type-name', name );
                         f.textContent = name;
-                        f.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            const searchInputFilter = document.getElementById('hrm-doc-type-filter-search');
-                            if ( searchInputFilter ) searchInputFilter.value = name;
-                            filterItems.style.display = 'none';
-                            if ( typeof filterDocumentsByType === 'function' ) filterDocumentsByType( id );
-                        });
-                        filterItems.insertBefore( f, filterItems.firstChild );
+                        // Do not add Empresa to filter list
+                        if ( ! isEmpresaType(name) ) {
+                            f.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                const searchInputFilter = document.getElementById('hrm-doc-type-filter-search');
+                                if ( searchInputFilter ) searchInputFilter.value = name;
+                                filterItems.style.display = 'none';
+                                if ( typeof filterDocumentsByType === 'function' ) filterDocumentsByType( id );
+                            });
+                            filterItems.insertBefore( f, filterItems.firstChild );
+                        }
                     }
 
                     // Añadir también un botón en panel 'Documentos' (empleado detalle) si existe
-                    try {
+                        try {
                         const docPanels = document.querySelectorAll('.hrm-panel-body.hrm-doc-panel-body');
+                        function findEmployeeIdForPanel(panel){
+                            // 1) data-employee-id on panel or closest ancestor
+                            let el = panel.closest('[data-employee-id]') || panel.querySelector('[data-employee-id]');
+                            if (el && el.dataset && el.dataset.employeeId) return el.dataset.employeeId;
+
+                            // 2) hidden inputs inside panel (common patterns)
+                            const inputSelectors = ['input[name="employee_id"]','input#employee_id','input[name="hrm_employee_id"]','input[name="employee-id"]'];
+                            for (const sel of inputSelectors){
+                                const inp = panel.querySelector(sel);
+                                if (inp && inp.value) return inp.value;
+                            }
+
+                            // 3) data attributes directly on panel
+                            if (panel.dataset && panel.dataset.employeeId) return panel.dataset.employeeId;
+
+                            // 4) fallback to global hrmDocsListData if available
+                            if (typeof hrmDocsListData !== 'undefined' && hrmDocsListData.employeeId) return hrmDocsListData.employeeId;
+
+                            return '';
+                        }
+
                         docPanels.forEach(panel => {
                             // No insertar si ya existe
                             if ( panel.querySelector("a[href*='hrm-mi-documentos-type-" + id + "']") ) return;
 
+                            // No insertar botones de tipo 'Empresa' dentro del panel de empleado
+                            if ( isEmpresaType(name) ) return;
+
                             const a = document.createElement('a');
                             a.className = 'hrm-doc-btn';
-                            // Si disponemos de employeeId en el contexto, añadirlo
-                            const empId = (typeof hrmDocsListData !== 'undefined' && hrmDocsListData.employeeId) ? hrmDocsListData.employeeId : '';
-                            const href = empId ? ('admin.php?page=hrm-mi-documentos-type-' + id + '&employee_id=' + empId) : ('admin.php?page=hrm-mi-documentos-type-' + id);
+
+                            // Detectar employeeId específico para este panel antes de usar el global
+                            const detectedEmpId = findEmployeeIdForPanel(panel) || '';
+                            const includeEmp = (typeof HRM_CAN_VIEW_OTHERS !== 'undefined' && HRM_CAN_VIEW_OTHERS) || (detectedEmpId && Number(detectedEmpId) === Number(HRM_CURRENT_USER_ID));
+                            const href = (includeEmp && detectedEmpId) ? ('admin.php?page=hrm-mi-documentos-type-' + id + '&employee_id=' + encodeURIComponent(detectedEmpId)) : ('admin.php?page=hrm-mi-documentos-type-' + id);
                             a.href = href;
                             a.title = name;
-                            a.setAttribute('data-icon-color', '#e6eef6');
+                            a.setAttribute('data-icon-color', '#b0b5bd');
 
                             a.innerHTML = '<div class="hrm-doc-btn-icon"><span class="dashicons dashicons-media-document"></span></div>' +
                                           '<div class="hrm-doc-btn-content"><div class="hrm-doc-btn-title">' + name + '</div><div class="hrm-doc-btn-desc">Accede a ' + name + '</div></div>' +
                                           '<div class="hrm-doc-btn-arrow"><span class="dashicons dashicons-arrow-right-alt2"></span></div>';
 
+                            // Apply inline background color and CSS variable to the icon immediately
+                            try {
+                                const tmp = document.createElement('div');
+                                tmp.innerHTML = a.innerHTML;
+                                const iconNode = tmp.querySelector('.hrm-doc-btn-icon');
+                                if (iconNode) {
+                                    iconNode.style.backgroundColor = '#b0b5bd';
+                                }
+                                a.innerHTML = tmp.innerHTML;
+                            } catch (e) {
+                                // fallback: set after insertion
+                            }
+                            try { a.style.setProperty('--hrm-doc-icon', '#b0b5bd'); } catch (e) {}
+
                             panel.appendChild(a);
                         });
 
                         // Adicional: si no se encontraron panels, intentar insertar como links en sidebars, evitando duplicados
-                        const refAnchors = document.querySelectorAll("a[href*='hrm-mi-documentos-contratos'], a[href*='hrm-mi-documentos-liquidaciones']");
-                        if ( refAnchors && refAnchors.length ) {
-                            refAnchors.forEach(ref => {
-                                const parentLi = ref.closest('li');
-                                if (parentLi && parentLi.parentNode && !parentLi.parentNode.querySelector("a[href*='hrm-mi-documentos-type-" + id + "']")) {
-                                    const li = document.createElement('li');
-                                    const a = document.createElement('a');
-                                    a.className = 'nav-link px-3 py-2';
-                                    a.href = 'admin.php?page=hrm-mi-documentos-type-' + id;
-                                    a.textContent = name;
-                                    li.appendChild(a);
-                                    parentLi.parentNode.insertBefore(li, parentLi.nextSibling);
+                        // NO insertar dinámicamente en la sidebar si el tipo es 'Empresa'
+                        try {
+                            if ( typeof name === 'string' && name.trim().toLowerCase() === 'empresa' ) {
+                                // skip sidebar insertion for Empresa
+                            } else {
+                                const refAnchors = document.querySelectorAll("a[href*='hrm-mi-documentos-contratos'], a[href*='hrm-mi-documentos-liquidaciones']");
+                                if ( refAnchors && refAnchors.length ) {
+                                    refAnchors.forEach(ref => {
+                                        const parentLi = ref.closest('li');
+                                        if (parentLi && parentLi.parentNode && !parentLi.parentNode.querySelector("a[href*='hrm-mi-documentos-type-" + id + "']")) {
+                                            const li = document.createElement('li');
+                                            const a = document.createElement('a');
+                                            a.className = 'nav-link px-3 py-2';
+                                            a.href = 'admin.php?page=hrm-mi-documentos-type-' + id;
+                                            a.textContent = name;
+                                            li.appendChild(a);
+                                            parentLi.parentNode.insertBefore(li, parentLi.nextSibling);
+                                        }
+                                    });
                                 }
-                            });
+                            }
+                        } catch (e) {
+                            console.error('Error inserting into sidebar:', e);
                         }
 
                         // Si existe data global con tipos, actualizarla

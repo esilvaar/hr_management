@@ -1,6 +1,11 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+// Cargar utilidades de archivos de WP para usar `wp_delete_file` cuando esté disponible
+if ( ! function_exists( 'wp_delete_file' ) && file_exists( ABSPATH . 'wp-admin/includes/file.php' ) ) {
+    require_once ABSPATH . 'wp-admin/includes/file.php';
+}
+
 // Registrar un shutdown handler y un log inicial para peticiones AJAX
 if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) {
     // Log inicial para depuración rápida
@@ -47,6 +52,35 @@ function hrm_ensure_db_classes() {
     if ( ! class_exists( 'HRM_DB_Documentos' ) ) {
         require_once HRM_PLUGIN_DIR . 'includes/db/class-hrm-db-documentos.php';
     }
+}
+
+/**
+ * Intento seguro de eliminación recursiva de directorios/archivos.
+ * Trata de ajustar permisos y borrar contenidos, registrando fallos.
+ * Devuelve array con 'deleted' => bool, 'failed' => array(paths)
+ */
+function hrm_recursive_rmdir_force( $dir ) {
+    $failed = array();
+    $dir = rtrim( wp_normalize_path( $dir ), '/' );
+    if ( ! is_dir( $dir ) ) return array( 'deleted' => false, 'failed' => array( $dir ) );
+
+    $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS), RecursiveIteratorIterator::CHILD_FIRST);
+    foreach ( $it as $fileinfo ) {
+        $path = $fileinfo->getPathname();
+        try {
+            @chmod( $path, 0644 );
+        } catch ( Exception $e ) {}
+        if ( $fileinfo->isDir() ) {
+            if ( ! @rmdir( $path ) ) $failed[] = $path;
+        } else {
+            if ( ! @unlink( $path ) ) $failed[] = $path;
+        }
+    }
+    // intentar remover el directorio raíz
+    try { @chmod( $dir, 0755 ); } catch ( Exception $e ) {}
+    if ( ! @rmdir( $dir ) ) $failed[] = $dir;
+
+    return array( 'deleted' => empty( $failed ), 'failed' => $failed );
 }
 
 /**
@@ -651,10 +685,10 @@ function hrm_ajax_create_document_type() {
         // Prefer filename with slug (desired by user). If exists, fall back to slug-ID, then to ID.
         $possible_paths = array();
         if ( $type_slug ) {
-            $possible_paths[] = HRM_PLUGIN_DIR . "views/mis-documentos-tipo-" . $type_slug . ".php";
-            $possible_paths[] = HRM_PLUGIN_DIR . "views/mis-documentos-tipo-" . $type_slug . "-" . intval( $id ) . ".php";
+            $possible_paths[] = HRM_PLUGIN_DIR . "views/mis-documentos-" . $type_slug . ".php";
+            $possible_paths[] = HRM_PLUGIN_DIR . "views/mis-documentos-" . $type_slug . "-" . intval( $id ) . ".php";
         }
-        $possible_paths[] = HRM_PLUGIN_DIR . "views/mis-documentos-tipo-" . intval( $id ) . ".php";
+        $possible_paths[] = HRM_PLUGIN_DIR . "views/mis-documentos-" . intval( $id ) . ".php";
 
         foreach ( $possible_paths as $stub_path ) {
             // If file already exists, skip creating but mark created_file true to indicate presence
@@ -718,6 +752,11 @@ function hrm_ajax_delete_document_type() {
         $type_name = sanitize_file_name( $all_types[ $id ] );
     }
 
+    // EXCEPCIÓN: nunca permitir eliminar el tipo 'Empresa' (case-insensitive)
+    if ( strtolower( trim( $type_name ) ) === 'empresa' ) {
+        wp_send_json_error( [ 'message' => 'El tipo "Empresa" no puede ser eliminado.' ], 403 );
+    }
+
     $res = $db_docs->delete_type( $id );
     if ( is_wp_error( $res ) ) {
         wp_send_json_error( [ 'message' => $res->get_error_message() ], 400 );
@@ -731,27 +770,74 @@ function hrm_ajax_delete_document_type() {
     $stub_deleted = false;
     if ( function_exists( 'hrm_remove_type_view_stub' ) ) {
         $stub_deleted = hrm_remove_type_view_stub( $id );
+    } else {
+        // Si la función no existe, intentar eliminar archivos con patrones conocidos
+        $possible_patterns = array(
+            HRM_PLUGIN_DIR . "views/mis-documentos-" . $id . ".php",
+            HRM_PLUGIN_DIR . "views/mis-documentos-*" . $id . ".php",
+            HRM_PLUGIN_DIR . "views/mis-documentos-tipo-*" . $id . ".php",
+            HRM_PLUGIN_DIR . "views/mis-documentos-tipo-*.php",
+            HRM_PLUGIN_DIR . "views/mis-documentos-*.php",
+        );
+        foreach ( $possible_patterns as $pat ) {
+            foreach ( glob( $pat ) as $f ) {
+                try {
+                    if ( function_exists( 'wp_delete_file' ) ) {
+                        wp_delete_file( $f );
+                    } else {
+                        @unlink( $f );
+                    }
+                    $stub_deleted = true;
+                } catch ( Exception $e ) { error_log( 'HRM: failed to delete stub file ' . $f . ' - ' . $e->getMessage() ); }
+            }
+        }
+        // Additionally remove legacy exact filenames if present
+        $legacy1 = HRM_PLUGIN_DIR . 'views/mis-documentos-tipo-' . sanitize_title( strtolower( $id ) ) . '.php';
+        if ( file_exists( $legacy1 ) ) {
+            if ( function_exists( 'wp_delete_file' ) ) { wp_delete_file( $legacy1 ); } else { @unlink( $legacy1 ); }
+            $stub_deleted = true;
+        }
     }
 
     // Intentar limpiar carpetas en uploads/hrm_docs/*/*/{type_name} si están vacías o sólo contienen index.html
     $deleted_dirs = array();
-    if ( ! empty( $type_name ) && function_exists( 'hrm_recursive_rmdir' ) ) {
+    if ( ! empty( $type_name ) ) {
         $upload_dir = wp_upload_dir();
         $base_dir = trailingslashit( $upload_dir['basedir'] ) . 'hrm_docs';
         $pattern = $base_dir . '/*/*/' . $type_name;
         $dirs = glob( $pattern, GLOB_ONLYDIR );
         if ( $dirs && is_array( $dirs ) ) {
             foreach ( $dirs as $d ) {
-                $items = array_diff( scandir( $d ), array( '.', '..' ) );
-                // Si está vacío o sólo contiene index.html, eliminar
-                if ( empty( $items ) || ( count( $items ) === 1 && in_array( 'index.html', $items ) ) ) {
-                    if ( hrm_recursive_rmdir( $d ) ) {
-                        $deleted_dirs[] = $d;
-                    }
+                // intentar eliminar incluso si no está vacío usando fuerza
+                $res = hrm_recursive_rmdir_force( $d );
+                if ( $res['deleted'] ) {
+                    $deleted_dirs[] = $d;
+                } else {
+                    // registrar fallos para devolver al cliente si es necesario
+                    error_log( 'HRM: failed to remove dir ' . $d . ' failed_paths=' . json_encode( $res['failed'] ) );
                 }
             }
         }
     }
+
+        // Adicional: intentar eliminar stubs con el slug derivado del nombre del tipo
+        try {
+            $type_slug = sanitize_title( $type_name );
+            if ( $type_slug ) {
+                $extra_paths = array(
+                    HRM_PLUGIN_DIR . 'views/mis-documentos-' . $type_slug . '.php',
+                    HRM_PLUGIN_DIR . 'views/mis-documentos-' . $type_slug . '-' . intval( $id ) . '.php',
+                );
+                foreach ( $extra_paths as $p ) {
+                    if ( file_exists( $p ) ) {
+                        if ( function_exists( 'wp_delete_file' ) ) { wp_delete_file( $p ); } else { @unlink( $p ); }
+                        $stub_deleted = true;
+                    }
+                }
+            }
+        } catch ( Exception $e ) {
+            error_log( 'HRM: Error deleting extra stub by slug: ' . $e->getMessage() );
+        }
 
     wp_send_json_success( [ 'id' => $id, 'stub_deleted' => $stub_deleted, 'deleted_dirs' => $deleted_dirs ] );
 }

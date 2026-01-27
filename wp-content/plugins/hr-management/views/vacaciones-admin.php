@@ -84,6 +84,10 @@ if ( $es_supervisor && ! $es_editor_vacaciones ) {
 $solicitudes = hrm_get_all_vacaciones( $search_term, $estado_filtro );
 
 $total_solicitudes = count( $solicitudes );
+
+// Contadores visibles (respetan permisos por rol y departamento)
+$count_dia_completo = function_exists( 'hrm_count_vacaciones_visibles' ) ? hrm_count_vacaciones_visibles() : 0;
+$count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count_medio_dia_visibles() : 0;
 ?>
 
 <div class="wrap">
@@ -107,7 +111,7 @@ $total_solicitudes = count( $solicitudes );
                             aria-controls="contenido-solicitudes" 
                             aria-selected="<?php echo $tab_activo === 'solicitudes' ? 'true' : 'false'; ?>">
                         <span style="font-size: 1.2rem;">📋</span>
-                        <span class="fw-semibold">Solicitudes de Vacaciones</span>
+                        <span class="fw-semibold">Solicitudes de Día Completo<?php echo ( $count_dia_completo > 0 ) ? ' (' . intval( $count_dia_completo ) . ')' : ''; ?></span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -129,7 +133,7 @@ $total_solicitudes = count( $solicitudes );
                             aria-controls="contenido-medio-dia" 
                             aria-selected="<?php echo $tab_activo === 'medio-dia' ? 'true' : 'false'; ?>">
                         <span style="font-size: 1.2rem;">⏰</span>
-                        <span class="fw-semibold">Solicitudes de Medio Día</span>
+                        <span class="fw-semibold">Solicitudes de Medio Día<?php echo ( $count_medio_dia > 0 ) ? ' (' . intval( $count_medio_dia ) . ')' : ''; ?></span>
                     </button>
                 </li>
                 

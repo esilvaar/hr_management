@@ -732,6 +732,16 @@ function hrm_register_admin_menus()
             }
         );
 
+            // Submenú: Documentos empresa (para administradores)
+            add_submenu_page(
+                'hrm-empleados',
+                'Documentos empresa',
+                'Documentos empresa',
+                'view_hrm_admin_views',
+                'hrm-anaconda-documents',
+                'hrm_render_anaconda_documents_page'
+            );
+
         add_submenu_page(
             'hrm-empleados',
             '[DEBUG] Formulario Vacaciones',
@@ -1400,8 +1410,22 @@ function hrm_render_mis_documentos_tipo_page()
     $employee_id = 0;
     if (isset($_GET['employee_id'])) {
         $employee_id = absint($_GET['employee_id']);
-        if ($employee_id && !(current_user_can('manage_options') || current_user_can('edit_hrm_employees'))) {
-            wp_die('No tienes permisos para ver documentos de otros empleados.');
+        if ($employee_id) {
+            $can_view_others = current_user_can('manage_options') || current_user_can('edit_hrm_employees');
+            if ( ! $can_view_others ) {
+                // Intentar resolver si el employee_id corresponde al empleado vinculado al usuario actual
+                if (!class_exists('HRM_DB_Empleados')) {
+                    require_once plugin_dir_path(__FILE__) . 'includes/db/class-hrm-db-empleados.php';
+                }
+                $db_emp_check = new HRM_DB_Empleados();
+                $my_employee = $db_emp_check->get_by_user_id( get_current_user_id() );
+                $my_emp_id = $my_employee ? intval( $my_employee->id ) : 0;
+
+                if ( $employee_id !== $my_emp_id ) {
+                    wp_die('No tienes permisos para ver documentos de otros empleados.');
+                }
+                // Si coincide, permitimos la visualización (es el propio usuario)
+            }
         }
     }
 

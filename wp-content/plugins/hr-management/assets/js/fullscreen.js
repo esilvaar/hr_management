@@ -8,11 +8,7 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         // Debug: mostrar los datos pasados desde PHP
-        try {
-            console.log('[HRM-FS] hrmFullscreenData =', window.hrmFullscreenData);
-        } catch (e) {
-            // Ignorar si console no está disponible
-        }
+        // hrmFullscreenData is available on window when provided by PHP; do not log in production
 
         // Crear botón de toggle solo en páginas del plugin
         const urlParams = new URLSearchParams(window.location.search);
@@ -44,27 +40,15 @@
 
         function checkLayoutDuplication() {
             try {
-                const layouts = document.querySelectorAll('.hrm-admin-layout');
-                const wrapCount = document.querySelectorAll('.wrap.hrm-admin-wrap').length;
-                if (layouts.length > 1 || wrapCount > 1) {
-                    console.warn('[HRM-DEBUG] Multiple HRM layouts detected', { layouts: layouts.length, hrmWraps: wrapCount });
-                    if (userId === 1) {
-                        const banner = document.createElement('div');
-                        banner.style.position = 'fixed';
-                        banner.style.top = '8px';
-                        banner.style.left = '50%';
-                        banner.style.transform = 'translateX(-50%)';
-                        banner.style.zIndex = '99999';
-                        banner.style.background = 'rgba(255, 75, 75, 0.95)';
-                        banner.style.color = '#fff';
-                        banner.style.padding = '10px 18px';
-                        banner.style.borderRadius = '6px';
-                        banner.style.fontWeight = '600';
-                        banner.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
-                        banner.textContent = 'HRM DEBUG: Se detectaron ' + layouts.length + ' layouts y ' + wrapCount + ' wraps. Revisa la consola para más detalles.';
-                        document.body.appendChild(banner);
-                        setTimeout(() => banner.remove(), 12000);
-                    }
+                const allLayouts = Array.from(document.querySelectorAll('.hrm-admin-layout'));
+                const allWraps = Array.from(document.querySelectorAll('.wrap.hrm-admin-wrap'));
+
+                // Consider only visible top-level elements to avoid false positives from hidden or nested nodes
+                const visibleLayouts = allLayouts.filter(el => el.offsetParent !== null && el.closest('.hrm-admin-layout') === el);
+                const visibleWraps = allWraps.filter(el => el.offsetParent !== null && el.closest('.wrap.hrm-admin-wrap') === el);
+
+                if (visibleLayouts.length > 1 || visibleWraps.length > 1) {
+                    // Multiple visible layouts detected; do not display debug banner in production.
                 }
             } catch (e) {
                 console.error('[HRM-DEBUG] checkLayoutDuplication error', e);

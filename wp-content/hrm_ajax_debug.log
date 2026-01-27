@@ -138,3 +138,199 @@ SERVER_SNIPPET: Array
 2026-01-26T19:44:14+00:00 - hrm_check_email invoked by user_id=1 REQUEST_KEYS=["action","email_b64","nonce"]
 2026-01-26T19:45:43+00:00 - hrm_check_email invoked by user_id=1 REQUEST_KEYS=["action","email_b64","nonce"]
 2026-01-26T19:45:43+00:00 - hrm_check_email invoked by user_id=1 REQUEST_KEYS=["action","email_b64","nonce"]
+2026-01-27T13:45:17+00:00 - hrm_check_email invoked by user_id=1 REQUEST_KEYS=["action","email_b64","nonce"]
+2026-01-27T13:45:19+00:00 - hrm_check_email invoked by user_id=1 REQUEST_KEYS=["action","email_b64","nonce"]
+2026-01-27T13:47:05+00:00 - hrm_check_email invoked by user_id=1 REQUEST_KEYS=["action","email_b64","nonce"]
+2026-01-27T13:47:07+00:00 - hrm_check_email invoked by user_id=1 REQUEST_KEYS=["action","email_b64","nonce"]
+2026-01-27T18:49:42+00:00 - SHUTDOWN ERROR: Array
+(
+    [type] => 4
+    [message] => Unclosed '{' on line 1817 does not match ')'
+    [file] => /home/rrhhanacondaweb/public_html/wp-content/plugins/hr-management/includes/vacaciones.php
+    [line] => 1878
+)
+
+ACTION_SNIPPET: Array
+(
+    [action] => hrm_sincronizar_personal_vigente
+    [nonce] => e566b5b8ba
+)
+
+SERVER_SNIPPET: Array
+(
+    [REQUEST_URI] => /wp-admin/admin-ajax.php
+    [REQUEST_METHOD] => POST
+    [REMOTE_ADDR] => 200.126.68.202
+    [HTTP_USER_AGENT] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36
+)
+
+2026-01-27T18:49:48+00:00 - SHUTDOWN ERROR: Array
+(
+    [type] => 4
+    [message] => Unclosed '{' on line 1817 does not match ')'
+    [file] => /home/rrhhanacondaweb/public_html/wp-content/plugins/hr-management/includes/vacaciones.php
+    [line] => 1878
+)
+
+ACTION_SNIPPET: Array
+(
+    [action] => heartbeat
+)
+
+SERVER_SNIPPET: Array
+(
+    [REQUEST_URI] => /wp-admin/admin-ajax.php
+    [REQUEST_METHOD] => POST
+    [REMOTE_ADDR] => 200.126.68.202
+    [HTTP_USER_AGENT] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36
+)
+
+2026-01-27T18:50:18+00:00 - SHUTDOWN ERROR: Array
+(
+    [type] => 4
+    [message] => Unclosed '{' on line 1817 does not match ')'
+    [file] => /home/rrhhanacondaweb/public_html/wp-content/plugins/hr-management/includes/vacaciones.php
+    [line] => 1878
+)
+
+ACTION_SNIPPET: Array
+(
+    [action] => heartbeat
+)
+
+SERVER_SNIPPET: Array
+(
+    [REQUEST_URI] => /wp-admin/admin-ajax.php
+    [REQUEST_METHOD] => POST
+    [REMOTE_ADDR] => 200.126.68.202
+    [HTTP_USER_AGENT] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36
+)
+
+2026-01-27T18:54:42+00:00 - SHUTDOWN ERROR: Array
+(
+    [type] => 4
+    [message] => Unclosed '{' on line 1817 does not match ')'
+    [file] => /home/rrhhanacondaweb/public_html/wp-content/plugins/hr-management/includes/vacaciones.php
+    [line] => 1878
+)
+
+ACTION_SNIPPET: Array
+(
+    [action] => hrm_sincronizar_personal_vigente
+    [nonce] => e566b5b8ba
+)
+
+SERVER_SNIPPET: Array
+(
+    [REQUEST_URI] => /wp-admin/admin-ajax.php
+    [REQUEST_METHOD] => POST
+    [REMOTE_ADDR] => 200.126.68.202
+    [HTTP_USER_AGENT] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36
+)
+
+2026-01-27T18:59:42+00:00 - SHUTDOWN ERROR: Array
+(
+    [type] => 4
+    [message] => Unmatched '}'
+    [file] => /home/rrhhanacondaweb/public_html/wp-content/plugins/hr-management/includes/vacaciones.php
+    [line] => 589
+)
+
+ACTION_SNIPPET: Array
+(
+    [action] => hrm_sincronizar_personal_vigente
+    [nonce] => e566b5b8ba
+)
+
+SERVER_SNIPPET: Array
+(
+    [REQUEST_URI] => /wp-admin/admin-ajax.php
+    [REQUEST_METHOD] => POST
+    [REMOTE_ADDR] => 200.126.68.202
+    [HTTP_USER_AGENT] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36
+)
+
+2026-01-27T19:06:22+00:00 - SHUTDOWN ERROR: Array
+(
+    [type] => 4
+    [message] => Unclosed '{' on line 537
+    [file] => /home/rrhhanacondaweb/public_html/wp-content/plugins/hr-management/includes/vacaciones.php
+    [line] => 6266
+)
+
+ACTION_SNIPPET: Array
+(
+    [action] => heartbeat
+)
+
+SERVER_SNIPPET: Array
+(
+    [REQUEST_URI] => /wp-admin/admin-ajax.php
+    [REQUEST_METHOD] => POST
+    [REMOTE_ADDR] => 200.126.68.202
+    [HTTP_USER_AGENT] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36
+)
+
+2026-01-27T19:06:50+00:00 - SHUTDOWN ERROR: Array
+(
+    [type] => 4
+    [message] => Unclosed '{' on line 537
+    [file] => /home/rrhhanacondaweb/public_html/wp-content/plugins/hr-management/includes/vacaciones.php
+    [line] => 6266
+)
+
+ACTION_SNIPPET: Array
+(
+    [action] => heartbeat
+)
+
+SERVER_SNIPPET: Array
+(
+    [REQUEST_URI] => /wp-admin/admin-ajax.php
+    [REQUEST_METHOD] => POST
+    [REMOTE_ADDR] => 200.126.68.202
+    [HTTP_USER_AGENT] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36
+)
+
+2026-01-27T19:07:07+00:00 - SHUTDOWN ERROR: Array
+(
+    [type] => 4
+    [message] => Unclosed '{' on line 537
+    [file] => /home/rrhhanacondaweb/public_html/wp-content/plugins/hr-management/includes/vacaciones.php
+    [line] => 6266
+)
+
+ACTION_SNIPPET: Array
+(
+    [action] => heartbeat
+)
+
+SERVER_SNIPPET: Array
+(
+    [REQUEST_URI] => /wp-admin/admin-ajax.php
+    [REQUEST_METHOD] => POST
+    [REMOTE_ADDR] => 200.126.68.202
+    [HTTP_USER_AGENT] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 OPR/125.0.0.0
+)
+
+2026-01-27T19:08:23+00:00 - SHUTDOWN ERROR: Array
+(
+    [type] => 4
+    [message] => Unclosed '{' on line 537
+    [file] => /home/rrhhanacondaweb/public_html/wp-content/plugins/hr-management/includes/vacaciones.php
+    [line] => 6266
+)
+
+ACTION_SNIPPET: Array
+(
+    [action] => heartbeat
+)
+
+SERVER_SNIPPET: Array
+(
+    [REQUEST_URI] => /wp-admin/admin-ajax.php
+    [REQUEST_METHOD] => POST
+    [REMOTE_ADDR] => 200.126.68.202
+    [HTTP_USER_AGENT] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36
+)
+

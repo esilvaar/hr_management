@@ -71,19 +71,24 @@
 
 /* Ajustar sidebar del plugin */
 .hrm-fullscreen-mode .hrm-sidebar {
+    position: fixed !important;
     left: 0 !important;
     height: 100vh !important;
     top: 0 !important;
+    width: 280px !important; /* coincidir con layout-sidebar-admin.css */
+    z-index: 1001 !important; /* asegurarse que la sidebar quede encima del contenido */
 }
 
 /* Ajustar contenido del plugin */
 .hrm-fullscreen-mode .hrm-content {
-    left: 260px !important;
-    width: calc(100vw - 260px) !important;
+    position: absolute !important;
+    left: 280px !important; /* dejar espacio para la sidebar fija */
+    width: calc(100vw - 280px) !important;
     height: 100vh !important;
     top: 0 !important;
     overflow: auto !important; /* permitir scroll interno */
     box-sizing: border-box;
+    z-index: 900 !important; /* contenido debajo de la sidebar */
 }
 
 /* Limitar tamaño de previsualización para que no se salga del área de contenido */

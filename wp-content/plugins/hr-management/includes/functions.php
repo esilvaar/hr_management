@@ -174,6 +174,31 @@ function hrm_enqueue_documents_upload_scripts( $hook ) {
         return;
     }
 
+    // Evitar encolar el script en páginas que no contienen el formulario de upload
+    $page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+    $tab  = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : '';
+
+    // No cargar en la página anaconda-documents (plantilla de prueba)
+    if ( $page === 'hrm-anaconda-documents' ) {
+        return;
+    }
+
+    // Solo encolar cuando estamos en el listado de documentos o en la pestaña de upload
+    $allowed = false;
+    if ( $tab === 'upload' ) {
+        $allowed = true;
+    }
+    if ( $page === 'hrm-mi-documentos' || $page === 'hrm-empleados' ) {
+        // En hrm-empleados puede haber un modal de upload (cuando se pasa id)
+        if ( $tab === 'upload' || isset( $_GET['id'] ) ) {
+            $allowed = true;
+        }
+    }
+
+    if ( ! $allowed ) {
+        return;
+    }
+
     wp_enqueue_script(
         'hrm-documents-upload',
         HRM_PLUGIN_URL . 'assets/js/documents-upload.js',

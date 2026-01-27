@@ -16,6 +16,24 @@ echo "<style>
 .hrm-readonly .hrm-readonly-text{display:inline-block}
 .hrm-readonly:hover{background-color:rgba(0,0,0,0.03)}
 
+/* Avatar styles are provided via assets/css/employees-detail.css to ensure consistency */
+.hrm-avatar-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 8px;
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    align-items: center;
+    background: rgba(255,255,255,0.92);
+    border-radius: 50%;
+    z-index: 5;
+}
+
 /* Clase utilitaria para resetear estilo de botón y que parezca enlace del panel */
 .hrm-btn-reset {
     background: none;
@@ -30,10 +48,7 @@ echo "<style>
     justify-content: space-between;
     box-sizing: border-box;
 }
-.hrm-btn-reset:focus {
-    outline: none;
-    box-shadow: none;
-}
+.hrm-btn-reset:focus { outline: none; box-shadow: none; }
 
 /* Expandir el enlace para cubrir todo el ancho del panel (compensa el padding del .hrm-panel-body) */
 .hrm-panel .hrm-btn-reset {
@@ -43,19 +58,29 @@ echo "<style>
     padding-left: 1.25rem;
     padding-right: 1.25rem;
 }
-    /* Panel específico que contiene acciones tipo botón-enlace: ocupar toda la altura */
-    .hrm-panel.hrm-panel-action {
-        display: flex;
-        flex-direction: column;
-    }
-    .hrm-panel.hrm-panel-action .hrm-panel-body {
-        flex: 1 1 auto;
-        padding: 0;
-    }
-    .hrm-panel.hrm-panel-action .hrm-btn-reset {
-        height: 100%;
-        align-items: center;
-    }
+
+/* Panel específico que contiene acciones tipo botón-enlace: ocupar toda la altura */
+.hrm-panel.hrm-panel-action { display: flex; flex-direction: column; }
+.hrm-panel.hrm-panel-action .hrm-panel-body { flex: 1 1 auto; padding: 0; }
+.hrm-panel.hrm-panel-action .hrm-btn-reset { height: 100%; align-items: center; }
+
+/* Responsive adjustments to avoid overlap on small screens */
+@media (max-width: 1200px) {
+    .avatar-hover-container { margin-bottom: 28px; max-width: 180px; }
+}
+@media (max-width: 992px) {
+    .avatar-hover-container { max-width: 160px; margin-bottom: 22px; }
+    .hrm-avatar-size { width: 120px; height: 120px; }
+}
+@media (max-width: 576px) {
+    .avatar-hover-container { max-width: 110px; margin-bottom: 14px; }
+    .hrm-avatar-size { width: 88px; height: 88px; }
+    /* Reset expanded button width to avoid horizontal overflow on narrow screens */
+    .hrm-panel .hrm-btn-reset { width: 100%; margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
+    /* Ensure overlay doesn't cover important content: make it compact */
+    .hrm-avatar-overlay { padding: 6px; font-size: 13px; }
+}
+
 </style>";
 
 // Validar empleado
@@ -210,7 +235,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                         </div>
                     </a>
 
-                    <a href="<?= esc_url( add_query_arg( array( 'page' => 'hrm-mi-documentos-liquidaciones', 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis liquidaciones" data-icon-color="#d0d5db">
+                    <a href="<?= esc_url( add_query_arg( array( 'page' => 'hrm-mi-documentos-liquidaciones', 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis liquidaciones" data-icon-color="#b0b5bd">
                         <div class="hrm-doc-btn-icon">
                             <span class="dashicons dashicons-money-alt"></span>
                         </div>
@@ -223,7 +248,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                         </div>
                     </a>
 
-                    <a href="<?= esc_url( admin_url('admin.php?page=hrm-convivencia') ); ?>" class="hrm-doc-btn" title="Ver reglamento interno" data-icon-color="#c5cad3">
+                    <a href="<?= esc_url( admin_url('admin.php?page=hrm-convivencia') ); ?>" class="hrm-doc-btn" title="Ver reglamento interno" data-icon-color="#b0b5bd">
                         <div class="hrm-doc-btn-icon">
                             <span class="dashicons dashicons-id"></span>
                         </div>
@@ -247,7 +272,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                             if ( in_array( strtolower( trim( $t_name ) ), $reserved, true ) ) continue;
                             $url = add_query_arg( array( 'page' => 'hrm-mi-documentos-type-' . intval( $t_id ), 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) );
                             ?>
-                            <a href="<?= esc_url( $url ) ?>" class="hrm-doc-btn" title="<?= esc_attr( $t_name ) ?>" data-icon-color="#e6eef6">
+                            <a href="<?= esc_url( $url ) ?>" class="hrm-doc-btn" title="<?= esc_attr( $t_name ) ?>" data-icon-color="#b0b5bd">
                                 <div class="hrm-doc-btn-icon">
                                     <span class="dashicons dashicons-media-document"></span>
                                 </div>
@@ -276,7 +301,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                     <h5 class="mb-0"><span class="dashicons dashicons-admin-network"></span> Acciones de Cuenta</h5>
                 </div>
                 <div class="hrm-panel-body">
-                    <a href="#" id="hrm-open-pass-modal" class="hrm-doc-btn" data-icon-color="#c5cad3" role="button" aria-haspopup="dialog">
+                    <a href="#" id="hrm-open-pass-modal" class="hrm-doc-btn" data-icon-color="#b0b5bd" role="button" aria-haspopup="dialog">
                         <div class="hrm-doc-btn-icon">
                             <span class="dashicons dashicons-lock"></span>
                         </div>
@@ -642,11 +667,46 @@ document.addEventListener('DOMContentLoaded', function() {
     if(btnCancelToggle) btnCancelToggle.onclick = function() { togglePanel.style.display = 'none'; }
 
     // 4. COLOREAR ICONOS DOCUMENTOS
+    // Enforce a single icon color for all document buttons to avoid later JS/inline changes
+    const ENFORCED_DOC_ICON = '#b0b5bd';
     document.querySelectorAll('.hrm-doc-btn').forEach(btn => {
-        const color = btn.getAttribute('data-icon-color');
         const icon = btn.querySelector('.hrm-doc-btn-icon');
-        if ( color && icon ) icon.style.backgroundColor = color;
+        if ( icon ) {
+            try { btn.style.setProperty('--hrm-doc-icon', ENFORCED_DOC_ICON); } catch (e) {}
+            try { icon.style.backgroundColor = ENFORCED_DOC_ICON; } catch (e) {}
+            // normalize data-attribute so other scripts that read it won't change appearance
+            try { btn.setAttribute('data-icon-color', ENFORCED_DOC_ICON); } catch (e) {}
+        }
     });
+
+    // Observe dynamic additions and apply the same coloring to newly inserted .hrm-doc-btn elements
+    const observer = new MutationObserver(mutations => {
+        for (const m of mutations) {
+            if (!m.addedNodes || !m.addedNodes.length) continue;
+            m.addedNodes.forEach(node => {
+                if (node.nodeType !== 1) return;
+                if (node.classList && node.classList.contains('hrm-doc-btn')) {
+                    const icon = node.querySelector('.hrm-doc-btn-icon');
+                    if (icon) {
+                        try { node.style.setProperty('--hrm-doc-icon', ENFORCED_DOC_ICON); } catch (e) {}
+                        try { icon.style.backgroundColor = ENFORCED_DOC_ICON; } catch (e) {}
+                        try { node.setAttribute('data-icon-color', ENFORCED_DOC_ICON); } catch (e) {}
+                    }
+                }
+                // Also check descendants
+                const children = node.querySelectorAll ? node.querySelectorAll('.hrm-doc-btn') : [];
+                children.forEach(ch => {
+                    const icon = ch.querySelector('.hrm-doc-btn-icon');
+                    if (icon) {
+                        try { ch.style.setProperty('--hrm-doc-icon', ENFORCED_DOC_ICON); } catch (e) {}
+                        try { icon.style.backgroundColor = ENFORCED_DOC_ICON; } catch (e) {}
+                        try { ch.setAttribute('data-icon-color', ENFORCED_DOC_ICON); } catch (e) {}
+                    }
+                });
+            });
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
 });
 </script>
 

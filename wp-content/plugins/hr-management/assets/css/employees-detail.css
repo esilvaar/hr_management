@@ -9,43 +9,62 @@
  */
 
 /* =============================================================================
-   AVATAR - Estilos Personalizados
+   AVATAR - Estilos Personalizados (RESPONSIVE)
    ============================================================================= */
 
+/* Imagen avatar: por defecto centrada y escalable */
 .hrm-avatar-size {
-    width: 18rem !important;
-    height: 18rem !important;
-    min-width: 15rem;
-    min-height: 15rem;
-    object-fit: cover;
     display: block;
-    border-radius: 50% !important;
+    margin: 0 auto;
+    width: 100%;
+    height: auto;
+    max-width: 18rem; /* tamaño máximo en desktop */
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 50%;
 }
 
+/* Draw an inner ring on the container to avoid clipping by overflow */
+.avatar-hover-container::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 4px rgba(0, 115, 170, 0.18); /* inner blue ring */
+}
+
+/* Contenedor cuadrado que mantiene aspecto 1:1 y centra la imagen */
 .avatar-hover-container {
     position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 19rem;
-    height: 19rem;
+    width: 100%;
+    max-width: 19rem;
+    aspect-ratio: 1 / 1;
     margin: 0 auto;
+    overflow: hidden;
 }
 
+/* Ensure avatar image fills the square container when inside it */
+.avatar-hover-container .hrm-avatar-size { width: 100%; height: 100%; object-fit: cover; }
+
 .avatar-hover-container:hover .hrm-avatar-overlay {
-    visibility: visible !important;
-    opacity: 1 !important;
+    visibility: visible;
+    opacity: 1;
+    background: rgba(0, 115, 170, 0.85); /* hover color: blue */
 }
 
 .hrm-avatar-overlay {
     position: absolute;
     top: 0;
     left: 0;
-    width: 19rem;
-    height: 19rem;
+    width: 100%;
+    height: 100%;
     display: flex;
-    visibility: hidden !important;
-    opacity: 0 !important;
+    visibility: hidden;
+    opacity: 0;
     background: rgba(0, 0, 0, 0.7);
     border-radius: 50%;
     justify-content: center;
@@ -55,10 +74,7 @@
     transition: all 0.3s ease;
 }
 
-.hrm-avatar-overlay .btn {
-    font-size: 0.875rem;
-    z-index: 10;
-}
+.hrm-avatar-overlay .btn { font-size: 0.875rem; z-index: 10; }
 
 /* =============================================================================
    PANEL - Alternativa personalizada a Card de Bootstrap
@@ -151,6 +167,15 @@
     transition: all 0.3s ease;
 }
 
+/* Allow color to be set via CSS variable --hrm-doc-icon for deterministic styling */
+.hrm-doc-btn .hrm-doc-btn-icon { 
+    background-color: var(--hrm-doc-icon, #b0b5bd) !important; 
+    background-image: none !important;
+    background-blend-mode: normal !important;
+    opacity: 1 !important;
+    filter: none !important;
+}
+
 .hrm-doc-btn:hover .hrm-doc-btn-icon {
     transform: scale(1.1);
     box-shadow: 0 4px 12px rgba(176, 181, 189, 0.3);
@@ -215,38 +240,15 @@
 
 @media (max-width: 991.98px) {
     /* Bootstrap ya maneja col-lg-3 y col-lg-9 responsive */
-    
-    .hrm-avatar-size {
-        width: 12rem !important;
-        height: 12rem !important;
-    }
-    
-    .avatar-hover-container {
-        width: 12rem;
-        height: 12rem;
-    }
-    
-    .hrm-avatar-overlay {
-        width: 12rem !important;
-        height: 12rem !important;
-    }
+    .hrm-avatar-size { max-width: 12rem; }
+    .avatar-hover-container { max-width: 12rem; }
+    .hrm-avatar-overlay { width: 100%; height: 100%; }
 }
 
 @media (max-width: 575.98px) {
-    .hrm-avatar-size {
-        width: 10rem !important;
-        height: 10rem !important;
-    }
-    
-    .avatar-hover-container {
-        width: 10rem;
-        height: 10rem;
-    }
-    
-    .hrm-avatar-overlay {
-        width: 10rem !important;
-        height: 10rem !important;
-    }
+    .hrm-avatar-size { max-width: 10rem; }
+    .avatar-hover-container { max-width: 10rem; }
+    .hrm-avatar-overlay { width: 100%; height: 100%; }
     
     .hrm-panel-header h5 {
         font-size: 0.95rem;

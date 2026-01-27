@@ -388,7 +388,8 @@ function hrm_get_feriados_locales( $ano ) {
     $table_solicitudes = $wpdb->prefix . 'rrhh_solicitudes_ausencia';
     $table_empleados = $wpdb->prefix . 'rrhh_empleados';
     $table_tipos = $wpdb->prefix . 'rrhh_tipo_ausencia';
-    $table_gerencia = $wpdb->prefix . 'rrhh_gerencia_deptos';
+        $table_medio_dia = $wpdb->prefix . 'rrhh_solicitudes_medio_dia'; // medio día
+        $table_gerencia = $wpdb->prefix . 'rrhh_gerencia_deptos'; // gerencia de departamentos
 
     // CONSTRUIR WHERE DINÁMICAMENTE
     $where_conditions = array();
@@ -536,58 +537,229 @@ function hrm_get_feriados_locales( $ano ) {
 function hrm_get_solicitudes_medio_dia( $search = '', $estado = '' ) {
     global $wpdb;
 
+    // Safe table names
     $table_solicitudes = $wpdb->prefix . 'rrhh_solicitudes_medio_dia';
     $table_empleados = $wpdb->prefix . 'rrhh_empleados';
 
-    // Condiciones WHERE
-    $where_conditions = [];
-    $params = [];
+    $where_conditions = array();
+    $params = array();
 
-    // Las solicitudes de medio día tienen fecha_inicio = fecha_fin
-    $where_conditions[] = "s.fecha_inicio = s.fecha_fin";
-    $where_conditions[] = "s.periodo_ausencia IN ('mañana', 'tarde')";
-
-    // Filtro por búsqueda de empleado
-    if ( ! empty( $search ) ) {
-        $where_conditions[] = "(e.nombre LIKE %s OR e.apellido LIKE %s)";
-        $like = '%' . $wpdb->esc_like( $search ) . '%';
-        $params[] = $like;
-        $params[] = $like;
+    // Estado filter
+    if ( ! empty( $estado ) ) {
+        $where_conditions[] = 's.estado = %s';
+        $params[] = sanitize_text_field( $estado );
     }
 
-    // Filtro por estado
-    if ( ! empty( $estado ) ) {
-        $where_conditions[] = "s.estado = %s";
-        $params[] = $estado;
+    // Search across employee name or comment
+    if ( ! empty( $search ) ) {
+        $where_conditions[] = '(LOWER(e.nombre) LIKE %s OR LOWER(e.apellido) LIKE %s OR LOWER(s.comentario_empleado) LIKE %s)';
+        $q = '%' . strtolower( sanitize_text_field( $search ) ) . '%';
+        $params[] = $q;
+        $params[] = $q;
+        $params[] = $q;
     }
 
     $where = ! empty( $where_conditions ) ? 'WHERE ' . implode( ' AND ', $where_conditions ) : '';
 
-    // Construir consulta
-    $sql = "
-        SELECT 
-            s.id_solicitud,
-            s.id_empleado,
-            e.nombre,
-            e.apellido,
-            e.correo,
-            s.fecha_inicio,
-            s.fecha_fin,
-            s.periodo_ausencia,
-            s.estado,
-            s.fecha_respuesta
-        FROM {$table_solicitudes} s
-        INNER JOIN {$table_empleados} e ON s.id_empleado = e.id_empleado
-        {$where}
-        ORDER BY s.fecha_inicio DESC, s.id_solicitud DESC
-    ";
+    $sql = "SELECT 
+                s.id_solicitud,
+                s.id_empleado,
+                e.nombre,
+                e.apellido,
+                COALESCE(e.correo, '') AS correo,
+                s.fecha_inicio,
+                s.fecha_fin,
+                s.total_dias,
+                s.periodo_ausencia,
+                s.estado,
+                s.comentario_empleado,
+                s.fecha_respuesta
+            FROM {$table_solicitudes} s
+            INNER JOIN {$table_empleados} e ON s.id_empleado = e.id_empleado
+            {$where}
+            ORDER BY s.fecha_inicio DESC, s.id_solicitud DESC";
+
+    try {
+        if ( ! empty( $params ) ) {
+            $prepared = $wpdb->prepare( $sql, $params );
+            $results = $wpdb->get_results( $prepared, ARRAY_A );
+        } else {
+            $results = $wpdb->get_results( $sql, ARRAY_A );
+        }
+    } catch ( Exception $e ) {
+        error_log( 'HRM: Error fetching medio-dia solicitudes: ' . $e->getMessage() );
+        return array();
+    }
+
+    return $results ?: array();
+}
+
+/**
+ * Cuenta las solicitudes de día completo visibles para el usuario actual.
+ * @param string|null $estado Opcional: 'PENDIENTE', 'APROBADA', 'RECHAZADA' o null para todos
+ * @return int Conteo de solicitudes visibles
+ */
+function hrm_count_vacaciones_visibles( $estado = null ) {
+    global $wpdb;
+
+    $table_solicitudes = $wpdb->prefix . 'rrhh_solicitudes_ausencia';
+    $table_empleados = $wpdb->prefix . 'rrhh_empleados';
+    $table_gerencia = $wpdb->prefix . 'rrhh_gerencia_deptos';
+
+    $where_conditions = array();
+    $params = array();
+
+    $is_admin = current_user_can( 'manage_options' );
+    $is_editor_vacaciones = current_user_can( 'manage_hrm_vacaciones' ) && ! current_user_can( 'edit_hrm_employees' );
+
+    if ( ! $is_admin && ! $is_editor_vacaciones ) {
+        $current_user_id = get_current_user_id();
+        $current_user = get_userdata( $current_user_id );
+        $current_user_email = $current_user ? $current_user->user_email : '';
+
+        $departamentos_a_gestionar = array();
+        if ( $current_user_email ) {
+            $deptos_result = $wpdb->get_col( $wpdb->prepare(
+                "SELECT depto_a_cargo FROM {$table_gerencia} WHERE correo_gerente = %s AND estado = 1",
+                $current_user_email
+            ) );
+            if ( ! empty( $deptos_result ) ) {
+                $departamentos_a_gestionar = $deptos_result;
+            }
+        }
+
+        $id_empleado_user = $wpdb->get_var( $wpdb->prepare(
+            "SELECT id_empleado FROM {$table_empleados} WHERE user_id = %d LIMIT 1",
+            get_current_user_id()
+        ) );
+
+        if ( empty( $departamentos_a_gestionar ) && empty( $id_empleado_user ) ) {
+            // No es admin, ni editor, ni gerente con departamentos, ni empleado: no ve nada
+            return 0;
+        }
+
+        $where_or = array();
+        if ( ! empty( $departamentos_a_gestionar ) ) {
+            $placeholders = implode( ',', array_fill( 0, count( $departamentos_a_gestionar ), '%s' ) );
+            $where_or[] = "(e.departamento IN ({$placeholders}))";
+            foreach ( $departamentos_a_gestionar as $d ) {
+                $params[] = $d;
+            }
+        }
+        if ( $id_empleado_user ) {
+            $where_or[] = "(s.id_empleado = %d)";
+            $params[] = $id_empleado_user;
+        }
+
+        if ( ! empty( $where_or ) ) {
+            $where_conditions[] = '( ' . implode( ' OR ', $where_or ) . ' )';
+        }
+    }
+
+    // Filtro por estado si se provee
+    if ( ! empty( $estado ) && in_array( $estado, array( 'PENDIENTE', 'APROBADA', 'RECHAZADA' ), true ) ) {
+        $where_conditions[] = 's.estado = %s';
+        $params[] = $estado;
+    }
+
+    $where = '';
+    if ( ! empty( $where_conditions ) ) {
+        $where = 'WHERE ' . implode( ' AND ', $where_conditions );
+    }
+
+    $sql = "SELECT COUNT(*) FROM {$table_solicitudes} s JOIN {$table_empleados} e ON s.id_empleado = e.id_empleado {$where}";
 
     if ( ! empty( $params ) ) {
         $sql = $wpdb->prepare( $sql, $params );
     }
 
-    $results = $wpdb->get_results( $sql, ARRAY_A );
-    return $results ?: [];
+    $count = $wpdb->get_var( $sql );
+    return intval( $count );
+}
+
+/**
+ * Cuenta las solicitudes de medio día visibles para el usuario actual.
+ * @param string|null $estado Opcional: 'PENDIENTE', 'APROBADA', 'RECHAZADA' o null para todos
+ * @return int Conteo de solicitudes de medio día visibles
+ */
+function hrm_count_medio_dia_visibles( $estado = null ) {
+    global $wpdb;
+
+    $table_solicitudes = $wpdb->prefix . 'rrhh_solicitudes_medio_dia';
+    $table_empleados = $wpdb->prefix . 'rrhh_empleados';
+    $table_gerencia = $wpdb->prefix . 'rrhh_gerencia_deptos';
+
+    $where_conditions = array();
+    $params = array();
+
+    // Reglas propias de medio día
+    $where_conditions[] = "s.fecha_inicio = s.fecha_fin";
+    $where_conditions[] = "s.periodo_ausencia IN ('mañana', 'tarde')";
+
+    $is_admin = current_user_can( 'manage_options' );
+    $is_editor_vacaciones = current_user_can( 'manage_hrm_vacaciones' ) && ! current_user_can( 'edit_hrm_employees' );
+
+    if ( ! $is_admin && ! $is_editor_vacaciones ) {
+        $current_user_id = get_current_user_id();
+        $current_user = get_userdata( $current_user_id );
+        $current_user_email = $current_user ? $current_user->user_email : '';
+
+        $departamentos_a_gestionar = array();
+        if ( $current_user_email ) {
+            $deptos_result = $wpdb->get_col( $wpdb->prepare(
+                "SELECT depto_a_cargo FROM {$table_gerencia} WHERE correo_gerente = %s AND estado = 1",
+                $current_user_email
+            ) );
+            if ( ! empty( $deptos_result ) ) {
+                $departamentos_a_gestionar = $deptos_result;
+            }
+        }
+
+        $id_empleado_user = $wpdb->get_var( $wpdb->prepare(
+            "SELECT id_empleado FROM {$table_empleados} WHERE user_id = %d LIMIT 1",
+            $current_user_id
+        ) );
+
+        if ( empty( $departamentos_a_gestionar ) && empty( $id_empleado_user ) ) {
+            return 0;
+        }
+
+        $where_or = array();
+        if ( ! empty( $departamentos_a_gestionar ) ) {
+            $placeholders = implode( ',', array_fill( 0, count( $departamentos_a_gestionar ), '%s' ) );
+            $where_or[] = "(e.departamento IN ({$placeholders}))";
+            foreach ( $departamentos_a_gestionar as $d ) {
+                $params[] = $d;
+            }
+        }
+        if ( $id_empleado_user ) {
+            $where_or[] = "(s.id_empleado = %d)";
+            $params[] = $id_empleado_user;
+        }
+
+        if ( ! empty( $where_or ) ) {
+            $where_conditions[] = '( ' . implode( ' OR ', $where_or ) . ' )';
+        }
+    }
+
+    if ( ! empty( $estado ) && in_array( $estado, array( 'PENDIENTE', 'APROBADA', 'RECHAZADA' ), true ) ) {
+        $where_conditions[] = 's.estado = %s';
+        $params[] = $estado;
+    }
+
+    $where = '';
+    if ( ! empty( $where_conditions ) ) {
+        $where = 'WHERE ' . implode( ' AND ', $where_conditions );
+    }
+
+    $sql = "SELECT COUNT(*) FROM {$table_solicitudes} s JOIN {$table_empleados} e ON s.id_empleado = e.id_empleado {$where}";
+
+    if ( ! empty( $params ) ) {
+        $sql = $wpdb->prepare( $sql, $params );
+    }
+
+    $count = $wpdb->get_var( $sql );
+    return intval( $count );
 }
 
 /* =====================================================
@@ -612,29 +784,33 @@ function hrm_get_vacaciones_empleado( $user_id ) {
         return $cached;
     }
 
-    $table_solicitudes = $wpdb->prefix . 'rrhh_solicitudes_ausencia';
-    $table_empleados = $wpdb->prefix . 'rrhh_empleados';
-    $table_tipos = $wpdb->prefix . 'rrhh_tipo_ausencia';
+    // Tablas relevantes
+    $table_solicitudes = $wpdb->prefix . 'rrhh_solicitudes_ausencia'; // día completo
+    $table_medio_dia   = $wpdb->prefix . 'rrhh_solicitudes_medio_dia'; // medio día
+    $table_empleados   = $wpdb->prefix . 'rrhh_empleados';
+    $table_tipos       = $wpdb->prefix . 'rrhh_tipo_ausencia';
 
-    $results = $wpdb->get_results(
-        $wpdb->prepare("
-            SELECT 
-                s.id_solicitud,
-                t.nombre AS tipo,
-                s.fecha_inicio,
-                s.fecha_fin,
-                s.total_dias,
-                s.estado,
-                s.comentario_empleado
+    /* Consulta unificada (UNION ALL):
+     * Devuelve ambas tablas con columnas normalizadas para la vista.
+     */
+    $sql = "SELECT s.id_solicitud, t.nombre AS tipo, s.fecha_inicio, s.fecha_fin, s.total_dias, s.estado, 'completo' AS tipo_solicitud, NULL AS detalle
             FROM {$table_solicitudes} s
             JOIN {$table_empleados} e ON s.id_empleado = e.id_empleado
             JOIN {$table_tipos} t ON s.id_tipo = t.id_tipo
             WHERE e.user_id = %d
-            ORDER BY s.fecha_inicio DESC
-        ", $user_id),
-        ARRAY_A
-    );
-    
+
+            UNION ALL
+
+            SELECT m.id_solicitud, '' AS tipo, m.fecha_inicio, m.fecha_fin, m.total_dias, m.estado, 'medio_dia' AS tipo_solicitud, m.periodo_ausencia AS detalle
+            FROM {$table_medio_dia} m
+            JOIN {$table_empleados} e2 ON m.id_empleado = e2.id_empleado
+            WHERE e2.user_id = %d
+
+            ORDER BY fecha_inicio DESC";
+
+    // Ejecutar la consulta preparada (pasamos user_id para cada subconsulta)
+    $results = $wpdb->get_results( $wpdb->prepare( $sql, $user_id, $user_id ), ARRAY_A );
+
     // Guardar en caché
     wp_cache_set( $cache_key, $results, '', HRM_CACHE_TIMEOUT );
 
@@ -1669,16 +1845,13 @@ function hrm_enviar_notificacion_vacaciones( $id_solicitud, $estado ) {
         }
 
         // 2) Obtener los gerentes responsables del departamento del solicitante
-        $table_solicitudes = $wpdb->prefix . 'rrhh_solicitudes_ausencia';
+        // Tablas relevantes
+        $table_solicitudes = $wpdb->prefix . 'rrhh_solicitudes_ausencia'; // día completo
+        $table_medio_dia   = $wpdb->prefix . 'rrhh_solicitudes_medio_dia'; // medio día
         $table_empleados   = $wpdb->prefix . 'rrhh_empleados';
-        $table_gerencia    = $wpdb->prefix . 'rrhh_gerencia_deptos';
+        $table_tipos       = $wpdb->prefix . 'rrhh_tipo_ausencia';
 
-        $id_empleado_solicitante = $wpdb->get_var(
-            $wpdb->prepare(
-                "SELECT id_empleado FROM {$table_solicitudes} WHERE id_solicitud = %d LIMIT 1",
-                $id_solicitud
-            )
-        );
+        // Bloque SQL duplicado eliminado: la consulta UNIÓN se implementa en hrm_get_vacaciones_empleado().
 
         if ( $id_empleado_solicitante ) {
             $departamento_solicitante = $wpdb->get_var(

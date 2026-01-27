@@ -214,28 +214,21 @@ function setupYearSearch() {
  */
 function setupFormSubmit() {
     const form = document.getElementById('hrm-upload-form');
-    console.log('[HRM] setupFormSubmit ejecutado');
     if ( ! form ) {
-        console.log('[HRM] No se encontró el formulario hrm-upload-form');
         return;
     }
     const submitButton = form.querySelector('button[type="submit"]');
     if (!submitButton) {
-        console.log('[HRM] No se encontró el botón submit dentro del formulario');
+        // submit button missing -- proceed without logging
     }
     form.addEventListener('submit', function(e) {
-        console.log('[HRM] Evento submit del formulario capturado');
         e.preventDefault();
         
         // Validar campos requeridos
         const tipoInput = document.getElementById('hrm_tipo_documento');
         const anioInput = document.getElementById('hrm_anio_documento');
         const filesInput = document.getElementById('hrm_archivos_subidos');
-        console.log('[HRM] Valores actuales:', {
-            tipo: tipoInput ? tipoInput.value : null,
-            anio: anioInput ? anioInput.value : null,
-            files: filesInput ? filesInput.files.length : null
-        });
+        // Valores actuales (no debug log in production)
         
         if ( ! tipoInput.value ) {
             showUploadMessage('Por favor selecciona un tipo de documento', 'error');
@@ -297,7 +290,7 @@ function setupFormSubmit() {
                 }, 1500);
             }
             
-            submitButton.disabled = false;
+                submitButton.disabled = false;
             submitButton.innerHTML = '<span class="dashicons dashicons-upload"></span> Subir Documentos';
         })
         .catch(error => {

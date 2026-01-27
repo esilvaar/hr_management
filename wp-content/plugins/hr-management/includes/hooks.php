@@ -337,45 +337,144 @@ function hrm_redirect_wp_profile_page() {
 }
 add_action( 'admin_init', 'hrm_redirect_wp_profile_page' );
 
+// The anaconda documents create form and its standalone handler were removed.
+// Related admin-post handling is no longer required here.
+
 /**
- * Handler para crear Documentos Empresa enviado desde el formulario admin (admin-post)
+ * Manejar subidas de documentos desde el formulario del panel (hrm_action = upload_document)
+ * Guarda archivos en uploads/hrm_docs/{rut}/{anio}/{tipo_slug}/ y los registra en la tabla de documentos.
  */
-function hrm_handle_anaconda_documents_create() {
-    if ( ! is_user_logged_in() ) {
-        wp_die( 'Debes iniciar sesión para realizar esta acción.', 'Acceso denegado', array( 'response' => 403 ) );
+function hrm_handle_upload_document() {
+    if ( ! isset( $_POST['hrm_action'] ) || $_POST['hrm_action'] !== 'upload_document' ) {
+        return;
     }
 
-    // Permisos: admin o administrador_anaconda (view_hrm_admin_views o rol administrador_anaconda)
-    $current_user = wp_get_current_user();
-    $is_anaconda = in_array( 'administrador_anaconda', (array) $current_user->roles, true );
-    if ( ! ( current_user_can( 'manage_options' ) || current_user_can( 'view_hrm_admin_views' ) || $is_anaconda ) ) {
-        wp_die( 'No tienes permisos para crear documentos de empresa.', 'Acceso denegado', array( 'response' => 403 ) );
+    // Solo gestionar POST
+    if ( strtoupper( $_SERVER['REQUEST_METHOD'] ?? '' ) !== 'POST' ) {
+        return;
     }
+
+    // Evitar doble procesamiento si ya fue manejado
+    if ( defined( 'HRM_UPLOAD_DOCUMENT_HANDLED' ) && HRM_UPLOAD_DOCUMENT_HANDLED ) {
+        return;
+    }
+    define( 'HRM_UPLOAD_DOCUMENT_HANDLED', true );
 
     // Verificar nonce
-    if ( empty( $_POST['anaconda_documents_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['anaconda_documents_nonce'] ) ), 'anaconda_documents_create' ) ) {
-        wp_die( 'Nonce inválido.', 'Acceso denegado', array( 'response' => 403 ) );
+    $nonce = isset( $_POST['hrm_upload_nonce'] ) ? wp_unslash( $_POST['hrm_upload_nonce'] ) : '';
+    if ( ! wp_verify_nonce( $nonce, 'hrm_upload_file' ) ) {
+        wp_send_json_error( array( 'message' => 'Token de seguridad inválido' ), 403 );
     }
 
-    if ( empty( $_FILES['doc_file'] ) || ! isset( $_FILES['doc_file']['tmp_name'] ) || ! is_uploaded_file( $_FILES['doc_file']['tmp_name'] ) ) {
-        wp_safe_redirect( add_query_arg( 'result', 'no_file', wp_get_referer() ?: admin_url( 'admin.php?page=hrm-anaconda-documents' ) ) );
-        exit;
+    if ( ! is_user_logged_in() ) {
+        wp_send_json_error( array( 'message' => 'Usuario no autenticado' ), 401 );
     }
 
-    require_once ABSPATH . 'wp-admin/includes/file.php';
-    $file = $_FILES['doc_file'];
-    $overrides = array( 'test_form' => false, 'mimes' => array( 'pdf' => 'application/pdf' ) );
-    $move = wp_handle_upload( $file, $overrides );
-
-    if ( isset( $move['error'] ) ) {
-        error_log( '[HRM-DEBUG] anaconda upload error: ' . $move['error'] );
-        wp_safe_redirect( add_query_arg( 'result', 'upload_error', wp_get_referer() ?: admin_url( 'admin.php?page=hrm-anaconda-documents' ) ) );
-        exit;
+    // Permisos: admin o editar empleados
+    if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'edit_hrm_employees' ) ) {
+        wp_send_json_error( array( 'message' => 'No tienes permisos para subir documentos' ), 403 );
     }
 
-    // TODO: Aquí se puede insertar un registro en la tabla HRM de documentos si se requiere.
-    // Por ahora redirigimos a la página con resultado de éxito.
-    wp_safe_redirect( add_query_arg( 'result', 'success', wp_get_referer() ?: admin_url( 'admin.php?page=hrm-anaconda-documents' ) ) );
-    exit;
+    // Validar campos necesarios
+    $employee_id = isset( $_POST['employee_id'] ) ? absint( wp_unslash( $_POST['employee_id'] ) ) : 0;
+    $tipo_input  = isset( $_POST['tipo_documento'] ) ? sanitize_text_field( wp_unslash( $_POST['tipo_documento'] ) ) : '';
+    $anio        = isset( $_POST['anio_documento'] ) ? sanitize_text_field( wp_unslash( $_POST['anio_documento'] ) ) : date( 'Y' );
+
+    if ( empty( $employee_id ) ) {
+        wp_send_json_error( array( 'message' => 'Empleado no seleccionado' ), 400 );
+    }
+    if ( empty( $tipo_input ) ) {
+        wp_send_json_error( array( 'message' => 'Tipo de documento vacío' ), 400 );
+    }
+
+    // Asegurar clases DB
+    hrm_ensure_db_classes();
+    $db_emp  = new HRM_DB_Empleados();
+    $db_docs = new HRM_DB_Documentos();
+
+    $employee = $db_emp->get( $employee_id );
+    if ( ! $employee ) {
+        wp_send_json_error( array( 'message' => 'Empleado no encontrado' ), 404 );
+    }
+
+    $rut = ! empty( $employee->rut ) ? $employee->rut : $employee_id;
+
+    // Normalizar tipo: si es ID, obtener nombre
+    $tipo_name = $tipo_input;
+    if ( is_numeric( $tipo_input ) ) {
+        $all_types = $db_docs->get_all_types();
+        $tid = (int) $tipo_input;
+        if ( isset( $all_types[ $tid ] ) ) $tipo_name = $all_types[ $tid ];
+    }
+    $tipo_slug = sanitize_title( $tipo_name );
+
+    // Preparar directorio destino
+    $upload = wp_upload_dir();
+    $base_dir = trailingslashit( $upload['basedir'] ) . 'hrm_docs';
+    $rel_dir = trailingslashit( $rut ) . trailingslashit( $anio ) . trailingslashit( $tipo_slug );
+    $dest_dir = wp_normalize_path( $base_dir . $rel_dir );
+
+    if ( ! wp_mkdir_p( $dest_dir ) ) {
+        // intentar crear directorio y fallar si no es posible
+        wp_send_json_error( array( 'message' => 'No se pudo crear carpeta de destino en uploads' ), 500 );
+    }
+
+    if ( empty( $_FILES['archivos_subidos'] ) || empty( $_FILES['archivos_subidos']['name'] ) ) {
+        wp_send_json_error( array( 'message' => 'No hay archivos para subir' ), 400 );
+    }
+
+    $files = $_FILES['archivos_subidos'];
+    $saved = array();
+
+    // Procesar múltiples archivos
+    for ( $i = 0; $i < count( $files['name'] ); $i++ ) {
+        if ( empty( $files['name'][ $i ] ) ) continue;
+        $tmp_name = $files['tmp_name'][ $i ];
+        $orig_name = sanitize_file_name( $files['name'][ $i ] );
+        $ext = pathinfo( $orig_name, PATHINFO_EXTENSION );
+        $ext = $ext ? strtolower( $ext ) : 'pdf';
+
+        // Construir nombre final: mis-documentos-{slug}-{timestamp}-{i}.ext
+        $timestamp = time();
+        $final_base = 'mis-documentos-' . ( $tipo_slug ?: 'documento' );
+        $final_name = $final_base . '-' . $timestamp . ( $i ? '-' . $i : '' ) . '.' . $ext;
+        $final_path = wp_normalize_path( $dest_dir . DIRECTORY_SEPARATOR . $final_name );
+
+        // Mover archivo desde tmp a destino
+        if ( ! is_uploaded_file( $tmp_name ) ) {
+            // intentar continuar con el siguiente
+            continue;
+        }
+
+        if ( ! @move_uploaded_file( $tmp_name, $final_path ) ) {
+            error_log( 'HRM Upload - Failed to move uploaded file to: ' . $final_path );
+            continue;
+        }
+
+        // Construir URL pública
+        $file_url = trailingslashit( $upload['baseurl'] ) . 'hrm_docs/' . ltrim( $rel_dir, '/' ) . $final_name;
+
+        // Registrar en tabla de documentos
+        $inserted = $db_docs->create( array(
+            'rut'  => $rut,
+            'tipo' => $tipo_input,
+            'anio' => $anio,
+            'nombre' => $final_name,
+            'url' => $file_url,
+        ) );
+
+        if ( $inserted ) {
+            $saved[] = array( 'name' => $final_name, 'url' => $file_url );
+        } else {
+            // si falla la inserción en DB, intentar eliminar archivo para evitar basura
+            @unlink( $final_path );
+        }
+    }
+
+    if ( empty( $saved ) ) {
+        wp_send_json_error( array( 'message' => 'No se pudieron procesar los archivos' ), 500 );
+    }
+
+    wp_send_json_success( array( 'message' => 'Archivos subidos', 'files' => $saved ) );
 }
-add_action( 'admin_post_anaconda_documents_create', 'hrm_handle_anaconda_documents_create' );
+add_action( 'admin_init', 'hrm_handle_upload_document', 5 );

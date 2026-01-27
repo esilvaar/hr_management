@@ -58,3 +58,6 @@
 [13-Jan-2026 13:34:35 UTC] PHP Parse error:  Unclosed '{' on line 643 in /home/rrhhanacondaweb/public_html/wp-content/plugins/hr-management/includes/vacaciones.php on line 2614
 [13-Jan-2026 13:34:57 UTC] PHP Parse error:  Unclosed '{' on line 643 in /home/rrhhanacondaweb/public_html/wp-content/plugins/hr-management/includes/vacaciones.php on line 2614
 [13-Jan-2026 13:36:55 UTC] PHP Parse error:  Unclosed '{' on line 643 in /home/rrhhanacondaweb/public_html/wp-content/plugins/hr-management/includes/vacaciones.php on line 2612
+[27-Jan-2026 18:56:28 UTC] PHP Parse error:  Unmatched '}' in /home/rrhhanacondaweb/public_html/wp-content/plugins/hr-management/includes/vacaciones.php on line 589
+[27-Jan-2026 18:56:59 UTC] PHP Parse error:  Unmatched '}' in /home/rrhhanacondaweb/public_html/wp-content/plugins/hr-management/includes/vacaciones.php on line 589
+[27-Jan-2026 18:57:07 UTC] PHP Parse error:  Unmatched '}' in /home/rrhhanacondaweb/public_html/wp-content/plugins/hr-management/includes/vacaciones.php on line 589
