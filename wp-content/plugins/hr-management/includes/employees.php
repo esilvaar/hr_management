@@ -140,8 +140,136 @@ function hrm_handle_employees_post() {
 
         // Ejecutar actualización de datos
         $db_result = false;
-        if(!empty($update_data)) {
+        if ( ! empty( $update_data ) ) {
+            // Si se está cambiando el email y el empleado está vinculado a un usuario WP,
+            // primero actualizar WP (email + login) para mantener consistencia de inicio de sesión.
+            if ( isset( $update_data['email'] ) && ! empty( $employee_obj->user_id ) ) {
+                $new_email = $update_data['email'];
+                if ( ! is_email( $new_email ) ) {
+                    hrm_redirect_with_message( $redirect_base, __( 'Email inválido.', 'hr-management' ), 'error' );
+                }
+
+                // Verificar si otro usuario ya usa ese email
+                $existing_user = get_user_by( 'email', $new_email );
+                if ( $existing_user && intval( $existing_user->ID ) !== intval( $employee_obj->user_id ) ) {
+                    hrm_redirect_with_message( $redirect_base, __( 'El email ya está en uso por otro usuario.', 'hr-management' ), 'error' );
+                }
+
+                // Intentar usar el email como user_login (sanitizado). Si falla, usar parte local o añadir sufijo.
+                $desired_login = sanitize_user( $new_email, true );
+                if ( empty( $desired_login ) ) {
+                    $local = strstr( $new_email, '@', true );
+                    $desired_login = $local ? sanitize_user( $local, true ) : '';
+                }
+                if ( empty( $desired_login ) ) {
+                    $desired_login = 'user' . intval( $employee_obj->id );
+                }
+
+                // Asegurar unicidad de user_login
+                $login_candidate = $desired_login;
+                $suffix = 0;
+                $exists = username_exists( $login_candidate );
+                while ( $exists && intval( $exists ) !== intval( $employee_obj->user_id ) ) {
+                    $suffix++;
+                    $login_candidate = $desired_login . '-' . $suffix;
+                    $exists = username_exists( $login_candidate );
+                    if ( $suffix > 50 ) break;
+                }
+
+                // Obtener datos WP del usuario vinculado (si existe) para comparar user_login actual
+                $wp_user = null;
+                if ( ! empty( $employee_obj->user_id ) ) {
+                    $wp_user = get_userdata( intval( $employee_obj->user_id ) );
+                }
+
+                // Ejecutar actualización en WP
+                $wp_update_args = array( 'ID' => intval( $employee_obj->user_id ), 'user_email' => $new_email );
+                // Intentar también actualizar user_login si es diferente
+                if ( isset( $employee_obj->user_id ) && ( ! $wp_user || ( isset( $wp_user->user_login ) && $login_candidate !== $wp_user->user_login ) ) ) {
+                    $wp_update_args['user_login'] = $login_candidate;
+                }
+
+                // Evitar que WordPress envíe el correo automático al correo antiguo
+                $old_email = ( $wp_user && ! empty( $wp_user->user_email ) ) ? $wp_user->user_email : '';
+                $__hrm_suppress_mail = null;
+                if ( ! empty( $old_email ) ) {
+                    $__hrm_suppress_mail = function( $atts ) use ( $old_email ) {
+                        if ( empty( $atts ) || empty( $atts['to'] ) ) {
+                            return $atts;
+                        }
+
+                        $to = $atts['to'];
+                        if ( is_array( $to ) ) {
+                            foreach ( $to as $i => $addr ) {
+                                if ( '' !== $addr && strtolower( trim( $addr ) ) === strtolower( trim( $old_email ) ) ) {
+                                    unset( $to[ $i ] );
+                                }
+                            }
+                            $to = array_values( $to );
+                        } else {
+                            if ( strtolower( trim( $to ) ) === strtolower( trim( $old_email ) ) ) {
+                                $to = '';
+                            }
+                        }
+
+                        $atts['to'] = $to;
+                        return $atts;
+                    };
+                    add_filter( 'wp_mail', $__hrm_suppress_mail, 10, 1 );
+                }
+
+                $wp_res = wp_update_user( $wp_update_args );
+
+                if ( $__hrm_suppress_mail ) {
+                    remove_filter( 'wp_mail', $__hrm_suppress_mail, 10 );
+                }
+                if ( is_wp_error( $wp_res ) ) {
+                    hrm_redirect_with_message( $redirect_base, sprintf( __( 'Error al actualizar usuario de WordPress: %s', 'hr-management' ), $wp_res->get_error_message() ), 'error' );
+                }
+            }
+
+            // Finalmente actualizar la fila de empleados en la tabla custom
             $db_result = $db_emp->update( $emp_id, $update_data );
+
+            // Enviar notificaciones por correo si el email cambió y la actualización DB fue exitosa
+            if ( $db_result && isset( $update_data['email'] ) ) {
+                $old_email = isset( $employee_obj->email ) ? $employee_obj->email : '';
+
+                // Obtener estado final del usuario WP para incluir login usado
+                $final_wp_user = null;
+                if ( ! empty( $employee_obj->user_id ) ) {
+                    $final_wp_user = get_userdata( intval( $employee_obj->user_id ) );
+                }
+
+                $final_login = $final_wp_user && isset( $final_wp_user->user_login ) ? $final_wp_user->user_login : '';
+                $final_email = $final_wp_user && isset( $final_wp_user->user_email ) ? $final_wp_user->user_email : $update_data['email'];
+
+                // Preparar datos comunes
+                $site_name = get_bloginfo( 'name' );
+                $login_url = wp_login_url();
+                $headers = array( 'Content-Type: text/plain; charset=UTF-8' );
+
+                // Aviso al email antiguo (si existe y es distinto)
+                if ( ! empty( $old_email ) && $old_email !== $final_email ) {
+                    $subject_old = sprintf( '[%s] Cambio de correo de acceso', $site_name );
+                    $message_old = "Hola,\n\n";
+                    $message_old .= sprintf( "La dirección de correo %s asociada a una cuenta en %s ha sido reemplazada y ya no podrá usarse para iniciar sesión.", $old_email, $site_name );
+                    $message_old .= "\n\nSi no autorizaste este cambio, contacta al administrador inmediatamente.";
+                    wp_mail( $old_email, $subject_old, $message_old, $headers );
+                }
+
+                // Aviso al nuevo email con detalles de acceso
+                if ( ! empty( $final_email ) ) {
+                    $subject_new = sprintf( '[%s] Tu acceso ha sido actualizado', $site_name );
+                    $message_new = "Hola,\n\n";
+                    $message_new .= sprintf( "Se ha actualizado la dirección de correo asociada a tu cuenta en %s.", $site_name );
+                    $message_new .= "\n\nDetalles de acceso:\n";
+                    $message_new .= sprintf( "- Usuario: %s\n", $final_login ?: $final_email );
+                    $message_new .= sprintf( "- Email: %s\n", $final_email );
+                    $message_new .= "\nAccede aquí: " . $login_url . "\n\nSi no solicitaste este cambio, contacta al administrador inmediatamente.";
+                    wp_mail( $final_email, $subject_new, $message_new, $headers );
+                }
+            }
         }
 
         // 2. PROCESAR CAMBIO DE CONTRASEÑA (Integrado)

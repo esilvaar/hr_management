@@ -203,7 +203,7 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
                     <li>
                         <a class="nav-link px-3 py-2 <?= hrm_sidebar_is_active('hrm-empleados', 'upload'); ?>"
                             href="<?= esc_url($upload_url); ?>">
-                            Documentos
+                            Documentos del Empleado
                         </a>
                     </li>
                     <?php if ($can_admin_views):  // Solo quien pueda administrar puede crear nuevos ?>
@@ -230,6 +230,12 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
                         <a class="nav-link px-3 py-2 <?= hrm_sidebar_is_active('hrm-vacaciones'); ?>"
                             href="<?= esc_url(admin_url('admin.php?page=hrm-vacaciones')); ?>">
                             Solicitudes de Vacaciones
+                            <?php
+                            $hrm_sidebar_notifications = function_exists('hrm_get_notifications_for_current_user') ? hrm_get_notifications_for_current_user() : array();
+                            $hrm_sidebar_unread = is_array($hrm_sidebar_notifications) ? count($hrm_sidebar_notifications) : 0;
+                            if ($hrm_sidebar_unread > 0): ?>
+                                <span class="hrm-badge ms-2"><?= intval($hrm_sidebar_unread) ?></span>
+                            <?php endif; ?>
                         </a>
                     </li>
                 </ul>
