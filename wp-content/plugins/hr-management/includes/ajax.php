@@ -36,7 +36,154 @@ function hrm_ajax_descargar_liquidaciones() {
     if (!$user_id || !$year) {
         wp_die('Parámetros inválidos');
     }
+    // Permitir que administradores o editores de empleados especifiquen un employee_id
+    if ( ( current_user_can('manage_options') || current_user_can('edit_hrm_employees') ) && isset( $_GET['employee_id'] ) ) {
+        $employee_id = absint( $_GET['employee_id'] );
+        if ( $employee_id ) {
+            hrm_ensure_db_classes();
+            $db_emp = new HRM_DB_Empleados();
+            $emp = $db_emp->get( $employee_id );
+            if ( $emp && ! empty( $emp->user_id ) ) {
+                $user_id = $emp->user_id;
+                if ( defined('WP_DEBUG') && WP_DEBUG ) {
+                    error_log('[HRM] descargar_liquidaciones: overriding user_id with employee->user_id=' . intval($user_id) );
+                }
+            }
+        }
+    }
+
     descargar_liquidaciones($user_id, $year, $cantidad);
+}
+
+/**
+ * Generar y enviar un ZIP con liquidaciones para un usuario y año dados.
+ * @param int $user_id WP user id
+ * @param int|string $year
+ * @param int|string $cantidad 1|3|6|'all'
+ */
+function descargar_liquidaciones( $user_id, $year = '', $cantidad = 'all' ) {
+    // Asegurar clases DB
+    hrm_ensure_db_classes();
+    $db_emp  = new HRM_DB_Empleados();
+    $db_docs = new HRM_DB_Documentos();
+
+    // Obtener empleado por user_id
+    $empleado = $db_emp->get_by_user_id( $user_id );
+    if ( ! $empleado || empty( $empleado->rut ) ) {
+        wp_die( 'Empleado no encontrado para el usuario.' );
+    }
+
+    $rut = $empleado->rut;
+
+    // Obtener documentos tipo 'liquidaciones'
+    $documents = $db_docs->get_by_rut( $rut, 'liquidaciones' );
+    if ( empty( $documents ) ) {
+        wp_die( 'No hay liquidaciones disponibles.' );
+    }
+
+    // Filtrar por año si se especifica
+    if ( ! empty( $year ) ) {
+        $documents = array_values( array_filter( $documents, function( $d ) use ( $year ) {
+            return isset( $d->anio ) && (string)$d->anio === (string)$year;
+        } ) );
+    }
+
+    if ( empty( $documents ) ) {
+        wp_die( 'No hay liquidaciones para el año solicitado.' );
+    }
+
+    // Ordenar por fecha descendente (últimas primero)
+    usort( $documents, function( $a, $b ) {
+        $ta = strtotime( $a->fecha ?? '1970-01-01' );
+        $tb = strtotime( $b->fecha ?? '1970-01-01' );
+        return $tb - $ta;
+    } );
+
+    // Seleccionar cantidad
+    if ( is_numeric( $cantidad ) ) {
+        $n = max( 0, intval( $cantidad ) );
+        $documents = array_slice( $documents, 0, $n );
+    } else {
+        // 'all' -> keep
+    }
+
+    if ( empty( $documents ) ) {
+        wp_die( 'No hay documentos seleccionados para descargar.' );
+    }
+
+    if ( ! class_exists( 'ZipArchive' ) ) {
+        wp_die( 'El servidor no tiene soporte para crear archivos ZIP.' );
+    }
+
+    $upload_dir = wp_get_upload_dir();
+
+    // Crear ZIP temporal
+    $tmpfile = wp_tempnam( 'hrm_liq_' );
+    if ( ! $tmpfile ) $tmpfile = sys_get_temp_dir() . '/hrm_liq_' . time() . '.zip';
+    $zip = new ZipArchive();
+    if ( $zip->open( $tmpfile, ZipArchive::CREATE | ZipArchive::OVERWRITE ) !== true ) {
+        wp_die( 'No se pudo crear archivo ZIP temporal.' );
+    }
+
+    $added = 0;
+    foreach ( $documents as $doc ) {
+        $url = isset( $doc->url ) ? $doc->url : '';
+        if ( empty( $url ) ) continue;
+
+        $filepath = '';
+        // Si ya es ruta en el filesystem
+        if ( file_exists( $url ) ) {
+            $filepath = $url;
+        } else {
+            // Intentar reemplazar upload baseurl por basedir
+            if ( strpos( $url, $upload_dir['baseurl'] ) === 0 ) {
+                $filepath = str_replace( $upload_dir['baseurl'], $upload_dir['basedir'], $url );
+            } else {
+                // Extraer path y mapear a ABSPATH si parece relativo
+                $p = wp_parse_url( $url );
+                if ( ! empty( $p['path'] ) ) {
+                    $maybe = ABSPATH . ltrim( $p['path'], '/' );
+                    if ( file_exists( $maybe ) ) $filepath = $maybe;
+                }
+            }
+        }
+
+        if ( ! $filepath || ! file_exists( $filepath ) ) {
+            error_log( '[HRM] descargar_liquidaciones - archivo no encontrado: ' . $url );
+            continue;
+        }
+
+        $name_in_zip = basename( $filepath );
+        // Evitar colisiones: prefijar con año y nombre si necesario
+        $zip->addFile( $filepath, $name_in_zip );
+        $added++;
+    }
+
+    if ( $added === 0 ) {
+        $zip->close();
+        @unlink( $tmpfile );
+        wp_die( 'No se encontraron archivos físicos para empaquetar.' );
+    }
+
+    $zip->close();
+
+    // Forzar descarga
+    if ( headers_sent() ) {
+        // No podemos enviar headers, fallar silenciosamente
+        wp_die( 'No es posible iniciar la descarga (headers ya enviados).' );
+    }
+
+    $filename = 'liquidaciones-' . sanitize_file_name( $empleado->rut . '-' . ($year ?: date('Y')) ) . '-' . date('YmdHis') . '.zip';
+    header( 'Content-Type: application/zip' );
+    header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+    header( 'Content-Length: ' . filesize( $tmpfile ) );
+    header( 'Pragma: public' );
+    header( 'Cache-Control: must-revalidate, post-check=0, pre-check=0' );
+
+    readfile( $tmpfile );
+    // limpiar
+    @unlink( $tmpfile );
+    exit;
 }
 
 /**

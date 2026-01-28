@@ -10,13 +10,21 @@ function hrm_enqueue_mis_documentos_admin($hook)
             'hrm-mi-documentos',
         ])
     ) {
-        wp_enqueue_script(
-            'hrm-mis-documentos',
-            HRM_PLUGIN_URL . 'assets/js/mis-documentos.js',
-            array('jquery'),
-            HRM_PLUGIN_VERSION,
-            true
-        );
+        $mis_js_path = HRM_PLUGIN_DIR . 'assets/js/mis-documentos.js';
+        if ( file_exists( $mis_js_path ) ) {
+            wp_enqueue_script(
+                'hrm-mis-documentos',
+                HRM_PLUGIN_URL . 'assets/js/mis-documentos.js',
+                array('jquery'),
+                HRM_PLUGIN_VERSION,
+                true
+            );
+        } else {
+            // Archivo ausente: evitar 404 en consola. Registrar para depuración si WP_DEBUG está activo.
+            if ( defined('WP_DEBUG') && WP_DEBUG ) {
+                error_log('[HRM] assets/js/mis-documentos.js no existe, se omite su encolado.');
+            }
+        }
     }
 }
 add_action('admin_enqueue_scripts', 'hrm_enqueue_mis_documentos_admin');

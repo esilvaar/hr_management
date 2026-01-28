@@ -27,6 +27,38 @@ if ( $employee_id ) {
 // Obtener liquidaciones
 $documents = $db_docs->get_by_rut( $employee->rut, 'liquidaciones' );
 
+// Ordenar documentos por mes (diciembre primero) — mantener consistencia con el listado AJAX
+$month_order = array(
+    'diciembre' => 1,
+    'noviembre' => 2,
+    'octubre'   => 3,
+    'septiembre'=> 4,
+    'agosto'    => 5,
+    'julio'     => 6,
+    'junio'     => 7,
+    'mayo'      => 8,
+    'abril'     => 9,
+    'marzo'     => 10,
+    'febrero'   => 11,
+    'enero'     => 12
+);
+
+if ( ! empty( $documents ) && is_array( $documents ) ) {
+    usort( $documents, function( $a, $b ) use ( $month_order ) {
+        $mes_a = '';
+        $mes_b = '';
+        foreach ( $month_order as $mes => $ord ) {
+            if ( stripos( $a->nombre, $mes ) !== false ) { $mes_a = $mes; break; }
+        }
+        foreach ( $month_order as $mes => $ord ) {
+            if ( stripos( $b->nombre, $mes ) !== false ) { $mes_b = $mes; break; }
+        }
+        $orden_a = $mes_a ? $month_order[ $mes_a ] : 99;
+        $orden_b = $mes_b ? $month_order[ $mes_b ] : 99;
+        return $orden_a - $orden_b;
+    } );
+}
+
 // JS data
 wp_localize_script( 'hrm-mis-documentos', 'hrmMisDocsData', array(
     'ajaxUrl' => admin_url( 'admin-ajax.php' ),
@@ -59,9 +91,18 @@ wp_localize_script( 'hrm-mis-documentos', 'hrmMisDocsData', array(
                                 <option value="<?= esc_attr( $y ); ?>" <?= $y === $anio_actual ? 'selected' : ''; ?>><?= esc_html( $y ); ?></option>
                             <?php endfor; ?>
                         </select>
+                        <div id="hrm-mis-download" style="position:relative;">
+                            <button id="hrm-mis-download-btn" class="btn btn-outline-primary btn-sm ms-2">Descargar ▾</button>
+                            <div id="hrm-mis-download-menu" style="display:none; position:absolute; top:calc(100% + 6px); left:0; background:#fff; border:1px solid #ddd; box-shadow:0 6px 18px rgba(0,0,0,0.08); z-index:1200; min-width:200px;">
+                                <a href="#" class="dropdown-item p-2" data-cantidad="1">Descargar última</a>
+                                <a href="#" class="dropdown-item p-2" data-cantidad="3">Descargar últimas 3</a>
+                                <a href="#" class="dropdown-item p-2" data-cantidad="6">Descargar últimas 6</a>
+                                <a href="#" class="dropdown-item p-2" data-cantidad="all">Descargar todas</a>
+                            </div>
+                        </div>
                     </div>
 
-                    <div id="hrm-mis-documents-container">
+                    <div id="hrm-mis-documents-container" style="visibility:hidden;">
                         <?php if ( ! empty( $documents ) ) : ?>
                             <div class="table-responsive">
                                 <table class="table table-striped table-hover mb-0">
@@ -196,6 +237,74 @@ document.addEventListener('DOMContentLoaded', function () {
         yearSelect.addEventListener('change', filterRowsByYear);
         // Inicializar filtro (el select viene por defecto con el año actual seleccionado)
         filterRowsByYear();
+        // Mostrar el contenedor una vez aplicado el filtro para evitar mostrar todos brevemente
+        try { container.style.visibility = 'visible'; } catch(e) { /* no-op */ }
+    })();
+
+    // Descargas: manejar el menú de descarga para liquidaciones (última/3/6/todas)
+    (function(){
+        const btn = document.getElementById('hrm-mis-download-btn');
+        const menu = document.getElementById('hrm-mis-download-menu');
+        const yearSelect = document.getElementById('hrm-mis-year-select');
+        const employeeId = <?= isset($employee->id) ? intval($employee->id) : 0; ?>;
+        if (!btn || !menu || !yearSelect) return;
+
+        btn.addEventListener('click', function(e){
+            e.preventDefault();
+            // Antes de mostrar, actualizar visibilidad de opciones según documentos disponibles
+            updateDownloadMenuVisibility();
+            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+        });
+
+        document.addEventListener('click', function(e){
+            if (!e.target.closest || (!e.target.closest('#hrm-mis-download') && !e.target.closest('#hrm-mis-download-menu') )) {
+                menu.style.display = 'none';
+            }
+        });
+
+        const menuItems = menu.querySelectorAll('a[data-cantidad]');
+        function updateDownloadMenuVisibility(){
+            // Contar filas disponibles según el año seleccionado
+            const year = yearSelect.value || '';
+            const rows = document.querySelectorAll('#hrm-mis-documents-container table tbody tr');
+            let count = 0;
+            rows.forEach(function(r){ if (!year || String(r.dataset.year) === String(year)) count++; });
+
+            // Mostrar solo las opciones pertinentes
+            menuItems.forEach(function(mi){
+                const c = mi.getAttribute('data-cantidad');
+                if (c === 'all') {
+                    mi.style.display = (count > 0) ? 'block' : 'none';
+                } else {
+                    const n = parseInt(c, 10) || 0;
+                    mi.style.display = (count >= n) ? 'block' : 'none';
+                }
+            });
+
+            // Si no hay opciones visibles, deshabilitar el botón
+            const visibleCount = Array.from(menuItems).filter(m => m.style.display !== 'none').length;
+            btn.disabled = visibleCount === 0;
+        }
+
+        // Actualizar al cambiar año
+        yearSelect.addEventListener('change', function(){ updateDownloadMenuVisibility(); });
+
+        menuItems.forEach(function(a){
+            a.addEventListener('click', function(e){
+                e.preventDefault();
+                const cantidad = this.getAttribute('data-cantidad');
+                const year = yearSelect.value || '';
+                // Construir URL al endpoint que genera el ZIP
+                let url = '<?= admin_url( "admin-ajax.php" ); ?>?action=hrm_descargar_liquidaciones&cantidad=' + encodeURIComponent(cantidad);
+                if ( year ) url += '&year=' + encodeURIComponent(year);
+                if ( employeeId ) url += '&employee_id=' + encodeURIComponent(employeeId);
+                // Abrir en nueva ventana/pestaña para permitir descarga sin navegar fuera
+                window.open(url, '_blank');
+                menu.style.display = 'none';
+            });
+        });
+        // Inicializar visibilidad
+        try { updateDownloadMenuVisibility(); } catch(e) { /* no-op */ }
     })();
 
 });
