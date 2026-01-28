@@ -154,7 +154,10 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
                         // Evitar duplicados con los items estáticos (Contrato/Liquidaciones/Licencias)
                         $reserved = array_map('strtolower', array('contrato', 'contratos', 'liquidacion', 'liquidaciones', 'licencia', 'licencias'));
                         foreach ($hrm_doc_types as $t_id => $t_name):
+                            // Omitir nombres reservados y el tipo 'Empresa'
                             if (in_array(strtolower(trim($t_name)), $reserved, true))
+                                continue;
+                            if (strtolower(trim($t_name)) === 'empresa')
                                 continue;
                             ?>
                             <li>
@@ -265,12 +268,25 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
                     <span class="flex-grow-1">Documentos-Reglamentos</span>
                 </summary>
                 <ul class="list-unstyled px-2 mb-2">
-                    <li>
-                        <a class="nav-link px-3 py-2 <?= hrm_sidebar_is_active('hrm-convivencia'); ?>"
-                            href="<?= esc_url(admin_url('admin.php?page=hrm-convivencia')); ?>">
-                            Reglamento Interno
-                        </a>
-                    </li>
+                    <?php
+                    // Mostrar documentos guardados en la tabla personalizada
+                    global $wpdb;
+                    $table = $wpdb->prefix . 'rrhh_documentos_empresa';
+                    $docs = $wpdb->get_results( "SELECT id, titulo FROM {$table} ORDER BY fecha_creacion DESC" );
+                    if ( ! empty( $docs ) ) :
+                        foreach ( $docs as $d ) :
+                            $doc_id = intval( $d->id );
+                            $title = esc_html( $d->titulo ? $d->titulo : 'Documento ' . $doc_id );
+                            $is_active = (string) hrm_get_query_var('doc_id') === (string) $doc_id ? ' active' : '';
+                            $href = esc_url( add_query_arg( array( 'page' => 'hrm-convivencia', 'doc_id' => $doc_id ), admin_url('admin.php') ) );
+                            ?>
+                            <li>
+                                <a class="nav-link px-3 py-2<?= $is_active ?>" href="<?= $href ?>"><?= $title ?></a>
+                            </li>
+                            <?php
+                        endforeach;
+                    endif;
+                    ?>
                 </ul>
             </details>
         </div>

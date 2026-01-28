@@ -1209,7 +1209,7 @@ function hrm_render_reglamento_interno_page()
     echo '<div class="hrm-admin-layout">';
     hrm_get_template_part('partials/sidebar-loader');
     echo '<main class="hrm-content">';
-    hrm_get_template_part('reglamento-interno');
+    hrm_get_template_part('anaconda-view-documents');
     echo '</main>';
     echo '</div>';
     echo '</div>';

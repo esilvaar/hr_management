@@ -12,10 +12,9 @@ if ( ! $employee ) {
     return;
 }
 
-// Verificar permisos
+// Verificar permisos: reutilizamos la lógica centralizada
 $current_user_id = get_current_user_id();
-$can_edit = current_user_can( 'edit_hrm_employees' ) || 
-            ( $current_user_id && intval( $employee->user_id ) === $current_user_id && current_user_can( 'view_hrm_own_profile' ) );
+$can_edit = function_exists('hrm_can_edit_employee') ? hrm_can_edit_employee( $employee->id ) : ( current_user_can( 'edit_hrm_employees' ) || ( $current_user_id && intval( $employee->user_id ) === $current_user_id ) );
 
 if ( ! $can_edit ) {
     echo '<div class="notice notice-error"><p>No tienes permisos para editar tu perfil.</p></div>';

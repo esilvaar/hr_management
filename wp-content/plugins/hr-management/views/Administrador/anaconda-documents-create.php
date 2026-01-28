@@ -23,6 +23,7 @@ $current_user = wp_get_current_user();
                                 <div style="padding:14px 18px;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;">
                                     <h3 id="modal-title" style="margin:0;font-size:16px;">Crear Documento Empresa</h3>
                                     <button id="modal-close" aria-label="Cerrar" style="background:transparent;border:0;font-size:20px;line-height:1;cursor:pointer;">&times;</button>
+
                                 </div>
                                 <div class="anaconda-modal-body" style="padding:16px;">
                                     <form id="anaconda-doc-create" class="anaconda-form" action="<?php echo esc_url( admin_url('admin-post.php') ); ?>" method="post" enctype="multipart/form-data" novalidate>
@@ -129,29 +130,7 @@ $current_user = wp_get_current_user();
                 <h2>Documentos registrados</h2>
 
                 <div class="admin-controls" style="display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
-                    <div style="flex:1;min-width:200px;">
-                        <label for="adm_search">Buscar</label>
-                        <input id="adm_search" type="search" placeholder="Buscar por título, usuario o archivo..." style="width:100%;padding:8px;box-sizing:border-box;" />
-                    </div>
-
-                    <div>
-                        <label for="adm_filter">Filtro</label>
-                        <select id="adm_filter" style="padding:8px;">
-                            <option value="all">Todos</option>
-                            <option value="active">Activos</option>
-                            <option value="archived">Archivados</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="bulk_action">Acciones</label>
-                        <select id="bulk_action" style="padding:8px;">
-                            <option value="">Seleccionar acción</option>
-                            <option value="delete">Eliminar</option>
-                            <option value="archive">Archivar</option>
-                        </select>
-                        <button id="bulk_apply" style="margin-left:6px;padding:8px 10px;">Aplicar</button>
-                    </div>
+                
                 </div>
 
                 <div class="table-wrap" style="overflow:auto;border:1px solid #e5e5e5;border-radius:4px;">
@@ -169,20 +148,63 @@ $current_user = wp_get_current_user();
                             </tr>
                         </thead>
                         <tbody id="anaconda-documents-table-body">
-                            <tr class="no-data">
-                                <td colspan="8" style="padding:18px;text-align:center;color:#666;">No hay documentos registrados.</td>
-                            </tr>
+                            <?php
+                            // List files from uploads/hrm_docs/empresa
+                            $upload_dir = wp_upload_dir();
+                            $empresa_dir = trailingslashit( $upload_dir['basedir'] ) . 'hrm_docs/empresa';
+                            $empresa_url = trailingslashit( $upload_dir['baseurl'] ) . 'hrm_docs/empresa';
+
+                            $rows = array();
+                            if ( is_dir( $empresa_dir ) ) {
+                                $files = glob( $empresa_dir . '/*.{pdf,PDF}', GLOB_BRACE );
+                                if ( $files ) {
+                                    usort( $files, function( $a, $b ) { return filemtime($b) - filemtime($a); } );
+                                    $i = 0;
+                                    foreach ( $files as $f ) {
+                                        $i++;
+                                        $basename = basename( $f );
+                                        $meta = array();
+                                        $meta_path = $f . '.json';
+                                        if ( file_exists( $meta_path ) ) {
+                                            $raw = @file_get_contents( $meta_path );
+                                            $decoded = json_decode( $raw, true );
+                                            if ( is_array( $decoded ) ) $meta = $decoded;
+                                        }
+                                        $title = ! empty( $meta['title'] ) ? $meta['title'] : pathinfo( $basename, PATHINFO_FILENAME );
+                                        $uploaded_by = ! empty( $meta['uploaded_by'] ) ? intval( $meta['uploaded_by'] ) : 0;
+                                        $uploaded_by_name = $uploaded_by ? esc_html( get_the_author_meta( 'display_name', $uploaded_by ) ) : '-';
+                                        $date = date( 'Y-m-d H:i', filemtime( $f ) );
+                                        $file_url = $empresa_url . '/' . rawurlencode( $basename );
+
+                                        echo '<tr data-fpath="' . esc_attr( $f ) . '">';
+                                        echo '<td style="padding:10px;text-align:center;"><input type="checkbox" name="selected_docs[]" value="' . esc_attr( $basename ) . '"></td>';
+                                        echo '<td style="padding:10px;">' . esc_html( $i ) . '</td>';
+                                        echo '<td style="padding:10px;">' . esc_html( $title ) . '</td>';
+                                        echo '<td style="padding:10px;">' . '<a href="' . esc_url( $file_url ) . '" target="_blank" rel="noopener">' . esc_html( $basename ) . '</a>' . '</td>';
+                                        echo '<td style="padding:10px;">' . $uploaded_by_name . '</td>';
+                                        echo '<td style="padding:10px;">' . esc_html( $date ) . '</td>';
+                                        echo '<td style="padding:10px;">' . ( ! empty( $meta ) ? 'activo' : '—' ) . '</td>';
+                                        // Actions: download and delete (delete posts to admin-post)
+                                        echo '<td style="padding:10px;">';
+                                        echo '<a href="' . esc_url( $file_url ) . '" class="actions-link" target="_blank">Descargar</a> ';
+                                        if ( current_user_can( 'manage_options' ) ) {
+                                            $delete_url = esc_url( admin_url( 'admin-post.php?action=anaconda_documents_delete&file=' . rawurlencode( $basename ) . '&_wpnonce=' . wp_create_nonce( 'anaconda_documents_delete' ) ) );
+                                            echo '<a href="' . $delete_url . '" class="actions-link text-danger" style="margin-left:8px;">Eliminar</a>';
+                                        }
+                                        echo '</td>';
+                                        echo '</tr>';
+                                    }
+                                }
+                            }
+
+                            if ( empty( $files ) ) {
+                                echo '<tr class="no-data"><td colspan="8" style="padding:18px;text-align:center;color:#666;">No hay documentos registrados.</td></tr>';
+                            }
+                            ?>
                         </tbody>
                     </table>
                 </div>
 
-                <div class="admin-pagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
-                    <div class="pagination-info" style="color:#666;font-size:13px;">Mostrando 0 - 0 de 0</div>
-                    <div class="pagination-controls">
-                        <button id="prev_page" style="padding:6px 10px;margin-right:6px;">Anterior</button>
-                        <button id="next_page" style="padding:6px 10px;">Siguiente</button>
-                    </div>
-                </div>
 
                 <style>
                 /* Administración: estilos básicos */

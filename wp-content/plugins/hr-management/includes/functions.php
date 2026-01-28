@@ -381,11 +381,12 @@ function hrm_can_edit_employee( $employee_id ) {
         return false;
     }
     
-    // Admins siempre pueden editar
-    if ( current_user_can( 'edit_hrm_employees' ) ) {
+    // Admins / HR admins / administrador_anaconda pueden editar
+    // Consideramos capacidades y rol específico para compatibilidad
+    if ( current_user_can( 'edit_hrm_employees' ) || current_user_can( 'manage_options' ) || current_user_can( 'view_hrm_admin_views' ) || in_array( 'administrador_anaconda', (array) wp_get_current_user()->roles, true ) ) {
         return true;
     }
-    
+
     // Gerentes pueden editar empleados de sus departamentos
     if ( current_user_can( 'edit_hrm_employees' ) || hrm_user_is_gerente( $current_user_id ) ) {
         // Obtener los departamentos que el gerente tiene a cargo
@@ -397,11 +398,17 @@ function hrm_can_edit_employee( $employee_id ) {
         }
     }
     
-    // Empleados solo pueden editar su propio perfil
-    if ( current_user_can( 'view_hrm_own_profile' ) ) {
-        return $employee && intval( $employee->user_id ) === $current_user_id;
+    // Empleados pueden editar su propio perfil si están vinculados por user_id
+    if ( intval( $employee->user_id ) === $current_user_id ) {
+        return true;
     }
-    
+
+    // Si no hay vínculo por user_id, permitir edición si el email del WP user coincide con el email del empleado
+    $current_user = wp_get_current_user();
+    if ( ! empty( $current_user->user_email ) && ! empty( $employee->email ) && strtolower( $current_user->user_email ) === strtolower( $employee->email ) ) {
+        return true;
+    }
+
     return false;
 }
 

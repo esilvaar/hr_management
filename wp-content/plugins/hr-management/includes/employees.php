@@ -59,6 +59,11 @@ function hrm_handle_employees_post() {
     if ( ! is_admin() || $_SERVER['REQUEST_METHOD'] !== 'POST' ) return;
     if ( ! isset( $_POST['hrm_action'] ) ) return;
 
+    if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+        $cu = wp_get_current_user();
+        error_log('[HRM-POST] hrm_handle_employees_post invoked. user_id=' . intval($cu->ID) . ' roles=' . json_encode($cu->roles) . ' REQUEST_URI=' . ($_SERVER['REQUEST_URI'] ?? '') . ' POST_hrm_action=' . (isset($_POST['hrm_action']) ? sanitize_text_field($_POST['hrm_action']) : '') );
+    }
+
     $action = $_POST['hrm_action'];
     $db_emp  = new HRM_DB_Empleados();
     $db_docs = new HRM_DB_Documentos();
@@ -72,7 +77,15 @@ function hrm_handle_employees_post() {
     // =========================================================================
     // ACCIÓN A: ACTUALIZAR EMPLEADO
     // =========================================================================
-    if ( $action === 'update_employee' && check_admin_referer( 'hrm_update_employee', 'hrm_update_employee_nonce' ) ) {
+    if ( $action === 'update_employee' ) {
+        // Verificar nonce manualmente para evitar que WP haga wp_die() y devuelva 403 sin contexto
+        $nonce = isset( $_POST['hrm_update_employee_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['hrm_update_employee_nonce'] ) ) : '';
+        if ( ! $nonce || ! wp_verify_nonce( $nonce, 'hrm_update_employee' ) ) {
+            // Registrar para depuración y redirigir con mensaje amigable
+            error_log( 'HRM: update_employee - nonce verification failed for user_id=' . get_current_user_id() . ' ip=' . ( $_SERVER['REMOTE_ADDR'] ?? '' ) );
+            hrm_redirect_with_message( $redirect_base, __( 'Token de seguridad inválido. Intenta recargar la página e inténtalo de nuevo.', 'hr-management' ), 'error' );
+        }
+
         $emp_id = absint( $_POST['employee_id'] );
         
         if ( ! hrm_can_edit_employee( $emp_id ) ) {
@@ -85,9 +98,11 @@ function hrm_handle_employees_post() {
         // 1. PROCESAR DATOS NORMALES (Campos editables)
         // ---------------------------------------------
         $current_user = wp_get_current_user();
-        $is_admin = current_user_can( 'manage_options' );
+        // Consider administrator, administrador_anaconda and users with view_hrm_admin_views as admin for update purposes
+        $is_admin = current_user_can( 'manage_options' ) || current_user_can( 'view_hrm_admin_views' ) || in_array( 'administrador_anaconda', (array) $current_user->roles, true );
         $is_supervisor = current_user_can( 'edit_hrm_employees' );
-        $is_own = ( intval( $employee_obj->user_id ) === get_current_user_id() );
+        // Owner detection: linked by user_id OR matching email
+        $is_own = ( intval( $employee_obj->user_id ) === get_current_user_id() ) || ( ! empty( $current_user->user_email ) && ! empty( $employee_obj->email ) && strtolower( $current_user->user_email ) === strtolower( $employee_obj->email ) );
 
         // Determinar campos permitidos (Misma lógica que la vista para seguridad)
         $allowed_fields = array();
@@ -244,6 +259,194 @@ function hrm_handle_employees_post() {
         }
         wp_redirect( add_query_arg( ['id'=>$emp_id, 'tab'=>'profile'], $redirect_base ) );
         exit;
+    }
+
+    // =========================================================================
+    // ACCIÓN: UPLOAD DOCUMENTS (desde formulario de documentos)
+    // =========================================================================
+    if ( $action === 'upload_document' ) {
+        // Esperamos un nonce llamado hrm_upload_nonce
+        $nonce = isset( $_POST['hrm_upload_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['hrm_upload_nonce'] ) ) : '';
+        if ( ! $nonce || ! wp_verify_nonce( $nonce, 'hrm_upload_file' ) ) {
+            wp_send_json_error( array( 'message' => 'Token de seguridad inválido.' ) );
+        }
+
+        // Validar employee_id
+        $emp_id = isset( $_POST['employee_id'] ) ? absint( $_POST['employee_id'] ) : 0;
+        if ( ! $emp_id ) {
+            wp_send_json_error( array( 'message' => 'Empleado no especificado.' ) );
+        }
+
+        // Cargar clases DB
+        hrm_ensure_db_classes();
+        $db_emp  = new HRM_DB_Empleados();
+        $db_docs = new HRM_DB_Documentos();
+
+        $employee = $db_emp->get( $emp_id );
+        if ( ! $employee ) {
+            wp_send_json_error( array( 'message' => 'Empleado no encontrado.' ) );
+        }
+
+        // Permisos: admin/supervisor o el propio usuario vinculado
+        $can_manage = current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) || current_user_can( 'view_hrm_admin_views' );
+        $is_owner = ( intval( $employee->user_id ) === get_current_user_id() );
+        if ( ! ( $can_manage || $is_owner ) ) {
+            wp_send_json_error( array( 'message' => 'No tienes permisos para subir documentos para este empleado.' ), 403 );
+        }
+
+        // Validar inputs
+        $tipo_input = isset( $_POST['tipo_documento'] ) ? sanitize_text_field( wp_unslash( $_POST['tipo_documento'] ) ) : '';
+        $anio_input = isset( $_POST['anio_documento'] ) ? sanitize_text_field( wp_unslash( $_POST['anio_documento'] ) ) : date( 'Y' );
+
+        if ( empty( $tipo_input ) ) {
+            wp_send_json_error( array( 'message' => 'Tipo de documento no especificado.' ) );
+        }
+
+        if ( empty( $_FILES['archivos_subidos'] ) ) {
+            wp_send_json_error( array( 'message' => 'No se detectaron archivos para subir.' ) );
+        }
+
+        // Debug: listar nombres y tmp de archivos recibidos
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            $incoming_names = is_array( $_FILES['archivos_subidos']['name'] ) ? array_values( $_FILES['archivos_subidos']['name'] ) : array( $_FILES['archivos_subidos']['name'] );
+            $incoming_tmps  = is_array( $_FILES['archivos_subidos']['tmp_name'] ) ? array_values( $_FILES['archivos_subidos']['tmp_name'] ) : array( $_FILES['archivos_subidos']['tmp_name'] );
+            error_log( '[HRM-UPLOAD] incoming FILES names=' . json_encode( $incoming_names ) . ' tmp=' . json_encode( $incoming_tmps ) );
+        }
+
+        // Preparar ruta base de uploads personalizada
+        $upload = wp_upload_dir();
+        $base_dir = untrailingslashit( $upload['basedir'] );
+        $base_url = untrailingslashit( $upload['baseurl'] );
+
+        // Normalizar partes de la ruta
+        $year = preg_replace('/[^0-9]/', '', $anio_input);
+        if ( empty( $year ) ) $year = date('Y');
+        $rut_raw = isset( $employee->rut ) ? (string) $employee->rut : '';
+        $rut_slug = sanitize_file_name( preg_replace('/[^A-Za-z0-9\-]/', '_', $rut_raw) );
+        $tipo_name = '';
+        // Si tipo es numérico, intentar resolver nombre
+        if ( is_numeric( $tipo_input ) ) {
+            $all_types = $db_docs->get_all_types();
+            $tipo_id = intval( $tipo_input );
+            $tipo_name = isset( $all_types[ $tipo_id ] ) ? $all_types[ $tipo_id ] : (string) $tipo_id;
+        } else {
+            $tipo_name = (string) $tipo_input;
+        }
+        $tipo_slug = sanitize_file_name( sanitize_title( $tipo_name ) );
+        if ( empty( $tipo_slug ) ) $tipo_slug = 'otros';
+
+        $target_dir = wp_normalize_path( $base_dir . '/hrm_docs/' . $year . '/' . $rut_slug . '/' . $tipo_slug );
+
+        // Registrar para depuración (mostrar valores que construyen la ruta)
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            error_log( '[HRM-UPLOAD] base_dir=' . $base_dir . ' base_url=' . $base_url . ' year=' . $year . ' rut_slug=' . $rut_slug . ' tipo_slug=' . $tipo_slug . ' target_dir=' . $target_dir );
+        }
+
+        // Crear directorios si no existen
+        if ( ! file_exists( $target_dir ) ) {
+            if ( ! wp_mkdir_p( $target_dir ) ) {
+                wp_send_json_error( array( 'message' => 'No se pudo crear el directorio de destino.' ) );
+            }
+            // crear index.html placeholder
+            $index = $target_dir . '/index.html';
+            if ( ! file_exists( $index ) ) @file_put_contents( $index, '<!doctype html><title></title>' );
+        }
+
+        $results = array();
+
+        // Procesar cada archivo subido
+        $files = $_FILES['archivos_subidos'];
+        $count = is_array( $files['name'] ) ? count( $files['name'] ) : 0;
+        for ( $i = 0; $i < $count; $i++ ) {
+            $orig_name = isset( $files['name'][ $i ] ) ? $files['name'][ $i ] : '';
+            $tmp_name  = isset( $files['tmp_name'][ $i ] ) ? $files['tmp_name'][ $i ] : '';
+            $error     = isset( $files['error'][ $i ] ) ? $files['error'][ $i ] : 1;
+            $type_mime = isset( $files['type'][ $i ] ) ? $files['type'][ $i ] : '';
+
+            if ( $error !== UPLOAD_ERR_OK ) {
+                $results[] = array( 'file' => $orig_name, 'success' => false, 'message' => 'Error al subir archivo.' );
+                continue;
+            }
+
+            // Solo permitir PDF por seguridad (coincide con validación cliente)
+            if ( strtolower( $type_mime ) !== 'application/pdf' && pathinfo( $orig_name, PATHINFO_EXTENSION ) !== 'pdf' ) {
+                $results[] = array( 'file' => $orig_name, 'success' => false, 'message' => 'Formato no permitido. Solo PDF.' );
+                continue;
+            }
+
+            // Normalizar y sanitizar nombre, removiendo sufijos tipo timestamp si aplica
+            $normalized_name = function_exists( 'hrm_normalize_uploaded_filename' ) ? hrm_normalize_uploaded_filename( $orig_name ) : $orig_name;
+            $safe_name = sanitize_file_name( $normalized_name );
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( '[HRM-UPLOAD] filename normalization applied: orig=' . $orig_name . ' normalized=' . $normalized_name . ' safe=' . $safe_name );
+            }
+
+            $dest_path = $target_dir . '/' . $safe_name;
+            $counter = 0;
+            while ( file_exists( $dest_path ) ) {
+                $counter++;
+                $dest_path = $target_dir . '/' . pathinfo( $safe_name, PATHINFO_FILENAME ) . '-' . $counter . '.' . pathinfo( $safe_name, PATHINFO_EXTENSION );
+            }
+
+            // Log antes de mover
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( '[HRM-UPLOAD] preparing move - orig_name=' . $orig_name . ' tmp=' . $tmp_name . ' mime=' . $type_mime . ' dest=' . $dest_path );
+            }
+
+            // Mover archivo
+            $moved = @move_uploaded_file( $tmp_name, $dest_path );
+            if ( ! $moved ) {
+                // intentar copy como fallback
+                $copied = @copy( $tmp_name, $dest_path );
+                if ( ! $copied ) {
+                    if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                        error_log( '[HRM-UPLOAD] move AND copy FAILED for ' . $orig_name . ' tmp=' . $tmp_name . ' dest=' . $dest_path );
+                    }
+                    $results[] = array( 'file' => $orig_name, 'success' => false, 'message' => 'No se pudo mover el archivo.' );
+                    continue;
+                } else {
+                    if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                        error_log( '[HRM-UPLOAD] copy fallback SUCCESS for ' . $orig_name . ' dest=' . $dest_path );
+                    }
+                }
+            } else {
+                if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                    error_log( '[HRM-UPLOAD] move_uploaded_file SUCCESS for ' . $orig_name . ' dest=' . $dest_path );
+                }
+            }
+
+            // Construir URL pública (determinístico)
+            $file_name = basename( $dest_path );
+            $subpath = 'hrm_docs/' . $year . '/' . $rut_slug . '/' . $tipo_slug . '/' . $file_name;
+            $file_url = untrailingslashit( $base_url ) . '/' . str_replace( '\\', '/', $subpath );
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( '[HRM-UPLOAD] file_url=' . $file_url );
+            }
+
+            // Registrar en la base de datos
+            $create_ok = $db_docs->create( array(
+                'rut'  => $employee->rut,
+                'tipo' => $tipo_input,
+                'anio' => intval( $year ),
+                'nombre' => $safe_name,
+                'url'  => $file_url,
+            ) );
+
+            if ( $create_ok ) {
+                $results[] = array( 'file' => $orig_name, 'success' => true, 'url' => $file_url );
+                if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                    $final_exists = file_exists( $dest_path );
+                    error_log( '[HRM-UPLOAD] final_file_exists dest=' . $dest_path . ' exists=' . ( $final_exists ? 'YES' : 'NO' ) . ' real=' . ( $final_exists ? realpath( $dest_path ) : '' ) . ' size=' . ( $final_exists ? filesize( $dest_path ) : 0 ) . ' counter=' . intval( $counter ) );
+                    error_log( '[HRM-UPLOAD] DB create ok for rut=' . $employee->rut . ' tipo=' . $tipo_input . ' name=' . $safe_name . ' url=' . $file_url );
+                }
+            } else {
+                // Si falló la DB, eliminar el archivo físicamente
+                @unlink( $dest_path );
+                $results[] = array( 'file' => $orig_name, 'success' => false, 'message' => 'Error al guardar en base de datos.' );
+            }
+        }
+
+        wp_send_json_success( array( 'results' => $results ) );
     }
 
     // =========================================================================

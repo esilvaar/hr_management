@@ -257,6 +257,14 @@ function setupFormSubmit() {
         submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Subiendo...';
         
         const formData = new FormData(form);
+
+        // Debug: log de envío (para inspección en consola)
+        try {
+            const fileNames = filesInput && filesInput.files ? Array.from(filesInput.files).map(f => f.name) : [];
+            console.log('[HRM-UPLOAD] submitting', { action: form.action, tipo: tipoInput && tipoInput.value, anio: anioInput && anioInput.value, files: fileNames });
+        } catch (err) {
+            console.log('[HRM-UPLOAD] submit debug failed', err);
+        }
         
         fetch(form.action || '', {
             method: 'POST',
@@ -264,11 +272,16 @@ function setupFormSubmit() {
         })
         .then(response => response.text())
         .then(data => {
+            // Log crudo de respuesta
+            console.log('[HRM-UPLOAD] raw response:', data);
+
             // Si es JSON, procesarlo
             try {
                 const json = JSON.parse(data);
+                console.log('[HRM-UPLOAD] parsed json:', json);
                 if ( json.success ) {
                     showUploadMessage('Documentos subidos correctamente', 'success');
+                    console.log('[HRM-UPLOAD] upload success, results:', json.data || json);
                     setTimeout(() => {
                         const modal = bootstrap.Modal.getInstance(document.getElementById('hrm-upload-modal'));
                         if ( modal ) modal.hide();
@@ -280,10 +293,12 @@ function setupFormSubmit() {
                         loadEmployeeDocuments();
                     }, 1500);
                 } else {
-                    showUploadMessage('Error: ' + json.data.message, 'error');
+                    console.warn('[HRM-UPLOAD] upload returned error', json);
+                    showUploadMessage('Error: ' + (json.data && json.data.message ? json.data.message : (json.message || 'Error desconocido')), 'error');
                 }
             } catch(e) {
-                // Si no es JSON, asumir que es una redirección exitosa
+                // Si no es JSON, asumir que es una redirección exitosa (o HTML devuelto)
+                console.warn('[HRM-UPLOAD] non-JSON response, assuming success or redirect. Preview:', data && data.slice ? data.slice(0,500) : data);
                 showUploadMessage('Documentos subidos correctamente', 'success');
                 setTimeout(() => {
                     location.reload();
@@ -294,7 +309,7 @@ function setupFormSubmit() {
             submitButton.innerHTML = '<span class="dashicons dashicons-upload"></span> Subir Documentos';
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('[HRM-UPLOAD] fetch error:', error);
             showUploadMessage('Error al subir documentos', 'error');
             submitButton.disabled = false;
             submitButton.innerHTML = '<span class="dashicons dashicons-upload"></span> Subir Documentos';

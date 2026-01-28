@@ -803,7 +803,7 @@ function hrm_ajax_delete_document_type() {
     $deleted_dirs = array();
     if ( ! empty( $type_name ) ) {
         $upload_dir = wp_upload_dir();
-        $base_dir = trailingslashit( $upload_dir['basedir'] ) . 'hrm_docs';
+        $base_dir = trailingslashit( $upload_dir['basedir'] ) . 'hrm_docs/';
         $pattern = $base_dir . '/*/*/' . $type_name;
         $dirs = glob( $pattern, GLOB_ONLYDIR );
         if ( $dirs && is_array( $dirs ) ) {
@@ -929,3 +929,190 @@ add_action( 'wp_ajax_hrm_check_email', 'hrm_ajax_check_email' );
 add_action( 'wp_ajax_hrm_delete_employee_document', 'hrm_ajax_delete_employee_document' );
 add_action( 'wp_ajax_hrm_aprobar_solicitud_supervisor', 'hrm_ajax_aprobar_solicitud_supervisor' );
 add_action( 'wp_ajax_hrm_rechazar_solicitud_supervisor', 'hrm_ajax_rechazar_solicitud_supervisor' );
+
+/**
+ * Handler for admin-post form that creates a company document (Anaconda UI)
+ * Stores uploaded PDF under wp-content/uploads/hrm_docs/empresa/
+ */
+function hrm_handle_anaconda_document_create() {
+    if ( ! is_user_logged_in() ) {
+        wp_die( 'No autorizado', '', 403 );
+    }
+
+    // Capability: restrict to admins or users who can manage options
+    if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_hrm_employees' ) ) {
+        wp_die( 'No tienes permisos para crear documentos de empresa', '', 403 );
+    }
+
+    // Nonce
+    if ( ! isset( $_POST['anaconda_documents_nonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['anaconda_documents_nonce'] ), 'anaconda_documents_create' ) ) {
+        wp_die( 'Token de seguridad inválido', '', 403 );
+    }
+
+    // Validate file
+    if ( empty( $_FILES['doc_file'] ) || ! isset( $_FILES['doc_file']['tmp_name'] ) ) {
+        $redirect = wp_get_referer() ?: admin_url();
+        wp_redirect( add_query_arg( 'anaconda_doc_error', 'nofile', $redirect ) );
+        exit;
+    }
+
+    $file = $_FILES['doc_file'];
+    if ( $file['error'] !== UPLOAD_ERR_OK ) {
+        $redirect = wp_get_referer() ?: admin_url();
+        wp_redirect( add_query_arg( 'anaconda_doc_error', 'upload_error', $redirect ) );
+        exit;
+    }
+
+    // Size limit 10MB
+    $max_size = 10 * 1024 * 1024;
+    if ( $file['size'] > $max_size ) {
+        $redirect = wp_get_referer() ?: admin_url();
+        wp_redirect( add_query_arg( 'anaconda_doc_error', 'too_large', $redirect ) );
+        exit;
+    }
+
+    // Ensure file is PDF
+    require_once ABSPATH . 'wp-admin/includes/file.php';
+    $check = wp_check_filetype_and_ext( $file['tmp_name'], $file['name'] );
+    if ( empty( $check['ext'] ) || strtolower( $check['ext'] ) !== 'pdf' ) {
+        $redirect = wp_get_referer() ?: admin_url();
+        wp_redirect( add_query_arg( 'anaconda_doc_error', 'invalid_type', $redirect ) );
+        exit;
+    }
+
+    // Prepare upload directory
+    $upload_dir = wp_upload_dir();
+    $base_dir = trailingslashit( $upload_dir['basedir'] ) . 'hrm_docs/';
+    $empresa_dir = trailingslashit( $base_dir ) . 'empresa';
+
+    if ( ! file_exists( $empresa_dir ) ) {
+        wp_mkdir_p( $empresa_dir );
+    }
+
+    // Sanitize and ensure unique filename
+    $filename = sanitize_file_name( $file['name'] );
+    $filename = wp_unique_filename( $empresa_dir, $filename );
+    $destination = wp_normalize_path( $empresa_dir . '/' . $filename );
+
+    // Move uploaded file
+    if ( ! move_uploaded_file( $file['tmp_name'], $destination ) ) {
+        // try wp_handle_sideload as fallback
+        $sideload = array( 'name' => $file['name'], 'type' => $file['type'], 'tmp_name' => $file['tmp_name'], 'error' => $file['error'], 'size' => $file['size'] );
+        $overrides = array( 'test_form' => false, 'mimes' => array( 'pdf' => 'application/pdf' ) );
+        $sideload_res = wp_handle_sideload( $sideload, $overrides, trailingslashit( $empresa_dir ) );
+        if ( isset( $sideload_res['error'] ) ) {
+            error_log( 'HRM Anaconda create file move failed: ' . $sideload_res['error'] );
+            $redirect = wp_get_referer() ?: admin_url();
+            wp_redirect( add_query_arg( 'anaconda_doc_error', 'move_failed', $redirect ) );
+            exit;
+        }
+        $destination = $sideload_res['file'];
+    }
+
+    // Set permissions
+    @chmod( $destination, 0644 );
+
+    // Save metadata if provided (title, description)
+    $meta = array(
+        'filename' => $filename,
+        'title' => isset( $_POST['doc_title'] ) ? sanitize_text_field( wp_unslash( $_POST['doc_title'] ) ) : '',
+        'description' => isset( $_POST['doc_description'] ) ? sanitize_text_field( wp_unslash( $_POST['doc_description'] ) ) : '',
+        'uploaded_by' => get_current_user_id(),
+        'uploaded_at' => current_time( 'mysql' ),
+    );
+    $meta_path = $destination . '.json';
+    try {
+        file_put_contents( $meta_path, wp_json_encode( $meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
+        @chmod( $meta_path, 0644 );
+    } catch ( Exception $e ) {
+        error_log( 'HRM Anaconda: failed to write metadata for ' . $destination . ' - ' . $e->getMessage() );
+    }
+
+    // Insert record into custom table rrhh_documentos_empresa
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'rrhh_documentos_empresa';
+    $title_for_db = ! empty( $meta['title'] ) ? $meta['title'] : pathinfo( $filename, PATHINFO_FILENAME );
+    $path_for_db = wp_normalize_path( $destination );
+    $data = array(
+        'titulo' => sanitize_text_field( $title_for_db ),
+        'ruta' => $path_for_db,
+        'fecha_creacion' => current_time( 'mysql' ),
+    );
+    $format = array( '%s', '%s', '%s' );
+    $inserted = $wpdb->insert( $table_name, $data, $format );
+    if ( false === $inserted ) {
+        error_log( 'HRM Anaconda: DB insert failed for document ' . $filename . ' - ' . $wpdb->last_error );
+    } else {
+        // Save DB id into metadata json
+        $meta['db_id'] = intval( $wpdb->insert_id );
+        try {
+            file_put_contents( $meta_path, wp_json_encode( $meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
+            @chmod( $meta_path, 0644 );
+        } catch ( Exception $e ) {
+            error_log( 'HRM Anaconda: failed to write metadata with db_id for ' . $destination . ' - ' . $e->getMessage() );
+        }
+    }
+
+    // Redirect back with success and filename
+    $redirect = wp_get_referer() ?: admin_url();
+    wp_redirect( add_query_arg( 'anaconda_doc_created', urlencode( $filename ), $redirect ) );
+    exit;
+}
+add_action( 'admin_post_anaconda_documents_create', 'hrm_handle_anaconda_document_create' );
+/**
+ * Handler to delete an Anaconda company document (from uploads/hrm_docs/empresa)
+ * Expects GET/POST with file=<basename> and _wpnonce matching 'anaconda_documents_delete'
+ */
+function hrm_handle_anaconda_document_delete() {
+    if ( ! is_user_logged_in() ) {
+        wp_die( 'No autorizado', '', 403 );
+    }
+
+    if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_hrm_employees' ) ) {
+        wp_die( 'No tienes permisos para eliminar documentos de empresa', '', 403 );
+    }
+
+    $nonce = isset( $_REQUEST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) ) : '';
+    if ( ! $nonce || ! wp_verify_nonce( $nonce, 'anaconda_documents_delete' ) ) {
+        wp_die( 'Token inválido', '', 403 );
+    }
+
+    if ( empty( $_REQUEST['file'] ) ) {
+        $redirect = wp_get_referer() ?: admin_url();
+        wp_redirect( add_query_arg( 'anaconda_doc_error', 'nofile', $redirect ) );
+        exit;
+    }
+
+    $basename = wp_unslash( $_REQUEST['file'] );
+    // Prevent directory traversal - only basename allowed
+    $basename = basename( sanitize_file_name( $basename ) );
+
+    $upload_dir = wp_upload_dir();
+    $empresa_dir = trailingslashit( $upload_dir['basedir'] ) . 'hrm_docs/empresa';
+    $file_path = wp_normalize_path( $empresa_dir . '/' . $basename );
+
+    if ( ! file_exists( $file_path ) ) {
+        $redirect = wp_get_referer() ?: admin_url();
+        wp_redirect( add_query_arg( 'anaconda_doc_error', 'not_found', $redirect ) );
+        exit;
+    }
+
+    // Attempt delete
+    $deleted = false;
+    if ( @unlink( $file_path ) ) {
+        $deleted = true;
+        // remove metadata if exists
+        $meta = $file_path . '.json';
+        if ( file_exists( $meta ) ) @unlink( $meta );
+    }
+
+    $redirect = wp_get_referer() ?: admin_url();
+    if ( $deleted ) {
+        wp_redirect( add_query_arg( 'anaconda_doc_deleted', urlencode( $basename ), $redirect ) );
+        exit;
+    } else {
+        wp_redirect( add_query_arg( 'anaconda_doc_error', 'delete_failed', $redirect ) );
+        exit;
+    }
+}
+add_action( 'admin_post_anaconda_documents_delete', 'hrm_handle_anaconda_document_delete' );

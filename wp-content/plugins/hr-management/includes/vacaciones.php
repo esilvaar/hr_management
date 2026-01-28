@@ -1853,6 +1853,17 @@ function hrm_enviar_notificacion_vacaciones( $id_solicitud, $estado ) {
 
         // Bloque SQL duplicado eliminado: la consulta UNIÓN se implementa en hrm_get_vacaciones_empleado().
 
+        // Asegurar que $id_empleado_solicitante esté definido antes de su uso
+        // Obtener id_empleado desde la solicitud (id_solicitud → id_empleado)
+        // Usamos $table_solicitudes ya definido arriba y $wpdb->prepare para seguridad
+        $table_gerencia = $wpdb->prefix . 'rrhh_gerencia_deptos';
+        $id_empleado_solicitante = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT id_empleado FROM {$table_solicitudes} WHERE id_solicitud = %d LIMIT 1",
+                $id_solicitud
+            )
+        );
+
         if ( $id_empleado_solicitante ) {
             $departamento_solicitante = $wpdb->get_var(
                 $wpdb->prepare(
@@ -2133,6 +2144,56 @@ function hrm_enviar_notificacion_vacaciones( $id_solicitud, $estado ) {
         add_action( 'admin_menu', 'hrm_admin_menu_vacaciones_badge', 999 );
     }
 
+
+    // Badge numérico para solicitudes PENDIENTES en el submenú 'hr-management-vacaciones'
+    if ( ! function_exists( 'hrm_admin_menu_pending_requests_badge' ) ) {
+        function hrm_admin_menu_pending_requests_badge() {
+            global $submenu;
+
+            $user_id = get_current_user_id();
+            if ( ! $user_id ) {
+                return;
+            }
+
+            // Roles permitidos: administradores, editor_vacaciones y gerentes/supervisores
+            $es_admin = current_user_can( 'manage_options' );
+            $es_editor = current_user_can( 'manage_hrm_vacaciones' );
+            $es_gerente = function_exists( 'hrm_user_is_gerente_supervisor' ) && hrm_user_is_gerente_supervisor( $user_id );
+
+            if ( ! ( $es_admin || $es_editor || $es_gerente ) ) {
+                return;
+            }
+
+            // Usar función existente que cuenta solicitudes visibles según permisos
+            if ( ! function_exists( 'hrm_count_vacaciones_visibles' ) ) {
+                return;
+            }
+
+            $count = intval( hrm_count_vacaciones_visibles( 'PENDIENTE' ) );
+            if ( $count <= 0 ) {
+                return; // no mostrar badge
+            }
+
+            $label = $count > 9 ? '9+' : strval( $count );
+
+            if ( ! empty( $submenu ) && is_array( $submenu ) ) {
+                foreach ( $submenu as $parent => &$items ) {
+                    foreach ( $items as &$it ) {
+                        // $it[2] contiene el slug del submenu
+                        if ( isset( $it[2] ) && $it[2] === 'hr-management-vacaciones' ) {
+                            // Evitar duplicar el badge si ya existe
+                            if ( strpos( $it[0], 'hrm-badge' ) === false ) {
+                                // Añadir badge a la derecha del texto del menú (usar clase existente hrm-badge)
+                                $it[0] = $it[0] . ' <span class="hrm-badge">' . esc_html( $label ) . '</span>';
+                            }
+                            break 2;
+                        }
+                    }
+                }
+            }
+        }
+        add_action( 'admin_menu', 'hrm_admin_menu_pending_requests_badge', 1000 );
+    }
     // Mostrar panel con lista limitada de notificaciones en la página HR -> Vacaciones
     if ( ! function_exists( 'hrm_render_vacaciones_notifications_panel' ) ) {
         function hrm_render_vacaciones_notifications_panel() {

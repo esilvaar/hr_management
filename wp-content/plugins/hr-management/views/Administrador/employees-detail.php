@@ -93,12 +93,35 @@ if ( ! isset( $employee ) || ! is_object( $employee ) || empty( $employee->id ) 
 
 // Permisos y roles
 $current_user_id = get_current_user_id();
-$is_own_profile = intval( $employee->user_id ) === $current_user_id;
 $user = wp_get_current_user();
+// Considerar propietario si el user_id coincide o si el email WP coincide con el email del empleado
+$is_own_profile = ( intval( $employee->user_id ) === $current_user_id ) || ( ! empty( $user->user_email ) && ! empty( $employee->email ) && strtolower( $user->user_email ) === strtolower( $employee->email ) );
 $is_admin = in_array('administrator', (array)$user->roles) || in_array('administrador_anaconda', (array)$user->roles);
 $is_supervisor = current_user_can('edit_hrm_employees');
 $is_role_supervisor = in_array( 'supervisor', (array) $user->roles, true );
 $can_edit_employee = hrm_can_edit_employee( $employee->id );
+
+// Logging temporal para depurar permisos (remover en producción)
+if ( defined('WP_DEBUG') && WP_DEBUG ) {
+    $roles = is_object( $user ) ? (array) $user->roles : array();
+    error_log('[HRM-PERM] current_user_id=' . intval($current_user_id) . ' roles=' . implode(',', $roles) . ' is_own_profile=' . ( $is_own_profile ? '1' : '0' ) . ' is_admin=' . ( $is_admin ? '1' : '0' ) . ' is_supervisor=' . ( $is_supervisor ? '1' : '0' ) . ' can_edit_employee=' . ( $can_edit_employee ? '1' : '0' ) . ' employee_user_id=' . intval($employee->user_id) . ' employee_email=' . (string)$employee->email );
+}
+
+// También mostrar en la consola del navegador para depuración rápida
+if ( defined('WP_DEBUG') && WP_DEBUG ) {
+    $perm_debug = array(
+        'current_user_id'   => intval( $current_user_id ),
+        'roles'             => is_object( $user ) ? array_values( (array) $user->roles ) : array(),
+        'is_own_profile'    => (bool) $is_own_profile,
+        'is_admin'          => (bool) $is_admin,
+        'is_supervisor'     => (bool) $is_supervisor,
+        'can_edit_employee' => (bool) $can_edit_employee,
+        'employee_user_id'  => intval( $employee->user_id ),
+        'employee_email'    => (string) $employee->email,
+    );
+
+    echo '<script>console.log("[HRM-PERM]", ' . wp_json_encode( $perm_debug ) . ');</script>';
+}
 
 // Determinar campos editables
 $editable_fields = array();
@@ -247,20 +270,6 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                             <span class="dashicons dashicons-arrow-right-alt2"></span>
                         </div>
                     </a>
-
-                    <a href="<?= esc_url( admin_url('admin.php?page=hrm-convivencia') ); ?>" class="hrm-doc-btn" title="Ver reglamento interno" data-icon-color="#b0b5bd">
-                        <div class="hrm-doc-btn-icon">
-                            <span class="dashicons dashicons-id"></span>
-                        </div>
-                        <div class="hrm-doc-btn-content">
-                            <div class="hrm-doc-btn-title">Reglamento interno</div>
-                            <div class="hrm-doc-btn-desc">Accede al reglamento interno</div>
-                        </div>
-                        <div class="hrm-doc-btn-arrow">
-                            <span class="dashicons dashicons-arrow-right-alt2"></span>
-                        </div>
-                    </a>
-
                     <?php
                     // Añadir enlaces para tipos de documento dinámicos (excluyendo nombres reservados)
                     hrm_ensure_db_classes();
@@ -269,7 +278,9 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                     if ( ! empty( $doc_types ) ) {
                         $reserved = array_map( 'strtolower', array( 'contrato', 'contratos', 'liquidacion', 'liquidaciones', 'licencia', 'licencias' ) );
                         foreach ( $doc_types as $t_id => $t_name ) {
-                            if ( in_array( strtolower( trim( $t_name ) ), $reserved, true ) ) continue;
+                            $t_name_l = strtolower( trim( $t_name ) );
+                            if ( in_array( $t_name_l, $reserved, true ) ) continue;
+                            if ( $t_name_l === 'empresa' ) continue; // don't render Empresa here
                             $url = add_query_arg( array( 'page' => 'hrm-mi-documentos-type-' . intval( $t_id ), 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) );
                             ?>
                             <a href="<?= esc_url( $url ) ?>" class="hrm-doc-btn" title="<?= esc_attr( $t_name ) ?>" data-icon-color="#b0b5bd">
@@ -288,6 +299,37 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                         }
                     }
                     ?>
+
+                    
+
+                    <?php
+                    // Documentos Empresa (listado dinámico desde la tabla personalizada)
+                    global $wpdb;
+                    $table = $wpdb->prefix . 'rrhh_documentos_empresa';
+                    $company_docs = $wpdb->get_results( "SELECT id, titulo FROM {$table} ORDER BY fecha_creacion DESC" );
+                    if ( ! empty( $company_docs ) ) :
+                        foreach ( $company_docs as $cd ) :
+                            $cd_id = intval( $cd->id );
+                            $cd_title = esc_html( $cd->titulo ? $cd->titulo : 'Documento Empresa ' . $cd_id );
+                            $cd_url = esc_url( add_query_arg( array( 'page' => 'hrm-convivencia', 'doc_id' => $cd_id ), admin_url( 'admin.php' ) ) );
+                            ?>
+                            <a href="<?= $cd_url ?>" class="hrm-doc-btn" title="<?= esc_attr( $cd_title ) ?>" data-icon-color="#b0b5bd">
+                                <div class="hrm-doc-btn-icon">
+                                    <span class="dashicons dashicons-media-document"></span>
+                                </div>
+                                <div class="hrm-doc-btn-content">
+                                    <div class="hrm-doc-btn-title"><?= $cd_title ?></div>
+                                    <div class="hrm-doc-btn-desc">Documento Empresa</div>
+                                </div>
+                                <div class="hrm-doc-btn-arrow">
+                                    <span class="dashicons dashicons-arrow-right-alt2"></span>
+                                </div>
+                            </a>
+                            <?php
+                        endforeach;
+                    endif;
+                    ?>
+
                 </div>
             </div>
 
@@ -318,7 +360,8 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
             <?php endif; ?>
 
         </div> <div class="col-lg-8">
-            <form method="POST" enctype="multipart/form-data" name="hrm_update_employee_form" action="<?= esc_url( admin_url( 'admin.php?page=hrm-empleados&tab=profile&id=' . absint( $employee->id ) ) ) ?>">
+            <?php $current_page_slug = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : 'hrm-empleados'; ?>
+            <form method="POST" enctype="multipart/form-data" name="hrm_update_employee_form" action="<?= esc_url( admin_url( 'admin.php?page=' . $current_page_slug . '&tab=profile&id=' . absint( $employee->id ) ) ) ?>">
                 <?php wp_nonce_field( 'hrm_update_employee', 'hrm_update_employee_nonce' ); ?>
                 <input type="hidden" name="hrm_action" value="update_employee">
                 <input type="hidden" name="employee_id" value="<?= absint( $employee->id ) ?>">

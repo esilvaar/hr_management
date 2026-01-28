@@ -342,7 +342,7 @@ add_action( 'admin_init', 'hrm_redirect_wp_profile_page' );
 
 /**
  * Manejar subidas de documentos desde el formulario del panel (hrm_action = upload_document)
- * Guarda archivos en uploads/hrm_docs/{rut}/{anio}/{tipo_slug}/ y los registra en la tabla de documentos.
+ * Guarda archivos en uploads/hrm_docs/{anio}/{rut}/{tipo_slug}/ y los registra en la tabla de documentos.
  */
 function hrm_handle_upload_document() {
     if ( ! isset( $_POST['hrm_action'] ) || $_POST['hrm_action'] !== 'upload_document' ) {
@@ -408,10 +408,16 @@ function hrm_handle_upload_document() {
     }
     $tipo_slug = sanitize_title( $tipo_name );
 
-    // Preparar directorio destino
+    // Preparar directorio destino (orden unificado: anio / rut / tipo)
     $upload = wp_upload_dir();
-    $base_dir = trailingslashit( $upload['basedir'] ) . 'hrm_docs';
-    $rel_dir = trailingslashit( $rut ) . trailingslashit( $anio ) . trailingslashit( $tipo_slug );
+    $base_dir = trailingslashit( $upload['basedir'] ) . 'hrm_docs/';
+
+    // Normalizar año y rut similares al handler central
+    $year = preg_replace( '/[^0-9]/', '', (string) $anio );
+    if ( empty( $year ) ) $year = date( 'Y' );
+    $rut_slug = sanitize_file_name( preg_replace( '/[^A-Za-z0-9\-]/', '_', (string) $rut ) );
+
+    $rel_dir = trailingslashit( $year ) . trailingslashit( $rut_slug ) . trailingslashit( $tipo_slug );
     $dest_dir = wp_normalize_path( $base_dir . $rel_dir );
 
     if ( ! wp_mkdir_p( $dest_dir ) ) {
@@ -430,14 +436,15 @@ function hrm_handle_upload_document() {
     for ( $i = 0; $i < count( $files['name'] ); $i++ ) {
         if ( empty( $files['name'][ $i ] ) ) continue;
         $tmp_name = $files['tmp_name'][ $i ];
-        $orig_name = sanitize_file_name( $files['name'][ $i ] );
-        $ext = pathinfo( $orig_name, PATHINFO_EXTENSION );
-        $ext = $ext ? strtolower( $ext ) : 'pdf';
+        $orig_name_raw = isset( $files['name'][ $i ] ) ? $files['name'][ $i ] : '';
+        $orig_name = sanitize_file_name( $orig_name_raw );
+        // Fallback si sanitize devuelve vacío
+        if ( empty( $orig_name ) ) {
+            $orig_name = 'documento-' . $i . '.pdf';
+        }
 
-        // Construir nombre final: mis-documentos-{slug}-{timestamp}-{i}.ext
-        $timestamp = time();
-        $final_base = 'mis-documentos-' . ( $tipo_slug ?: 'documento' );
-        $final_name = $final_base . '-' . $timestamp . ( $i ? '-' . $i : '' ) . '.' . $ext;
+        // Usar el nombre original (sanitizado) y asegurar unicidad en el destino
+        $final_name = wp_unique_filename( $dest_dir, $orig_name );
         $final_path = wp_normalize_path( $dest_dir . DIRECTORY_SEPARATOR . $final_name );
 
         // Mover archivo desde tmp a destino

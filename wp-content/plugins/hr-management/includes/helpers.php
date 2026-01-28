@@ -216,6 +216,36 @@ function hrm_ensure_placeholder_index( $dir, $contents = null ) {
 }
 
 /**
+ * Normalizar nombre de archivo subido por el usuario.
+ *
+ * Por defecto elimina sufijos tipo "-<timestamp>" cuando coinciden con
+ * el patrón de 7+ dígitos al final del nombre (antes de la extensión).
+ * Puedes desactivar este comportamiento con el filtro `hrm_strip_uploaded_timestamp`.
+ *
+ * @param string $filename Nombre original del archivo (puede incluir path)
+ * @return string Nombre normalizado (sin path)
+ */
+function hrm_normalize_uploaded_filename( $filename ) {
+    $strip = apply_filters( 'hrm_strip_uploaded_timestamp', true );
+
+    $ext = pathinfo( $filename, PATHINFO_EXTENSION );
+    $base = pathinfo( $filename, PATHINFO_FILENAME );
+
+    if ( $strip ) {
+        // eliminar sufijo tipo -12345678 o -1600000000 (7+ dígitos)
+        $new_base = preg_replace( '/-\d{7,}$/', '', $base );
+        if ( $new_base !== $base ) {
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( '[HRM-UPLOAD] normalized filename: ' . $base . ' -> ' . $new_base );
+            }
+            $base = $new_base;
+        }
+    }
+
+    return $base . ( $ext ? '.' . $ext : '' );
+}
+
+/**
  * Remove a directory and its contents recursively.
  * Returns true if removed or didn't exist; false on failure.
  *
