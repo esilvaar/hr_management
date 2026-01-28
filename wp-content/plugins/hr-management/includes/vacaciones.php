@@ -667,10 +667,17 @@ function hrm_count_vacaciones_visibles( $estado = null ) {
         $where = 'WHERE ' . implode( ' AND ', $where_conditions );
     }
 
-    $sql = "SELECT COUNT(*) FROM {$table_solicitudes} s JOIN {$table_empleados} e ON s.id_empleado = e.id_empleado {$where}";
+    // Use DISTINCT to avoid inflated counts in case JOINs produce duplicate rows
+    $sql = "SELECT COUNT(DISTINCT s.id_solicitud) FROM {$table_solicitudes} s JOIN {$table_empleados} e ON s.id_empleado = e.id_empleado {$where}";
 
     if ( ! empty( $params ) ) {
-        $sql = $wpdb->prepare( $sql, $params );
+        // Ensure proper argument expansion for prepare when $params is an array
+        if ( is_array( $params ) ) {
+            $prepare_args = array_merge( array( $sql ), $params );
+            $sql = call_user_func_array( array( $wpdb, 'prepare' ), $prepare_args );
+        } else {
+            $sql = $wpdb->prepare( $sql, $params );
+        }
     }
 
     $count = $wpdb->get_var( $sql );
@@ -752,10 +759,17 @@ function hrm_count_medio_dia_visibles( $estado = null ) {
         $where = 'WHERE ' . implode( ' AND ', $where_conditions );
     }
 
-    $sql = "SELECT COUNT(*) FROM {$table_solicitudes} s JOIN {$table_empleados} e ON s.id_empleado = e.id_empleado {$where}";
+    // Use DISTINCT to avoid inflated counts in case JOINs produce duplicate rows
+    $sql = "SELECT COUNT(DISTINCT s.id_solicitud) FROM {$table_solicitudes} s JOIN {$table_empleados} e ON s.id_empleado = e.id_empleado {$where}";
 
     if ( ! empty( $params ) ) {
-        $sql = $wpdb->prepare( $sql, $params );
+        // Ensure proper argument expansion for prepare when $params is an array
+        if ( is_array( $params ) ) {
+            $prepare_args = array_merge( array( $sql ), $params );
+            $sql = call_user_func_array( array( $wpdb, 'prepare' ), $prepare_args );
+        } else {
+            $sql = $wpdb->prepare( $sql, $params );
+        }
     }
 
     $count = $wpdb->get_var( $sql );
@@ -2115,34 +2129,63 @@ function hrm_enviar_notificacion_vacaciones( $id_solicitud, $estado ) {
         add_action( 'admin_post_hrm_mark_notification_read', 'hrm_mark_notification_read_handler' );
     }
 
-    // Agregar badge al submenu "Vacaciones"
-    if ( ! function_exists( 'hrm_admin_menu_vacaciones_badge' ) ) {
-        function hrm_admin_menu_vacaciones_badge() {
-            global $submenu;
+    if ( ! function_exists( 'hrm_mark_all_notifications_read_handler' ) ) {
+        function hrm_mark_all_notifications_read_handler() {
+            if ( ! is_user_logged_in() ) {
+                wp_safe_redirect( wp_get_referer() ?: admin_url() );
+                exit;
+            }
+
             $user_id = get_current_user_id();
-            if ( ! $user_id ) {
-                return;
+
+            // Only allow editors of vacations and gerentes
+            $is_editor = current_user_can( 'manage_hrm_vacaciones' );
+            $is_gerente = function_exists( 'hrm_user_is_gerente_supervisor' ) && hrm_user_is_gerente_supervisor( $user_id );
+            if ( ! ( $is_editor || $is_gerente ) ) {
+                wp_die( 'No tienes permisos para realizar esta acción.', 'Acceso denegado', array( 'response' => 403 ) );
             }
 
-            $count = count( hrm_get_notifications_for_current_user() );
-            if ( $count <= 0 ) {
-                return;
+            // CSRF
+            if ( empty( $_POST ) || ! isset( $_POST['hrm_mark_all_notifications_read_nonce'] ) ) {
+                wp_safe_redirect( wp_get_referer() ?: admin_url() );
+                exit;
+            }
+            check_admin_referer( 'hrm_mark_all_notifications_read', 'hrm_mark_all_notifications_read_nonce' );
+
+            if ( ! function_exists( 'hrm_get_notifications_for_current_user' ) ) {
+                wp_safe_redirect( wp_get_referer() ?: admin_url( 'admin.php?page=hrm-vacaciones' ) );
+                exit;
             }
 
-            if ( ! empty( $submenu ) && is_array( $submenu ) ) {
-                foreach ( $submenu as $parent => &$items ) {
-                    foreach ( $items as &$it ) {
-                        if ( isset( $it[2] ) && $it[2] === 'hr-management-vacaciones' ) {
-                            $it[0] = $it[0] . ' <span class="hrm-badge">' . intval( $count ) . '</span>';
-                            // only update first match
-                            break 2;
-                        }
+            $unread = hrm_get_notifications_for_current_user();
+            $uids = array();
+            if ( is_array( $unread ) ) {
+                foreach ( $unread as $n ) {
+                    if ( isset( $n['uid'] ) && $n['uid'] ) {
+                        $uids[] = $n['uid'];
                     }
                 }
             }
+
+            if ( ! empty( $uids ) ) {
+                $read_meta = get_user_meta( $user_id, 'hrm_notifications_read', true );
+                if ( ! is_array( $read_meta ) ) {
+                    $read_meta = array();
+                }
+                $new = array_unique( array_merge( $read_meta, $uids ) );
+                update_user_meta( $user_id, 'hrm_notifications_read', $new );
+            }
+
+            $redirect = wp_get_referer() ?: admin_url( 'admin.php?page=hrm-vacaciones' );
+            $redirect = add_query_arg( 'hrm_marked', '1', $redirect );
+            wp_safe_redirect( $redirect );
+            exit;
         }
-        add_action( 'admin_menu', 'hrm_admin_menu_vacaciones_badge', 999 );
+        add_action( 'admin_post_hrm_mark_all_notifications_read', 'hrm_mark_all_notifications_read_handler' );
     }
+
+    // NOTE: removed hrm_admin_menu_vacaciones_badge() to avoid duplication
+    // Notifications badge was causing visual confusion with pending-requests badge.
 
 
     // Badge numérico para solicitudes PENDIENTES en el submenú 'hr-management-vacaciones'
@@ -2169,23 +2212,26 @@ function hrm_enviar_notificacion_vacaciones( $id_solicitud, $estado ) {
                 return;
             }
 
-            $count = intval( hrm_count_vacaciones_visibles( 'PENDIENTE' ) );
-            if ( $count <= 0 ) {
+            // Sumar pendientes día completo + medio día
+            $full = function_exists( 'hrm_count_vacaciones_visibles' ) ? intval( hrm_count_vacaciones_visibles( 'PENDIENTE' ) ) : 0;
+            $half = function_exists( 'hrm_count_medio_dia_visibles' ) ? intval( hrm_count_medio_dia_visibles( 'PENDIENTE' ) ) : 0;
+
+            $total = $full + $half;
+            if ( $total <= 0 ) {
                 return; // no mostrar badge
             }
 
-            $label = $count > 9 ? '9+' : strval( $count );
+            $label = $total > 9 ? '9+' : strval( $total );
 
             if ( ! empty( $submenu ) && is_array( $submenu ) ) {
                 foreach ( $submenu as $parent => &$items ) {
                     foreach ( $items as &$it ) {
-                        // $it[2] contiene el slug del submenu
-                        if ( isset( $it[2] ) && $it[2] === 'hr-management-vacaciones' ) {
-                            // Evitar duplicar el badge si ya existe
-                            if ( strpos( $it[0], 'hrm-badge' ) === false ) {
-                                // Añadir badge a la derecha del texto del menú (usar clase existente hrm-badge)
-                                $it[0] = $it[0] . ' <span class="hrm-badge">' . esc_html( $label ) . '</span>';
-                            }
+                        // $it[2] contiene el slug del submenu (compat: 'hr-management-vacaciones' o 'hrm-vacaciones')
+                        if ( isset( $it[2] ) && in_array( $it[2], array( 'hr-management-vacaciones', 'hrm-vacaciones' ), true ) ) {
+                            // Remove any previous badge markup to avoid duplicates
+                            $it[0] = preg_replace( '/\s*<span class="hrm-badge">.*?<\/span>/i', '', $it[0] );
+                            // Añadir un único badge actualizado a la derecha del texto del menú
+                            $it[0] = $it[0] . ' <span class="hrm-badge">' . esc_html( $label ) . '</span>';
                             break 2;
                         }
                     }
@@ -2194,11 +2240,75 @@ function hrm_enviar_notificacion_vacaciones( $id_solicitud, $estado ) {
         }
         add_action( 'admin_menu', 'hrm_admin_menu_pending_requests_badge', 1000 );
     }
+
+    /**
+     * Mark HRM notifications as read when the user visits the Vacaciones admin page.
+     * This ensures the main-menu "new notifications" badge disappears when the user
+     * opens the Vacaciones screen.
+     */
+    if ( ! function_exists( 'hrm_mark_notifications_read_on_vacaciones' ) ) {
+        function hrm_mark_notifications_read_on_vacaciones() {
+            if ( ! is_admin() ) {
+                return;
+            }
+
+            $screen = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+            if ( ! in_array( $screen, array( 'hr-management-vacaciones', 'hrm-vacaciones' ), true ) ) {
+                return;
+            }
+
+            if ( ! is_user_logged_in() ) {
+                return;
+            }
+
+            $user_id = get_current_user_id();
+            if ( ! $user_id ) {
+                return;
+            }
+
+            if ( ! function_exists( 'hrm_get_notifications_for_current_user' ) ) {
+                return;
+            }
+
+            // Get the unread notifications visible for this user (filtered by deptos)
+            $unread = hrm_get_notifications_for_current_user();
+            if ( empty( $unread ) || ! is_array( $unread ) ) {
+                return;
+            }
+
+            $read_meta = get_user_meta( $user_id, 'hrm_notifications_read', true );
+            if ( ! is_array( $read_meta ) ) {
+                $read_meta = array();
+            }
+
+            $uids = array();
+            foreach ( $unread as $n ) {
+                if ( isset( $n['uid'] ) ) {
+                    $uids[] = $n['uid'];
+                }
+            }
+
+            if ( empty( $uids ) ) {
+                return;
+            }
+
+            $new = array_unique( array_merge( $read_meta, $uids ) );
+            update_user_meta( $user_id, 'hrm_notifications_read', $new );
+        }
+        add_action( 'admin_init', 'hrm_mark_notifications_read_on_vacaciones', 10 );
+    }
+
+    /**
+     * Add a numeric badge to the main HR Management menu showing unread HRM notifications.
+     * This badge reflects new/unread notifications only (from option `hrm_notifications`).
+     */
+    // NOTE: main-menu notifications-number badge removed. Main menu will use
+    // a simple pending-dot indicator based on PENDIENTE counts (see below).
     // Mostrar panel con lista limitada de notificaciones en la página HR -> Vacaciones
     if ( ! function_exists( 'hrm_render_vacaciones_notifications_panel' ) ) {
         function hrm_render_vacaciones_notifications_panel() {
             $screen = isset( $_GET['page'] ) ? sanitize_text_field( $_GET['page'] ) : '';
-            if ( $screen !== 'hr-management-vacaciones' ) {
+            if ( ! in_array( $screen, array( 'hr-management-vacaciones', 'hrm-vacaciones' ), true ) ) {
                 return;
             }
 
@@ -2240,6 +2350,109 @@ function hrm_enviar_notificacion_vacaciones( $id_solicitud, $estado ) {
             </style>";
         }
         add_action( 'admin_head', 'hrm_admin_styles' );
+    }
+
+    /* =====================================================
+     * Pending-dot indicator for main menu (no number)
+     * Shows a simple visual dot if there are pending solicitudes
+     * visible to the user (full-day OR medio-día). The dot is
+     * cleared when the user visits the Vacaciones page (records
+     * the last seen pending total per-user).
+     */
+    if ( ! function_exists( 'hrm_get_pending_total' ) ) {
+        function hrm_get_pending_total() {
+            $full = function_exists( 'hrm_count_vacaciones_visibles' ) ? intval( hrm_count_vacaciones_visibles( 'PENDIENTE' ) ) : 0;
+            $half = function_exists( 'hrm_count_medio_dia_visibles' ) ? intval( hrm_count_medio_dia_visibles( 'PENDIENTE' ) ) : 0;
+            return $full + $half;
+        }
+    }
+
+    if ( ! function_exists( 'hrm_admin_main_pending_dot' ) ) {
+        function hrm_admin_main_pending_dot() {
+            global $menu;
+
+            if ( ! is_array( $menu ) ) {
+                return;
+            }
+
+            if ( ! is_user_logged_in() ) {
+                return;
+            }
+
+            $user_id = get_current_user_id();
+
+            // Allowed roles: admin, editor_vacaciones, gerente/supervisor
+            $es_admin = current_user_can( 'manage_options' );
+            $es_editor = current_user_can( 'manage_hrm_vacaciones' );
+            $es_gerente = function_exists( 'hrm_user_is_gerente_supervisor' ) && hrm_user_is_gerente_supervisor( $user_id );
+            if ( ! ( $es_admin || $es_editor || $es_gerente ) ) {
+                return;
+            }
+
+            $pending = hrm_get_pending_total();
+            // Get last seen pending count for this user
+            $last_seen = intval( get_user_meta( $user_id, 'hrm_pending_last_seen', true ) );
+
+            // Show dot only if there are pending solicitudes and current pending > last_seen
+            if ( $pending <= 0 || $pending <= $last_seen ) {
+                // Remove any existing dot to avoid duplicates
+                foreach ( $menu as &$m ) {
+                    if ( isset( $m[2] ) && $m[2] === 'hrm-empleados' ) {
+                        $m[0] = preg_replace( '/\s*<span class="hrm-badge-dot">.*?<\/span>/i', '', $m[0] );
+                        break;
+                    }
+                }
+                return;
+            }
+
+            // Append a simple dot indicator to main menu (no number)
+            foreach ( $menu as &$m ) {
+                if ( isset( $m[2] ) && $m[2] === 'hrm-empleados' ) {
+                    // Remove existing dot or numeric badge to avoid duplicates
+                    $m[0] = preg_replace( '/\s*<span class="hrm-badge-dot">.*?<\/span>/i', '', $m[0] );
+                    $m[0] = preg_replace( '/\s*<span class="hrm-badge">.*?<\/span>/i', '', $m[0] );
+                    // Dot markup uses a separate class to avoid number styling
+                    $m[0] = $m[0] . ' <span class="hrm-badge-dot">●</span>';
+                    break;
+                }
+            }
+        }
+        add_action( 'admin_menu', 'hrm_admin_main_pending_dot', 997 );
+    }
+
+    // When visiting the Vacaciones page, update hrm_pending_last_seen to current pending total
+    if ( ! function_exists( 'hrm_clear_pending_indicator_on_vacaciones' ) ) {
+        function hrm_clear_pending_indicator_on_vacaciones() {
+            if ( ! is_admin() ) {
+                return;
+            }
+            $screen = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+            if ( ! in_array( $screen, array( 'hr-management-vacaciones', 'hrm-vacaciones' ), true ) ) {
+                return;
+            }
+            if ( ! is_user_logged_in() ) {
+                return;
+            }
+            $user_id = get_current_user_id();
+            $pending = hrm_get_pending_total();
+            update_user_meta( $user_id, 'hrm_pending_last_seen', intval( $pending ) );
+        }
+        add_action( 'admin_init', 'hrm_clear_pending_indicator_on_vacaciones', 11 );
+    }
+
+    // Admin notice shown after marking notifications as read via the Vacaciones panel
+    if ( ! function_exists( 'hrm_vacaciones_marked_notice' ) ) {
+        function hrm_vacaciones_marked_notice() {
+            $screen = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+            if ( ! in_array( $screen, array( 'hr-management-vacaciones', 'hrm-vacaciones' ), true ) ) {
+                return;
+            }
+
+            if ( isset( $_GET['hrm_marked'] ) && (string) $_GET['hrm_marked'] === '1' ) {
+                echo '<div class="notice notice-success is-dismissible"><p>Notificaciones marcadas como leídas.</p></div>';
+            }
+        }
+        add_action( 'admin_notices', 'hrm_vacaciones_marked_notice', 15 );
     }
 
 /**

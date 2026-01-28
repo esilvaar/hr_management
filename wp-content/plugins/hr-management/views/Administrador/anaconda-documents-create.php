@@ -9,23 +9,22 @@ $current_user = wp_get_current_user();
         <div class="hrm-admin-layout">
                 <?php hrm_get_template_part('partials/sidebar-loader'); ?>
                 <main class="hrm-content">
-                        <h1>Crear Documento Empresa</h1>
-                        <p>Bienvenido, <strong><?php echo esc_html( $current_user->display_name ?: $current_user->user_login ); ?></strong>.</p>
-
-                        <div style="margin:12px 0 18px 0;">
-                            <button id="open-create-modal" class="anaconda-open-btn" style="background:#0073aa;color:#fff;padding:8px 12px;border:0;cursor:pointer;">Nuevo documento</button>
+                        <div class="anaconda-header">
+                            <h1>Crear Documento Empresa</h1>
+                            <div class="anaconda-header-actions">
+                                <button id="open-create-modal" class="anaconda-open-btn btn btn-sm btn-primary">Nuevo documento</button>
+                            </div>
                         </div>
-
                         <!-- Modal: formulario de creación -->
                         <div id="createModal" class="anaconda-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modal-title" style="display:none;">
-                            <div class="anaconda-modal-overlay" data-close="true" style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;"></div>
-                            <div class="anaconda-modal-dialog" role="document" style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1001;background:#fff;border-radius:6px;max-width:640px;width:94%;box-shadow:0 10px 30px rgba(0,0,0,0.2);">
-                                <div style="padding:14px 18px;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;">
-                                    <h3 id="modal-title" style="margin:0;font-size:16px;">Crear Documento Empresa</h3>
-                                    <button id="modal-close" aria-label="Cerrar" style="background:transparent;border:0;font-size:20px;line-height:1;cursor:pointer;">&times;</button>
+                            <div class="anaconda-modal-overlay" data-close="true"></div>
+                            <div class="anaconda-modal-dialog" role="document">
+                                <div class="anaconda-modal-header">
+                                    <h3 id="modal-title">Crear Documento Empresa</h3>
+                                    <button id="modal-close" aria-label="Cerrar" class="anaconda-modal-close">&times;</button>
 
                                 </div>
-                                <div class="anaconda-modal-body" style="padding:16px;">
+                                <div class="anaconda-modal-body">
                                     <form id="anaconda-doc-create" class="anaconda-form" action="<?php echo esc_url( admin_url('admin-post.php') ); ?>" method="post" enctype="multipart/form-data" novalidate>
                                         <?php if ( function_exists( 'wp_nonce_field' ) ) wp_nonce_field( 'anaconda_documents_create', 'anaconda_documents_nonce' ); ?>
                                         <input type="hidden" name="action" value="anaconda_documents_create">
@@ -44,8 +43,8 @@ $current_user = wp_get_current_user();
                                         <div id="file-info" class="file-info" aria-live="polite"></div>
                                         <div id="file-error" class="error" aria-live="assertive"></div>
 
-                                        <div style="margin-top:12px;text-align:right;">
-                                            <button type="button" id="modal-cancel" style="margin-right:8px;padding:8px 12px;">Cancelar</button>
+                                        <div class="anaconda-modal-actions">
+                                            <button type="button" id="modal-cancel" class="anaconda-cancel">Cancelar</button>
                                             <button id="submit-btn" class="anaconda-submit" type="submit">Crear documento</button>
                                         </div>
                                     </form>
@@ -54,7 +53,26 @@ $current_user = wp_get_current_user();
                         </div>
 
                         <style>
-                        .anaconda-form { max-width:520px; font-family: Arial, sans-serif; }
+                        /* Scoped: normalize headings in HRM admin area */
+                        .hrm-admin-wrap h1 { font-size:22px; font-weight:700; margin:0 0 12px; }
+                        .hrm-admin-wrap h2 { font-size:16px; font-weight:600; margin:18px 0 8px; }
+                        .hrm-admin-wrap h3 { font-size:15px; font-weight:600; margin:0; }
+
+                        /* Header layout */
+                        .anaconda-header { display:flex; align-items:center; justify-content:space-between; margin:12px 0 18px 0; max-width:980px; margin-left:auto; margin-right:auto; }
+                        .anaconda-header-actions { margin-left:12px; }
+                        .anaconda-open-btn { padding:6px 10px; background:#0073aa; color:#fff; border:0; }
+
+                        /* Modal: remove inline styles and center content */
+                        .anaconda-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; }
+                        .anaconda-modal-dialog { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1001; background:#fff; border-radius:6px; max-width:640px; width:94%; box-shadow:0 10px 30px rgba(0,0,0,0.2); }
+                        .anaconda-modal-header { padding:14px 18px; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between; }
+                        .anaconda-modal-header h3 { margin:0; font-size:16px; }
+                        .anaconda-modal-close { background:transparent; border:0; font-size:20px; line-height:1; cursor:pointer; }
+                        .anaconda-modal-body { padding:16px; }
+                        .anaconda-modal-actions { margin-top:12px; text-align:right; }
+                        .anaconda-cancel { margin-right:8px; padding:8px 12px; }
+                        .anaconda-form { max-width:520px; font-family: Arial, sans-serif; margin:0 auto; }
                         .anaconda-form label { display:block; margin-top:12px; margin-bottom:6px; font-weight:600; }
                         .anaconda-form input[type="text"]{ width:100%; padding:8px; margin-bottom:8px; box-sizing:border-box; }
                         .drop-area { border:2px dashed #bbb; padding:18px; text-align:center; cursor:pointer; color:#444; background:#fafafa; margin-bottom:8px; }
@@ -133,18 +151,13 @@ $current_user = wp_get_current_user();
                 
                 </div>
 
-                <div class="table-wrap" style="overflow:auto;border:1px solid #e5e5e5;border-radius:4px;">
-                    <table id="anaconda-documents-table" style="width:100%;border-collapse:collapse;min-width:720px;">
-                        <thead style="background:#f7f7f7;">
+                    <div class="table-wrap" style="overflow:auto;border:1px solid #e5e5e5;border-radius:4px; max-width:980px; margin:0 auto;">
+                        <table id="anaconda-documents-table" class="table table-striped table-hover" style="width:100%;border-collapse:collapse;min-width:720px;">
+                        <thead class="table-dark">
                             <tr>
-                                <th style="padding:10px;border-bottom:1px solid #eee;width:40px;text-align:center;"><input id="select_all" type="checkbox" /></th>
-                                <th style="padding:10px;border-bottom:1px solid #eee;text-align:left;">ID</th>
-                                <th style="padding:10px;border-bottom:1px solid #eee;text-align:left;">Título</th>
-                                <th style="padding:10px;border-bottom:1px solid #eee;text-align:left;">Archivo</th>
-                                <th style="padding:10px;border-bottom:1px solid #eee;text-align:left;">Subido por</th>
-                                <th style="padding:10px;border-bottom:1px solid #eee;text-align:left;">Fecha</th>
-                                <th style="padding:10px;border-bottom:1px solid #eee;text-align:left;">Estado</th>
-                                <th style="padding:10px;border-bottom:1px solid #eee;text-align:left;">Acciones</th>
+                                <th>Título</th>
+                                <th>Archivo</th>
+                                <th class="text-end">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="anaconda-documents-table-body">
@@ -177,19 +190,14 @@ $current_user = wp_get_current_user();
                                         $file_url = $empresa_url . '/' . rawurlencode( $basename );
 
                                         echo '<tr data-fpath="' . esc_attr( $f ) . '">';
-                                        echo '<td style="padding:10px;text-align:center;"><input type="checkbox" name="selected_docs[]" value="' . esc_attr( $basename ) . '"></td>';
-                                        echo '<td style="padding:10px;">' . esc_html( $i ) . '</td>';
                                         echo '<td style="padding:10px;">' . esc_html( $title ) . '</td>';
                                         echo '<td style="padding:10px;">' . '<a href="' . esc_url( $file_url ) . '" target="_blank" rel="noopener">' . esc_html( $basename ) . '</a>' . '</td>';
-                                        echo '<td style="padding:10px;">' . $uploaded_by_name . '</td>';
-                                        echo '<td style="padding:10px;">' . esc_html( $date ) . '</td>';
-                                        echo '<td style="padding:10px;">' . ( ! empty( $meta ) ? 'activo' : '—' ) . '</td>';
-                                        // Actions: download and delete (delete posts to admin-post)
-                                        echo '<td style="padding:10px;">';
-                                        echo '<a href="' . esc_url( $file_url ) . '" class="actions-link" target="_blank">Descargar</a> ';
+                                        // Actions: download and delete
+                                        echo '<td style="padding:10px; text-align:right;">';
+                                        echo '<a href="' . esc_url( $file_url ) . '" class="btn btn-sm btn-outline-secondary me-1" target="_blank">Descargar</a>';
                                         if ( current_user_can( 'manage_options' ) ) {
                                             $delete_url = esc_url( admin_url( 'admin-post.php?action=anaconda_documents_delete&file=' . rawurlencode( $basename ) . '&_wpnonce=' . wp_create_nonce( 'anaconda_documents_delete' ) ) );
-                                            echo '<a href="' . $delete_url . '" class="actions-link text-danger" style="margin-left:8px;">Eliminar</a>';
+                                            echo '<a href="' . $delete_url . '" class="btn btn-sm btn-danger" style="margin-left:8px;">Eliminar</a>';
                                         }
                                         echo '</td>';
                                         echo '</tr>';
@@ -197,9 +205,9 @@ $current_user = wp_get_current_user();
                                 }
                             }
 
-                            if ( empty( $files ) ) {
-                                echo '<tr class="no-data"><td colspan="8" style="padding:18px;text-align:center;color:#666;">No hay documentos registrados.</td></tr>';
-                            }
+                                if ( empty( $files ) ) {
+                                    echo '<tr class="no-data"><td colspan="3" style="padding:18px;text-align:center;color:#666;">No hay documentos registrados.</td></tr>';
+                                }
                             ?>
                         </tbody>
                     </table>
@@ -207,24 +215,19 @@ $current_user = wp_get_current_user();
 
 
                 <style>
-                /* Administración: estilos básicos */
-                #anaconda-documents-table th, #anaconda-documents-table td { font-size:13px; }
+                /* Administración: estilos tipo tabla con colores */
+                #anaconda-documents-table th, #anaconda-documents-table td { font-size:13px; padding:10px; vertical-align:middle; }
+                #anaconda-documents-table thead.table-dark { background:#343a40; color:#fff; }
                 #anaconda-documents-table tbody tr:nth-child(odd) { background:#fff; }
                 #anaconda-documents-table tbody tr:nth-child(even) { background:#fbfbfb; }
                 .anaconda-admin h2 { margin-top:18px; margin-bottom:8px; }
                 .anaconda-admin .actions a { margin-right:8px; color:#0073aa; text-decoration:none; }
+                .anaconda-open-btn { background:#0073aa; color:#fff; border:0; }
                 </style>
 
-                <script>
+                    <script>
                 (function(){
-                    // Placeholder: aquí se cargarán los documentos vía AJAX o server-side.
-                    // Por ahora solo esquema HTML; la lógica de obtención, paginado y acciones se implementará según necesidad.
-                    const tableBody = document.getElementById('anaconda-documents-table-body');
-                    const selectAll = document.getElementById('select_all');
-                    selectAll && selectAll.addEventListener('change', function(){
-                        const checked = this.checked;
-                        document.querySelectorAll('#anaconda-documents-table-body input[type="checkbox"]').forEach(cb => cb.checked = checked);
-                    });
+                    // Placeholder for future JS enhancements (pagination, ajax loading, etc.)
                 })();
                 </script>
 			</main>

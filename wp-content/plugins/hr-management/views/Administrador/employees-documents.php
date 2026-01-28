@@ -92,19 +92,17 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
                     </div>
 
                     <div style="position: relative; min-width: 150px; max-width: 220px;">
-                        <input 
-                            type="text" 
-                            class="form-control" 
-                            id="hrm-doc-year-filter-search" 
-                            placeholder="Buscar año..."
-                            autocomplete="off"
-                            style="padding-right:36px;">
-                        <div id="hrm-doc-year-filter-items" style="position: absolute; top: 100%; left: 0; min-width: 150px; max-width: 250px; background: white; border: 1px solid #dee2e6; border-top: none; max-height: 300px; overflow-y: auto; z-index: 1000; display: none;"></div>
-                        <button type="button" class="btn hrm-filter-clear hrm-filter-clear-inline" data-filter="year" title="Limpiar año" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); border:none; background:transparent; color:#d9534f; font-size:18px; padding:0; line-height:1; cursor:pointer; display: none;">&times;</button>
+                        <select id="hrm-doc-year-filter-select" class="form-control">
+                            <option value="">— Año —</option>
+                            <?php $anio_actual = (int) date('Y'); for ($y = $anio_actual; $y >= 2000; $y--) : ?>
+                                <option value="<?= esc_attr( $y ); ?>" <?= $y === $anio_actual ? 'selected' : ''; ?>><?= esc_html( $y ); ?></option>
+                            <?php endfor; ?>
+                        </select>
+                        <button type="button" class="btn hrm-filter-clear hrm-filter-clear-inline" data-filter="year" title="Limpiar año" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); border:none; background:transparent; color:#d9534f; font-size:18px; padding:0; line-height:1; cursor:pointer;">&times;</button>
                     </div>
                     
                     <input type="hidden" id="hrm-doc-filter-type-id" value="">
-                    <input type="hidden" id="hrm-doc-filter-year" value="">
+                    <input type="hidden" id="hrm-doc-filter-year" value="<?= esc_attr( date('Y') ); ?>">
                     <button id="hrm-doc-filters-clear-all" type="button" class="btn btn-sm btn-outline-secondary ms-1" title="Limpiar todos">&times;</button>
                 </div>
             </div>
@@ -399,6 +397,41 @@ document.addEventListener('DOMContentLoaded', function() {
             window.hrmDocumentsSetEmployee(hrmDocsListData.employeeId);
         }
     }
+
+    // Año: sincronizar select con filtro oculto y manejar clear
+    (function(){
+        const yearSelect = document.getElementById('hrm-doc-year-filter-select');
+        const yearHidden = document.getElementById('hrm-doc-filter-year');
+        const yearClearBtn = document.querySelector('.hrm-filter-clear[data-filter="year"]');
+        if (!yearSelect || !yearHidden) return;
+
+        // Inicializar hidden con el valor seleccionado (por defecto año actual)
+        yearHidden.value = yearSelect.value || '';
+
+        function triggerReload() {
+            if ( typeof filterDocumentsByYear === 'function' ) {
+                try { filterDocumentsByYear( yearHidden.value ); } catch(e){ if ( typeof window.loadEmployeeDocuments === 'function' ) window.loadEmployeeDocuments(); }
+            } else if ( typeof window.loadEmployeeDocuments === 'function' ) {
+                window.loadEmployeeDocuments();
+            }
+        }
+
+        yearSelect.addEventListener('change', function(){
+            yearHidden.value = this.value || '';
+            if ( yearClearBtn ) yearClearBtn.style.display = this.value ? '' : 'none';
+            triggerReload();
+        });
+
+        if ( yearClearBtn ) {
+            yearClearBtn.style.display = yearSelect.value ? '' : 'none';
+            yearClearBtn.addEventListener('click', function(){
+                yearSelect.value = '';
+                yearHidden.value = '';
+                this.style.display = 'none';
+                triggerReload();
+            });
+        }
+    })();
 
     // Helper: comprobar si el tipo es 'Empresa' (case-insensitive)
     function isEmpresaType(name) {

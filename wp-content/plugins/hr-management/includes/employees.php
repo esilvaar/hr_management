@@ -341,8 +341,11 @@ function hrm_handle_employees_post() {
     // ACCIÓN: TOGGLE ESTADO
     // =========================================================================
     if ( $action === 'toggle_employee_status' && check_admin_referer( 'hrm_toggle_employee_status', 'hrm_toggle_status_nonce' ) ) {
-        if ( ! current_user_can( 'edit_hrm_employees' ) ) wp_die('Sin permisos');
-        
+        $current_user = wp_get_current_user();
+        $roles = (array) ( $current_user->roles ?? array() );
+        $can_toggle = current_user_can( 'manage_options' ) || current_user_can( 'view_hrm_admin_views' ) || in_array( 'administrador_anaconda', $roles, true ) || in_array( 'supervisor', $roles, true ) || current_user_can( 'edit_hrm_employees' );
+        if ( ! $can_toggle ) wp_die('Sin permisos');
+
         $emp_id = absint( $_POST['employee_id'] );
         $nuevo_estado = ( intval($_POST['current_estado']) === 1 ) ? 0 : 1;
         
@@ -354,6 +357,64 @@ function hrm_handle_employees_post() {
         );
         
         wp_redirect( add_query_arg( ['id'=>$emp_id, 'tab'=>'profile', 'message_success'=>'Estado actualizado'], $redirect_base ) );
+        exit;
+    }
+
+    // =========================================================================
+    // ACCIÓN: ELIMINAR EMPLEADO (completamente)
+    // =========================================================================
+    if ( $action === 'delete_employee' && check_admin_referer( 'hrm_delete_employee', 'hrm_delete_employee_nonce' ) ) {
+        $current_user = wp_get_current_user();
+        $roles = (array) ( $current_user->roles ?? array() );
+        $is_allowed = current_user_can( 'manage_options' ) || current_user_can( 'view_hrm_admin_views' ) || in_array( 'administrador_anaconda', $roles, true ) || in_array( 'supervisor', $roles, true ) || current_user_can( 'edit_hrm_employees' );
+        if ( ! $is_allowed ) {
+            hrm_redirect_with_message( $redirect_base, __( 'No tienes permisos para eliminar empleados.', 'hr-management' ), 'error' );
+        }
+
+        $emp_id = isset( $_POST['employee_id'] ) ? absint( $_POST['employee_id'] ) : 0;
+        if ( ! $emp_id ) {
+            hrm_redirect_with_message( $redirect_base, __( 'Empleado no especificado.', 'hr-management' ), 'error' );
+        }
+
+        $employee = $db_emp->get( $emp_id );
+        if ( ! $employee ) {
+            hrm_redirect_with_message( $redirect_base, __( 'Empleado no encontrado.', 'hr-management' ), 'error' );
+        }
+
+        $errors = array();
+
+        // 1) Eliminar usuario WP vinculado si existe
+        if ( ! empty( $employee->user_id ) ) {
+            require_once ABSPATH . 'wp-admin/includes/user.php';
+            $res = wp_delete_user( intval( $employee->user_id ) );
+            if ( $res === false || is_wp_error( $res ) ) {
+                $errors[] = __( 'No se pudo eliminar el usuario de WordPress.', 'hr-management' );
+            }
+        }
+
+        // 2) Eliminar documentos asociados (por RUT)
+        global $wpdb;
+        $deleted_docs = false;
+        if ( ! empty( $employee->rut ) ) {
+            $deleted_docs = $wpdb->delete( $db_docs->table(), array( $db_docs->col('rut') => $employee->rut ), array( '%s' ) );
+            if ( $deleted_docs === false ) {
+                $errors[] = __( 'Error al eliminar documentos asociados.', 'hr-management' );
+            }
+        }
+
+        // 3) Eliminar fila del empleado
+        $deleted_emp = $wpdb->delete( $db_emp->table(), array( $db_emp->col('id') => $emp_id ), array( '%d' ) );
+        if ( $deleted_emp === false ) {
+            hrm_redirect_with_message( $redirect_base, __( 'Error al eliminar empleado de la base de datos.', 'hr-management' ), 'error' );
+        }
+
+        $msg = __( 'Empleado eliminado correctamente.', 'hr-management' );
+        if ( ! empty( $errors ) ) {
+            $msg .= ' ' . implode( ' ', $errors );
+            hrm_redirect_with_message( $redirect_base, $msg, 'warning' );
+        }
+
+        hrm_redirect_with_message( $redirect_base, $msg, 'success' );
         exit;
     }
 

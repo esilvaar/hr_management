@@ -51,6 +51,16 @@ wp_localize_script( 'hrm-mis-documentos', 'hrmMisDocsData', array(
 
                 <div class="hrm-panel-body">
 
+                    <div class="mb-3 d-flex align-items-center gap-2">
+                        <label for="hrm-mis-year-select" class="me-2 mb-0 fw-bold">Filtrar por año:</label>
+                        <select id="hrm-mis-year-select" class="form-select" style="max-width:160px;">
+                            <option value="">Todos</option>
+                            <?php $anio_actual = (int) date('Y'); for ($y = $anio_actual; $y >= 2000; $y--) : ?>
+                                <option value="<?= esc_attr( $y ); ?>" <?= $y === $anio_actual ? 'selected' : ''; ?>><?= esc_html( $y ); ?></option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+
                     <div id="hrm-mis-documents-container">
                         <?php if ( ! empty( $documents ) ) : ?>
                             <div class="table-responsive">
@@ -154,6 +164,39 @@ document.addEventListener('DOMContentLoaded', function () {
             previewIframe.src = '';
         });
     }
+
+    // Filtrado por año (cliente) para la tabla de liquidaciones
+    (function(){
+        const yearSelect = document.getElementById('hrm-mis-year-select');
+        const container = document.getElementById('hrm-mis-documents-container');
+        if (!yearSelect || !container) return;
+
+        function filterRowsByYear(){
+            const val = yearSelect.value;
+            const rows = container.querySelectorAll('table tbody tr[data-year]');
+            let visible = 0;
+            rows.forEach(r => {
+                if (!val || r.dataset.year === val) { r.style.display = ''; visible++; } else { r.style.display = 'none'; }
+            });
+
+            // Mostrar mensaje si no hay resultados
+            let noEl = container.querySelector('.hrm-no-results');
+            if ( visible === 0 ) {
+                if (!noEl) {
+                    noEl = document.createElement('div');
+                    noEl.className = 'alert alert-info hrm-no-results text-center';
+                    noEl.innerHTML = '<p class="mb-0">No hay documentos para el año seleccionado.</p>';
+                    container.appendChild(noEl);
+                }
+            } else if ( noEl ) {
+                noEl.remove();
+            }
+        }
+
+        yearSelect.addEventListener('change', filterRowsByYear);
+        // Inicializar filtro (el select viene por defecto con el año actual seleccionado)
+        filterRowsByYear();
+    })();
 
 });
 </script>

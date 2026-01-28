@@ -99,6 +99,17 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                 <h1 class="wp-heading-inline fs-2 fw-bold text-primary mb-0">
                     Panel de Gestion de Vacaciones
                 </h1>
+                <?php
+                // Optional action: mark all HRM notifications as read (visible to editor and gerente)
+                $current_uid = get_current_user_id();
+                $can_mark_all = current_user_can( 'manage_hrm_vacaciones' ) || ( function_exists( 'hrm_user_is_gerente_supervisor' ) && hrm_user_is_gerente_supervisor( $current_uid ) );
+                if ( $can_mark_all ) : ?>
+                    <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin:0;">
+                        <?php wp_nonce_field( 'hrm_mark_all_notifications_read', 'hrm_mark_all_notifications_read_nonce' ); ?>
+                        <input type="hidden" name="action" value="hrm_mark_all_notifications_read">
+                        <button type="submit" class="btn btn-outline-secondary">Marcar todas como leídas</button>
+                    </form>
+                <?php endif; ?>
             </div>
 
             <!-- Navegación de Tabs -->

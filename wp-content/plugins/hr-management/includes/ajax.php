@@ -1021,11 +1021,15 @@ function hrm_handle_anaconda_document_create() {
         'uploaded_at' => current_time( 'mysql' ),
     );
     $meta_path = $destination . '.json';
-    try {
-        file_put_contents( $meta_path, wp_json_encode( $meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
-        @chmod( $meta_path, 0644 );
-    } catch ( Exception $e ) {
-        error_log( 'HRM Anaconda: failed to write metadata for ' . $destination . ' - ' . $e->getMessage() );
+    // Escritura de metadata JSON controlada por filtro. Por defecto está desactivada.
+    $write_meta = apply_filters( 'hrm_write_company_metadata_json', false );
+    if ( $write_meta ) {
+        try {
+            file_put_contents( $meta_path, wp_json_encode( $meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
+            @chmod( $meta_path, 0644 );
+        } catch ( Exception $e ) {
+            error_log( 'HRM Anaconda: failed to write metadata for ' . $destination . ' - ' . $e->getMessage() );
+        }
     }
 
     // Insert record into custom table rrhh_documentos_empresa
@@ -1043,13 +1047,15 @@ function hrm_handle_anaconda_document_create() {
     if ( false === $inserted ) {
         error_log( 'HRM Anaconda: DB insert failed for document ' . $filename . ' - ' . $wpdb->last_error );
     } else {
-        // Save DB id into metadata json
+        // Save DB id into metadata array (only written to disk if filter enabled)
         $meta['db_id'] = intval( $wpdb->insert_id );
-        try {
-            file_put_contents( $meta_path, wp_json_encode( $meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
-            @chmod( $meta_path, 0644 );
-        } catch ( Exception $e ) {
-            error_log( 'HRM Anaconda: failed to write metadata with db_id for ' . $destination . ' - ' . $e->getMessage() );
+        if ( ! empty( $write_meta ) ) {
+            try {
+                file_put_contents( $meta_path, wp_json_encode( $meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
+                @chmod( $meta_path, 0644 );
+            } catch ( Exception $e ) {
+                error_log( 'HRM Anaconda: failed to write metadata with db_id for ' . $destination . ' - ' . $e->getMessage() );
+            }
         }
     }
 

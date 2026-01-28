@@ -522,13 +522,13 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                     <div class="hrm-panel-body d-flex gap-2 justify-content-center flex-wrap">
                         <button type="submit" class="btn btn-success"><span class="dashicons dashicons-update"></span> Guardar Cambios</button>
                         
-                        <?php if ( $is_admin && !$is_own_profile ) : ?>
-                            <?php if ( intval( $employee->estado ?? 1 ) === 1 ) : ?>
-                                <button type="button" class="btn btn-danger" id="btn-desactivar-empleado">Desactivar</button>
-                            <?php else : ?>
-                                <button type="button" class="btn btn-warning" id="btn-activar-empleado">Activar</button>
-                            <?php endif; ?>
-                        <?php endif; ?>
+                                <?php if ( ( $is_admin || $is_supervisor || $is_role_supervisor ) && ! $is_own_profile ) : ?>
+                                    <?php if ( intval( $employee->estado ?? 1 ) === 1 ) : ?>
+                                        <button type="button" class="btn btn-danger" id="btn-desactivar-empleado">Desactivar</button>
+                                    <?php else : ?>
+                                        <button type="button" class="btn btn-warning" id="btn-activar-empleado">Activar</button>
+                                    <?php endif; ?>
+                                <?php endif; ?>
                     </div>
                 </div>
 

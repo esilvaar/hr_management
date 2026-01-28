@@ -155,16 +155,45 @@ if ( ! empty( $lista_empleados ) ) {
                                 <td class="text-center px-3 py-3">
                                     <?php if ( ! empty( $emp_id ) ) : ?>
                                         <div class="d-flex gap-1 justify-content-center">
-                                            <a href="<?= esc_url( admin_url( 'admin.php?page=hrm-empleados&tab=profile&id=' . rawurlencode( $emp_id ) ) ) ?>" 
-                                               class="btn btn-sm btn-primary" 
-                                               title="Editar">
-                                                <span class="dashicons dashicons-edit"></span>
-                                            </a>
-                                            <a href="<?= esc_url( admin_url( 'admin.php?page=hrm-empleados&tab=upload&id=' . absint( $emp_id ) ) ) ?>" 
-                                               class="btn btn-sm btn-secondary" 
-                                               title="Subir documentos">
-                                                <span class="dashicons dashicons-upload"></span>
-                                            </a>
+                                            <?php
+                                                $roles = (array) ( wp_get_current_user()->roles ?? array() );
+                                                $can_manage = current_user_can( 'manage_options' ) || $is_anaconda || in_array( 'supervisor', $roles, true ) || current_user_can( 'edit_hrm_employees' );
+                                            ?>
+                                            <?php if ( $show_inactive ) : ?>
+                                                <?php if ( $can_manage ) : ?>
+                                                    <form method="post" action="<?= esc_url( admin_url( 'admin.php?page=hrm-empleados&tab=list' ) ) ?>" style="display:inline-block; margin:0;">
+                                                        <?php wp_nonce_field( 'hrm_toggle_employee_status', 'hrm_toggle_status_nonce' ); ?>
+                                                        <input type="hidden" name="hrm_action" value="toggle_employee_status" />
+                                                        <input type="hidden" name="employee_id" value="<?= esc_attr( $emp_id ) ?>" />
+                                                        <input type="hidden" name="current_estado" value="<?= esc_attr( isset($empleado->estado) ? $empleado->estado : 0 ) ?>" />
+                                                        <button type="submit" class="btn btn-sm btn-success" title="Activar" onclick="return confirm('¿Confirmar activación del empleado?');">
+                                                            <span class="dashicons dashicons-yes"></span>
+                                                        </button>
+                                                    </form>
+
+                                                    <form method="post" action="<?= esc_url( admin_url( 'admin.php?page=hrm-empleados&tab=list' ) ) ?>" style="display:inline-block; margin:0;">
+                                                        <?php wp_nonce_field( 'hrm_delete_employee', 'hrm_delete_employee_nonce' ); ?>
+                                                        <input type="hidden" name="hrm_action" value="delete_employee" />
+                                                        <input type="hidden" name="employee_id" value="<?= esc_attr( $emp_id ) ?>" />
+                                                        <button type="submit" class="btn btn-sm btn-danger" title="Eliminar" onclick="return confirm('Eliminar este empleado eliminará también su usuario de WordPress y documentos asociados. ¿Continuar?');">
+                                                            <span class="dashicons dashicons-trash"></span>
+                                                        </button>
+                                                    </form>
+                                                <?php else : ?>
+                                                    <span class="text-muted">Sin acciones disponibles</span>
+                                                <?php endif; ?>
+                                            <?php else : ?>
+                                                <a href="<?= esc_url( admin_url( 'admin.php?page=hrm-empleados&tab=profile&id=' . rawurlencode( $emp_id ) ) ) ?>" 
+                                                   class="btn btn-sm btn-primary" 
+                                                   title="Editar">
+                                                    <span class="dashicons dashicons-edit"></span>
+                                                </a>
+                                                <a href="<?= esc_url( admin_url( 'admin.php?page=hrm-empleados&tab=upload&id=' . absint( $emp_id ) ) ) ?>" 
+                                                   class="btn btn-sm btn-secondary" 
+                                                   title="Subir documentos">
+                                                    <span class="dashicons dashicons-upload"></span>
+                                                </a>
+                                            <?php endif; ?>
                                         </div>
                                     <?php endif; ?>
                                 </td>

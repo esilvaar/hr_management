@@ -266,6 +266,57 @@ function setupFormSubmit() {
             console.log('[HRM-UPLOAD] submit debug failed', err);
         }
         
+        // If multiple files, upload them sequentially to reduce server load/timeouts
+        const filesCount = filesInput.files ? filesInput.files.length : 0;
+        if ( filesCount > 1 ) {
+            (async function(){
+                const filesArr = Array.from(filesInput.files);
+                let anySuccess = false;
+                for (let i = 0; i < filesArr.length; i++) {
+                    showUploadMessage('Subiendo archivo ' + (i+1) + ' de ' + filesArr.length + '...', 'success');
+                    const singleFD = new FormData(form);
+                    // Replace file inputs with a single file to send
+                    try { singleFD.delete('archivos_subidos[]'); } catch(e) {}
+                    singleFD.append('archivos_subidos[]', filesArr[i]);
+                    try {
+                        const resp = await fetch(form.action || '', { method: 'POST', body: singleFD });
+                        const txt = await resp.text();
+                        console.log('[HRM-UPLOAD] raw response (file ' + (i+1) + '):', txt);
+                        try {
+                            const json = JSON.parse(txt);
+                            console.log('[HRM-UPLOAD] parsed json (file ' + (i+1) + '):', json);
+                            if ( json && json.success ) {
+                                anySuccess = true;
+                            } else {
+                                console.warn('[HRM-UPLOAD] upload returned error for file ' + (i+1), json);
+                            }
+                        } catch (e) {
+                            // non-json
+                            console.warn('[HRM-UPLOAD] non-JSON response for file ' + (i+1));
+                            anySuccess = true;
+                        }
+                    } catch (err) {
+                        console.error('[HRM-UPLOAD] fetch error for file ' + (i+1) + ':', err);
+                        // stop on network error
+                        showUploadMessage('Error al subir archivos (falló la conexión)', 'error');
+                        break;
+                    }
+                }
+
+                if ( anySuccess ) {
+                    showUploadMessage('Documentos subidos correctamente', 'success');
+                    setTimeout(() => { location.reload(); }, 1200);
+                } else {
+                    showUploadMessage('No se pudieron subir los archivos', 'error');
+                }
+
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<span class="dashicons dashicons-upload"></span> Subir Documentos';
+            })();
+
+            return;
+        }
+
         fetch(form.action || '', {
             method: 'POST',
             body: formData
