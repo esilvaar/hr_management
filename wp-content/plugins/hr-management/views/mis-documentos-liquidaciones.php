@@ -169,7 +169,11 @@ wp_localize_script( 'hrm-mis-documentos', 'hrmMisDocsData', array(
                         <iframe id="hrm-preview-iframe"
                                 style="width:100%;min-height:600px;border:1px solid #ccc;background:#fff;"></iframe>
                     </div>
-                    <?php else: error_log('[HRM-DEBUG] Skipping duplicated liquidations preview render for employee id=' . intval( $employee->id ) ); endif; ?>
+                    <?php else:
+                        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                            error_log( '[HRM-DEBUG] Skipping duplicated liquidations preview render for employee id=' . intval( $employee->id ) );
+                        }
+                    endif; ?>
 
                 </div>
             </div>

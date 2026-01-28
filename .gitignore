@@ -1,0 +1,5 @@
+# Ignore HRM debug logs and other large runtime logs
+/wp-content/hrm_ajax_debug.log
+/wp-content/uploads/hrm-debug.log
+/wp-content/*.log
+/wp-content/uploads/*.log

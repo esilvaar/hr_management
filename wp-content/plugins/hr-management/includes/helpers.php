@@ -332,6 +332,10 @@ function hrm_remove_type_view_stub( $type_id ) {
 // Helper: write plugin-local debug logs in a file writable by the web user.
 if ( ! function_exists( 'hrm_local_debug_log' ) ) {
     function hrm_local_debug_log( $msg ) {
+        // Only write local debug logs when WP_DEBUG is enabled.
+        if ( ! ( defined( 'WP_DEBUG' ) && WP_DEBUG ) ) {
+            return false;
+        }
         // Prefer writing to uploads dir (writable by web server) and fallback to plugin dir.
         $ts = date( 'c' );
         $current = wp_get_current_user();

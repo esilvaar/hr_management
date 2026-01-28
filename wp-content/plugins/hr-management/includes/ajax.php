@@ -6,18 +6,27 @@ if ( ! function_exists( 'wp_delete_file' ) && file_exists( ABSPATH . 'wp-admin/i
     require_once ABSPATH . 'wp-admin/includes/file.php';
 }
 
-// Registrar un shutdown handler y un log inicial para peticiones AJAX
-if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) {
+// Helper para logs de depuración: sólo escribe cuando WP_DEBUG está activo
+if ( ! function_exists( 'hrm_debug_log' ) ) {
+    function hrm_debug_log( $msg ) {
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            error_log( $msg );
+        }
+    }
+}
+
+// Registrar un shutdown handler y un log inicial para peticiones AJAX (solo en WP_DEBUG)
+if ( defined( 'DOING_AJAX' ) && DOING_AJAX && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
     // Log inicial para depuración rápida
-    error_log( 'HRM AJAX START - action=' . ( isset( $_REQUEST['action'] ) ? $_REQUEST['action'] : '(none)' ) . ' REQUEST_KEYS=' . json_encode( array_keys( $_REQUEST ) ) );
+    hrm_debug_log( 'HRM AJAX START - action=' . ( isset( $_REQUEST['action'] ) ? $_REQUEST['action'] : '(none)' ) . ' REQUEST_KEYS=' . json_encode( array_keys( $_REQUEST ) ) );
 
     // Registrar shutdown para capturar errores fatales que no llegan al stack normal
     register_shutdown_function( function() {
         $err = error_get_last();
         if ( $err && in_array( $err['type'], array( E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR ), true ) ) {
-            error_log( 'HRM AJAX SHUTDOWN ERROR: ' . print_r( $err, true ) );
+            hrm_debug_log( 'HRM AJAX SHUTDOWN ERROR: ' . print_r( $err, true ) );
             // Mostrar algunos parámetros útiles (sin volcar todo el request para evitar datos sensibles)
-            error_log( 'HRM AJAX SHUTDOWN - REQUEST_SNIPPET: ' . print_r( array_intersect_key( $_REQUEST, array( 'action' => 1, 'email' => 1, 'email_b64' => 1, 'nonce' => 1 ) ), true ) );
+            hrm_debug_log( 'HRM AJAX SHUTDOWN - REQUEST_SNIPPET: ' . print_r( array_intersect_key( $_REQUEST, array( 'action' => 1, 'email' => 1, 'email_b64' => 1, 'nonce' => 1 ) ), true ) );
         }
     } );
 }
@@ -149,7 +158,7 @@ function descargar_liquidaciones( $user_id, $year = '', $cantidad = 'all' ) {
         }
 
         if ( ! $filepath || ! file_exists( $filepath ) ) {
-            error_log( '[HRM] descargar_liquidaciones - archivo no encontrado: ' . $url );
+            hrm_debug_log( '[HRM] descargar_liquidaciones - archivo no encontrado: ' . $url );
             continue;
         }
 
@@ -268,28 +277,28 @@ function hrm_grant_ajax_access_to_supervisor( $allcaps, $caps, $args, $user ) {
  * Carga documentos de forma asincrónica para mejorar rendimiento
  */
 function hrm_ajax_get_employee_documents() {
-    // Debug: log del usuario y permisos
+    // Debug: log del usuario y permisos (solo si WP_DEBUG)
     $current_user = wp_get_current_user();
     $can_manage = current_user_can( 'manage_options' );
     $can_edit = current_user_can( 'edit_hrm_employees' );
     $can_view_admin = current_user_can( 'view_hrm_employee_admin' );
-    
-    error_log( 'HRM AJAX Documents - User ID: ' . $current_user->ID );
-    error_log( 'HRM AJAX Documents - Roles: ' . implode(', ', $current_user->roles) );
-    error_log( 'HRM AJAX Documents - manage_options: ' . ($can_manage ? 'YES' : 'NO') );
-    error_log( 'HRM AJAX Documents - edit_hrm_employees: ' . ($can_edit ? 'YES' : 'NO') );
-    error_log( 'HRM AJAX Documents - view_hrm_employee_admin: ' . ($can_view_admin ? 'YES' : 'NO') );
-    
+
+    hrm_debug_log( 'HRM AJAX Documents - User ID: ' . $current_user->ID );
+    hrm_debug_log( 'HRM AJAX Documents - Roles: ' . implode(', ', $current_user->roles) );
+    hrm_debug_log( 'HRM AJAX Documents - manage_options: ' . ($can_manage ? 'YES' : 'NO') );
+    hrm_debug_log( 'HRM AJAX Documents - edit_hrm_employees: ' . ($can_edit ? 'YES' : 'NO') );
+    hrm_debug_log( 'HRM AJAX Documents - view_hrm_employee_admin: ' . ($can_view_admin ? 'YES' : 'NO') );
+
     // Listar todas las capabilities del usuario para debug
     if ( ! empty( $current_user->allcaps ) ) {
-        error_log( 'HRM AJAX Documents - All caps: ' . implode(', ', array_keys( array_filter( $current_user->allcaps ) ) ) );
+        hrm_debug_log( 'HRM AJAX Documents - All caps: ' . implode(', ', array_keys( array_filter( $current_user->allcaps ) ) ) );
     }
-    
+
     // Verificar permisos: admin, supervisor o rol con vista de empleados
     if ( ! $can_manage && ! $can_edit && ! $can_view_admin ) {
-        error_log( 'HRM AJAX Documents - PERMISSION DENIED' );
-        
-        // Mensaje de error detallado
+        hrm_debug_log( 'HRM AJAX Documents - PERMISSION DENIED' );
+
+        // Mensaje de error detallado, incluir detalles solo si WP_DEBUG
         $error_details = array(
             'user_id' => $current_user->ID,
             'user_login' => $current_user->user_login,
@@ -298,11 +307,12 @@ function hrm_ajax_get_employee_documents() {
             'edit_hrm_employees' => $can_edit,
             'view_hrm_employee_admin' => $can_view_admin,
         );
-        
-        wp_send_json_error( array(
-            'message' => 'No tienes permisos para ver documentos.',
-            'debug' => $error_details
-        ) );
+
+        $resp = array( 'message' => 'No tienes permisos para ver documentos.' );
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            $resp['debug'] = $error_details;
+        }
+        wp_send_json_error( $resp );
     }
 
     // Verificar nonce
@@ -501,14 +511,14 @@ function hrm_ajax_get_employee_documents() {
 
 // ...existing code...
 function hrm_ajax_delete_employee_document() {
-    // Debug: log de invocación y parámetros recibidos
-    error_log( 'HRM AJAX Delete - Called. Method: ' . ( $_SERVER['REQUEST_METHOD'] ?? 'UNKNOWN' ) . ' action: ' . ( isset( $_REQUEST['action'] ) ? $_REQUEST['action'] : '(none)' ) );
+    // Debug: log de invocación y parámetros recibidos (solo si WP_DEBUG)
+    hrm_debug_log( 'HRM AJAX Delete - Called. Method: ' . ( $_SERVER['REQUEST_METHOD'] ?? 'UNKNOWN' ) . ' action: ' . ( isset( $_REQUEST['action'] ) ? $_REQUEST['action'] : '(none)' ) );
     if ( defined( 'DOING_AJAX' ) ) {
-        error_log( 'HRM AJAX Delete - DOING_AJAX = true' );
+        hrm_debug_log( 'HRM AJAX Delete - DOING_AJAX = true' );
     } else {
-        error_log( 'HRM AJAX Delete - DOING_AJAX not defined or false' );
+        hrm_debug_log( 'HRM AJAX Delete - DOING_AJAX not defined or false' );
     }
-    error_log( 'HRM AJAX Delete - REQUEST keys: ' . implode( ', ', array_keys( $_REQUEST ) ) );
+    hrm_debug_log( 'HRM AJAX Delete - REQUEST keys: ' . implode( ', ', array_keys( $_REQUEST ) ) );
 
     // Validar contexto y autenticación
     if ( ! defined( 'DOING_AJAX' ) || ! DOING_AJAX ) {
@@ -535,7 +545,7 @@ function hrm_ajax_delete_employee_document() {
     }
 
     if ( ! $nonce || ! wp_verify_nonce( $nonce, 'hrm_delete_file' ) ) {
-        error_log( 'HRM Delete Document - Nonce verification FAILED' );
+        hrm_debug_log( 'HRM Delete Document - Nonce verification FAILED' );
         wp_send_json_error( [ 'message' => 'Token de seguridad inválido. Actualiza la página e intenta nuevamente.' ], 403 );
     }
 
@@ -598,17 +608,17 @@ function hrm_ajax_delete_employee_document() {
                 }
 
             } else {
-                error_log( "HRM Delete Document - Failed to unlink file: {$file_path}" );
+                hrm_debug_log( "HRM Delete Document - Failed to unlink file: {$file_path}" );
             }
         } else {
-            error_log( "HRM Delete Document - File not found for deletion: {$file_path}" );
+            hrm_debug_log( "HRM Delete Document - File not found for deletion: {$file_path}" );
         }
     }
 
     // Eliminar de la base de datos y comprobar resultado
     $db_result = $db_docs->delete( $doc_id );
     if ( $db_result === false ) {
-        error_log( "HRM Delete Document - DB delete failed for ID: {$doc_id}" );
+        hrm_debug_log( "HRM Delete Document - DB delete failed for ID: {$doc_id}" );
         wp_send_json_error( [ 'message' => 'No se pudo eliminar el registro en la base de datos.' ], 500 );
     }
 
@@ -706,7 +716,7 @@ function hrm_ajax_aprobar_solicitud_supervisor() {
         [ '%d' ]
     );
     
-    error_log( "HRM: Solicitud $solicitud_id aprobada por supervisor. Días descontados: $dias. Días restantes: $nuevos_dias" );
+    hrm_debug_log( "HRM: Solicitud $solicitud_id aprobada por supervisor. Días descontados: $dias. Días restantes: $nuevos_dias" );
     
     wp_send_json_success( [
         'message' => 'Solicitud aprobada correctamente',
@@ -780,7 +790,7 @@ function hrm_ajax_rechazar_solicitud_supervisor() {
         wp_send_json_error( [ 'message' => 'Error al actualizar solicitud' ] );
     }
     
-    error_log( "HRM: Solicitud $solicitud_id rechazada por supervisor" );
+    hrm_debug_log( "HRM: Solicitud $solicitud_id rechazada por supervisor" );
     
     wp_send_json_success( [ 'message' => 'Solicitud rechazada correctamente' ] );
 }
@@ -854,7 +864,7 @@ function hrm_ajax_create_document_type() {
                     break;
                 }
             } catch ( Exception $e ) {
-                error_log( 'HRM: No se pudo crear stub para tipo id=' . intval( $id ) . ' - ' . $e->getMessage() );
+                hrm_debug_log( 'HRM: No se pudo crear stub para tipo id=' . intval( $id ) . ' - ' . $e->getMessage() );
             }
         }
     }
@@ -935,7 +945,7 @@ function hrm_ajax_delete_document_type() {
                         @unlink( $f );
                     }
                     $stub_deleted = true;
-                } catch ( Exception $e ) { error_log( 'HRM: failed to delete stub file ' . $f . ' - ' . $e->getMessage() ); }
+                } catch ( Exception $e ) { hrm_debug_log( 'HRM: failed to delete stub file ' . $f . ' - ' . $e->getMessage() ); }
             }
         }
         // Additionally remove legacy exact filenames if present
@@ -957,11 +967,11 @@ function hrm_ajax_delete_document_type() {
             foreach ( $dirs as $d ) {
                 // intentar eliminar incluso si no está vacío usando fuerza
                 $res = hrm_recursive_rmdir_force( $d );
-                if ( $res['deleted'] ) {
+                    if ( $res['deleted'] ) {
                     $deleted_dirs[] = $d;
                 } else {
                     // registrar fallos para devolver al cliente si es necesario
-                    error_log( 'HRM: failed to remove dir ' . $d . ' failed_paths=' . json_encode( $res['failed'] ) );
+                    hrm_debug_log( 'HRM: failed to remove dir ' . $d . ' failed_paths=' . json_encode( $res['failed'] ) );
                 }
             }
         }
@@ -983,7 +993,7 @@ function hrm_ajax_delete_document_type() {
                 }
             }
         } catch ( Exception $e ) {
-            error_log( 'HRM: Error deleting extra stub by slug: ' . $e->getMessage() );
+            hrm_debug_log( 'HRM: Error deleting extra stub by slug: ' . $e->getMessage() );
         }
 
     wp_send_json_success( [ 'id' => $id, 'stub_deleted' => $stub_deleted, 'deleted_dirs' => $deleted_dirs ] );
@@ -995,21 +1005,23 @@ add_action( 'wp_ajax_hrm_delete_document_type', 'hrm_ajax_delete_document_type' 
  * Retorna JSON { success: true, data: { exists: bool, user_id: int|null } }
  */
 function hrm_ajax_check_email() {
-    // Debug: registrar llamada para detectar problemas que causan 500
+    // Debug: registrar llamada para detectar problemas que causan 500 (solo si WP_DEBUG)
     $current_user_id = get_current_user_id();
-    error_log( "HRM AJAX hrm_check_email called by user_id={$current_user_id}. REQUEST=" . json_encode( array_intersect_key( $_REQUEST, array( 'action' => 1, 'email' => 1, 'email_b64' => 1, 'nonce' => 1 ) ) ) );
+    hrm_debug_log( "HRM AJAX hrm_check_email called by user_id={$current_user_id}. REQUEST=" . json_encode( array_intersect_key( $_REQUEST, array( 'action' => 1, 'email' => 1, 'email_b64' => 1, 'nonce' => 1 ) ) ) );
     // Also append to a file in wp-content to capture logs if syslog is suppressed
-    @file_put_contents( WP_CONTENT_DIR . '/hrm_ajax_debug.log', date( 'c' ) . " - hrm_check_email invoked by user_id={$current_user_id} REQUEST_KEYS=" . json_encode( array_keys( $_REQUEST ) ) . PHP_EOL, FILE_APPEND );
+    if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+        @file_put_contents( WP_CONTENT_DIR . '/hrm_ajax_debug.log', date( 'c' ) . " - hrm_check_email invoked by user_id={$current_user_id} REQUEST_KEYS=" . json_encode( array_keys( $_REQUEST ) ) . PHP_EOL, FILE_APPEND );
+    }
 
     // Solo para usuarios con permisos de administración de empleados o creación de usuarios
     if ( ! current_user_can( 'edit_hrm_employees' ) && ! current_user_can( 'create_users' ) && ! current_user_can( 'manage_options' ) ) {
-        error_log( "HRM AJAX hrm_check_email - permission denied for user_id={$current_user_id}" );
+        hrm_debug_log( "HRM AJAX hrm_check_email - permission denied for user_id={$current_user_id}" );
         wp_send_json_error( array( 'message' => 'No tienes permisos para verificar este email.' ), 403 );
     }
 
     $nonce = isset( $_REQUEST['nonce'] ) ? sanitize_text_field( $_REQUEST['nonce'] ) : '';
     if ( ! wp_verify_nonce( $nonce, 'hrm_check_email_nonce' ) ) {
-        error_log( "HRM AJAX hrm_check_email - invalid nonce for user_id={$current_user_id}" );
+        hrm_debug_log( "HRM AJAX hrm_check_email - invalid nonce for user_id={$current_user_id}" );
         wp_send_json_error( array( 'message' => 'Nonce inválido' ), 403 );
     }
 
@@ -1019,17 +1031,17 @@ function hrm_ajax_check_email() {
         $email_b64 = wp_unslash( $_REQUEST['email_b64'] );
         $decoded = base64_decode( $email_b64, true );
         if ( $decoded === false ) {
-            error_log( "HRM AJAX hrm_check_email - invalid base64 for email_b64" );
+            hrm_debug_log( "HRM AJAX hrm_check_email - invalid base64 for email_b64" );
             wp_send_json_error( array( 'message' => 'Email inválido (codificación)' ), 400 );
         }
         $email = sanitize_email( $decoded );
-        error_log( "HRM AJAX hrm_check_email - received email via base64: {$email}" );
+        hrm_debug_log( "HRM AJAX hrm_check_email - received email via base64: {$email}" );
     } elseif ( isset( $_REQUEST['email'] ) ) {
         $email = sanitize_email( wp_unslash( $_REQUEST['email'] ) );
     }
 
     if ( empty( $email ) || ! is_email( $email ) ) {
-        error_log( "HRM AJAX hrm_check_email - invalid email provided: '{$email}'" );
+        hrm_debug_log( "HRM AJAX hrm_check_email - invalid email provided: '{$email}'" );
         wp_send_json_error( array( 'message' => 'Email inválido' ), 400 );
     }
 
@@ -1048,12 +1060,12 @@ function hrm_ajax_check_email() {
         // Verificar errores SQL inesperados a través del accessor
         $last_error = $db_emp->last_error();
         if ( ! empty( $last_error ) ) {
-            error_log( "HRM AJAX hrm_check_email - SQL error: " . $last_error );
+            hrm_debug_log( "HRM AJAX hrm_check_email - SQL error: " . $last_error );
             wp_send_json_error( array( 'message' => 'Error en la consulta de la base de datos.' ), 500 );
         }
 
     } catch ( Exception $e ) {
-        error_log( "HRM AJAX hrm_check_email - Exception: " . $e->getMessage() );
+        hrm_debug_log( "HRM AJAX hrm_check_email - Exception: " . $e->getMessage() );
         wp_send_json_error( array( 'message' => 'Error interno al verificar email.' ), 500 );
     }
 
@@ -1065,7 +1077,7 @@ function hrm_ajax_check_email() {
         'employee_name' => ! empty( $empleado ) ? trim( ($empleado->nombre ?? '') . ' ' . ($empleado->apellido ?? '') ) : '',
     );
 
-    error_log( "HRM AJAX hrm_check_email - response: " . json_encode( $response ) );
+    hrm_debug_log( "HRM AJAX hrm_check_email - response: " . json_encode( $response ) );
 
     wp_send_json_success( $response );
 }
@@ -1148,7 +1160,7 @@ function hrm_handle_anaconda_document_create() {
         $overrides = array( 'test_form' => false, 'mimes' => array( 'pdf' => 'application/pdf' ) );
         $sideload_res = wp_handle_sideload( $sideload, $overrides, trailingslashit( $empresa_dir ) );
         if ( isset( $sideload_res['error'] ) ) {
-            error_log( 'HRM Anaconda create file move failed: ' . $sideload_res['error'] );
+            hrm_debug_log( 'HRM Anaconda create file move failed: ' . $sideload_res['error'] );
             $redirect = wp_get_referer() ?: admin_url();
             wp_redirect( add_query_arg( 'anaconda_doc_error', 'move_failed', $redirect ) );
             exit;
@@ -1175,7 +1187,7 @@ function hrm_handle_anaconda_document_create() {
             file_put_contents( $meta_path, wp_json_encode( $meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
             @chmod( $meta_path, 0644 );
         } catch ( Exception $e ) {
-            error_log( 'HRM Anaconda: failed to write metadata for ' . $destination . ' - ' . $e->getMessage() );
+            hrm_debug_log( 'HRM Anaconda: failed to write metadata for ' . $destination . ' - ' . $e->getMessage() );
         }
     }
 
@@ -1192,7 +1204,7 @@ function hrm_handle_anaconda_document_create() {
     $format = array( '%s', '%s', '%s' );
     $inserted = $wpdb->insert( $table_name, $data, $format );
     if ( false === $inserted ) {
-        error_log( 'HRM Anaconda: DB insert failed for document ' . $filename . ' - ' . $wpdb->last_error );
+        hrm_debug_log( 'HRM Anaconda: DB insert failed for document ' . $filename . ' - ' . $wpdb->last_error );
     } else {
         // Save DB id into metadata array (only written to disk if filter enabled)
         $meta['db_id'] = intval( $wpdb->insert_id );
@@ -1201,7 +1213,7 @@ function hrm_handle_anaconda_document_create() {
                 file_put_contents( $meta_path, wp_json_encode( $meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
                 @chmod( $meta_path, 0644 );
             } catch ( Exception $e ) {
-                error_log( 'HRM Anaconda: failed to write metadata with db_id for ' . $destination . ' - ' . $e->getMessage() );
+                hrm_debug_log( 'HRM Anaconda: failed to write metadata with db_id for ' . $destination . ' - ' . $e->getMessage() );
             }
         }
     }
