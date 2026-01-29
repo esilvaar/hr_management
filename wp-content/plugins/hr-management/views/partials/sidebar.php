@@ -84,9 +84,70 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
             margin: auto 0;
         }
     }
+
+    /* Mobile sidebar: hidden by default, slide in when open */
+    .hrm-mobile-toggle {
+        display: none;
+    }
+
+    .hrm-sidebar-overlay {
+        display: none;
+    }
+
+    @media (max-width: 767.98px) {
+        .hrm-mobile-toggle {
+            display: block;
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 1052;
+            border-radius: 6px;
+            padding: .45rem .5rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,.18);
+        }
+
+        .hrm-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 280px;
+            max-width: 85%;
+            transform: translateX(-110%);
+            transition: transform .28s ease;
+            z-index: 1053;
+            box-shadow: 2px 0 8px rgba(0,0,0,.12);
+        }
+
+        body.hrm-sidebar-open .hrm-sidebar {
+            transform: translateX(0);
+        }
+
+        .hrm-sidebar-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.45);
+            z-index: 1051;
+            display: none;
+        }
+
+        body.hrm-sidebar-open .hrm-sidebar-overlay {
+            display: block;
+        }
+
+        /* Ensure toggle hides when sidebar open to avoid duplicate controls */
+        body.hrm-sidebar-open .hrm-mobile-toggle {
+            opacity: .9;
+        }
+    }
 </style>
 
-<aside class="hrm-sidebar d-flex flex-column flex-shrink-0 border-end bg-light">
+<!-- Mobile toggle button (visible on small screens) -->
+<button class="hrm-mobile-toggle btn btn-primary d-md-none" aria-controls="hrm-sidebar" aria-expanded="false" aria-label="Abrir menú">
+    <span class="dashicons dashicons-menu"></span>
+</button>
+
+<aside id="hrm-sidebar" class="hrm-sidebar d-flex flex-column flex-shrink-0 border-end bg-light" role="complementary">
 
     <!-- Header -->
     <div class="hrm-sidebar-header d-flex align-items-center justify-content-center p-3 border-bottom">
@@ -292,6 +353,62 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
         </div>
 
     </nav>
+
+<!-- Overlay para cerrar al tocar fuera (móvil) -->
+<div class="hrm-sidebar-overlay" aria-hidden="true"></div>
+
+<script>
+(function(){
+    var btn = document.querySelector('.hrm-mobile-toggle');
+    var overlay = document.querySelector('.hrm-sidebar-overlay');
+    var body = document.body;
+    var sidebar = document.getElementById('hrm-sidebar');
+
+    function openSidebar(){
+        body.classList.add('hrm-sidebar-open');
+        if(btn) btn.setAttribute('aria-expanded','true');
+        if(overlay) overlay.setAttribute('aria-hidden','false');
+        if(sidebar){
+            var first = sidebar.querySelector('a,button');
+            if(first) first.focus();
+        }
+    }
+    function closeSidebar(){
+        body.classList.remove('hrm-sidebar-open');
+        if(btn) btn.setAttribute('aria-expanded','false');
+        if(overlay) overlay.setAttribute('aria-hidden','true');
+        if(btn) btn.focus();
+    }
+
+    if(btn){
+        btn.addEventListener('click', function(e){
+            e.preventDefault();
+            body.classList.contains('hrm-sidebar-open') ? closeSidebar() : openSidebar();
+        });
+    }
+    if(overlay){
+        overlay.addEventListener('click', closeSidebar);
+    }
+    if(sidebar){
+        // Cerrar al pulsar cualquier link (en móvil)
+        sidebar.querySelectorAll('.nav-link').forEach(function(el){
+            el.addEventListener('click', function(){
+                if(window.innerWidth < 768) closeSidebar();
+            });
+        });
+    }
+
+    // Cerrar con Escape
+    document.addEventListener('keydown', function(e){
+        if(e.key === 'Escape' && body.classList.contains('hrm-sidebar-open')) closeSidebar();
+    });
+
+    // Asegurar que la sidebar quede cerrada al redimensionar a desktop
+    window.addEventListener('resize', function(){
+        if(window.innerWidth >= 768) closeSidebar();
+    });
+})();
+</script>
 
     <!-- Logout -->
     <div class="p-3 border-top">
