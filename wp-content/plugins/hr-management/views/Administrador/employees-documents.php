@@ -28,6 +28,15 @@ wp_enqueue_script(
     true
 );
 
+// Per-view admin behavior for documents (migrated from inline script)
+wp_enqueue_script(
+    'hrm-employees-documents-admin',
+    HRM_PLUGIN_URL . 'assets/js/employees-documents.js',
+    array('jquery','hrm-documents-list-init','hrm-documents-list'),
+    defined('HRM_PLUGIN_VERSION') ? HRM_PLUGIN_VERSION : '1.0.0',
+    true
+);
+
 // No terminamos la ejecución aquí: permitimos mostrar filtros y botón incluso sin un empleado seleccionado.
 $has_employee = ! empty( $employee );
 $employee_id  = $has_employee ? intval( $employee->id ) : 0;
@@ -64,6 +73,8 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
     'createTypeNonce' => wp_create_nonce( 'hrm_create_type' ),
     'deleteTypeNonce' => wp_create_nonce( 'hrm_delete_type' ),
     'types' => $doc_types_js,
+    'currentUserId' => intval( get_current_user_id() ),
+    'canViewOthers' => ( current_user_can('manage_options') || current_user_can('edit_hrm_employees') ),
 ) );
 ?>
 
@@ -79,26 +90,25 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
             <div class="col-md">
                 <h6 class="fw-bold mb-2">Filtros</h6>
                 <div class="d-flex gap-2 flex-wrap align-items-center">
-                    <div style="position: relative; min-width: 220px; max-width: 320px;">
+                    <div class="hrm-filter-container hrm-filter-container-type">
                         <input 
                             type="text" 
-                            class="form-control" 
+                            class="form-control hrm-filter-input" 
                             id="hrm-doc-type-filter-search" 
                             placeholder="Buscar tipo..."
-                            autocomplete="off"
-                            style="padding-right:36px;">
-                        <div id="hrm-doc-type-filter-items" style="position: absolute; top: 100%; left: 0; min-width: 250px; max-width: 400px; background: white; border: 1px solid #dee2e6; border-top: none; max-height: 300px; overflow-y: auto; z-index: 1000; display: none;"></div>
-                        <button type="button" class="btn hrm-filter-clear hrm-filter-clear-inline" data-filter="type" title="Limpiar tipo" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); border:none; background:transparent; color:#d9534f; font-size:18px; padding:0; line-height:1; cursor:pointer; display: none;">&times;</button>
+                            autocomplete="off">
+                        <div id="hrm-doc-type-filter-items"></div>
+                        <button type="button" class="btn hrm-filter-clear hrm-filter-clear-inline" data-filter="type" title="Limpiar tipo">&times;</button>
                     </div>
 
-                    <div style="position: relative; min-width: 150px; max-width: 220px;">
+                    <div class="hrm-filter-container hrm-filter-container-year">
                         <select id="hrm-doc-year-filter-select" class="form-control">
                             <option value="">— Año —</option>
                             <?php $anio_actual = (int) date('Y'); for ($y = $anio_actual; $y >= 2000; $y--) : ?>
                                 <option value="<?= esc_attr( $y ); ?>" <?= $y === $anio_actual ? 'selected' : ''; ?>><?= esc_html( $y ); ?></option>
                             <?php endfor; ?>
                         </select>
-                        <button type="button" class="btn hrm-filter-clear hrm-filter-clear-inline" data-filter="year" title="Limpiar año" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); border:none; background:transparent; color:#d9534f; font-size:18px; padding:0; line-height:1; cursor:pointer;">&times;</button>
+                        <button type="button" class="btn hrm-filter-clear hrm-filter-clear-inline" data-filter="year" title="Limpiar año">&times;</button>
                     </div>
                     
                     <input type="hidden" id="hrm-doc-filter-type-id" value="">
@@ -135,7 +145,7 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
 
 
     <!-- Panel de subida de documentos -->
-    <div id="hrm-upload-panel" class="border rounded shadow p-4 mb-4 bg-white" style="max-width: 600px; margin: 0 auto; display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); z-index: 9999;">
+    <div id="hrm-upload-panel" class="border rounded shadow p-4 mb-4 bg-white hrm-upload-panel">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="mb-0"><span class="dashicons dashicons-upload"></span> Subir Nuevo Documento</h5>
             <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-cerrar-upload">Cerrar</button>
@@ -146,14 +156,14 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
             <input type="hidden" name="hrm_action" value="upload_document">
             <div class="mb-3">
                 <label class="form-label fw-bold" for="hrm-tipo-search">Tipo de Documento *</label>
-                <div style="position: relative;">
+                <div class="hrm-filter-container hrm-filter-container-type">
                     <input 
                         type="text" 
                         class="form-control" 
                         id="hrm-tipo-search" 
                         placeholder="Selecciona o escribe tipo..."
                         autocomplete="off">
-                    <div id="hrm-tipo-items" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #dee2e6; border-top: none; max-height: 300px; overflow-y: auto; z-index: 1000; display: none;">
+                    <div id="hrm-tipo-items">
                         <?php
                         // $hrm_tipos_documento puede ser array asociativo id=>nombre o lista de strings (legacy)
                         foreach ( $hrm_tipos_documento as $k => $v ) :
@@ -183,14 +193,14 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
             </div>
             <div class="mb-3">
                 <label class="form-label fw-bold" for="hrm-anio-search">Año del Documento *</label>
-                <div style="position: relative;">
+                <div class="hrm-filter-container">
                     <input 
                         type="text" 
                         class="form-control" 
                         id="hrm-anio-search" 
                         placeholder="Selecciona o escribe año..."
                         autocomplete="off">
-                    <div id="hrm-anio-items" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #dee2e6; border-top: none; max-height: 300px; overflow-y: auto; z-index: 1000; display: none;">
+                    <div id="hrm-anio-items">
                         <?php
                         $anio_actual = (int)date('Y');
                         for ($y = $anio_actual; $y >= 2000; $y--) {
@@ -221,14 +231,14 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
         </form>
     </div>
     <!-- Panel de Creacion de Directorios (modal similar a Subir) -->
-    <div id="hrm-create-type-panel" class="border rounded shadow p-4 mb-4 bg-white" style="max-width: 520px; margin: 0 auto; display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); z-index: 9999;">
+    <div id="hrm-create-type-panel" class="border rounded shadow p-4 mb-4 bg-white hrm-create-type-panel">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="mb-0"><span ></span> Gestión de Directorios</h5>
         </div>
 
         <div class="mb-3">
             <label class="form-label fw-bold">Tipos existentes</label>
-            <div id="hrm-create-type-list" style="max-height:260px; overflow-y:auto; border:1px solid #e9ecef; padding:8px;">
+            <div id="hrm-create-type-list" class="hrm-create-type-list">
                 <?php foreach ( $hrm_tipos_documento as $k => $v ) :
                     if ( is_int( $k ) || ctype_digit( (string) $k ) ) {
                         $tipo_id = (int) $k;
@@ -288,166 +298,7 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
 
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Exponer info de usuario actual y permisos al JS
-    const HRM_CURRENT_USER_ID = <?php echo intval( get_current_user_id() ); ?>;
-    const HRM_CAN_VIEW_OTHERS = <?php echo ( current_user_can('manage_options') || current_user_can('edit_hrm_employees') ) ? 'true' : 'false'; ?>;
-    const uploadPanel = document.getElementById('hrm-upload-panel');
-    const btnNuevo = document.getElementById('btn-nuevo-documento');
-    const btnCerrar = document.getElementById('btn-cerrar-upload');
-    const btnCancelar = document.getElementById('btn-cancelar-upload');
-    const msgDiv = document.getElementById('hrm-documents-message');
-    const hiddenInput = document.getElementById('hrm_upload_employee_id');
-
-    function showSelectEmployeeAlert() {
-        const bigMsg = '<div class="alert alert-warning text-center" style="font-size:1.25rem; padding:2rem;"><span class="me-2">⚠️</span><strong>Atención:</strong> Por favor selecciona un usuario para continuar.</div>';
-        if (msgDiv) {
-            msgDiv.innerHTML = bigMsg;
-            msgDiv.scrollIntoView({behavior: 'smooth', block: 'center'});
-        }
-        const container = document.getElementById('hrm-documents-container');
-        if (container) container.innerHTML = bigMsg;
-    }
-
-    function clearAlert() {
-        if (msgDiv) msgDiv.innerHTML = '';
-        const container = document.getElementById('hrm-documents-container');
-        if (container) container.innerHTML = '';
-    }
-
-    // Inicializar estado del botón según data-attributes
-    if (btnNuevo) {
-        const hasEmployee = btnNuevo.dataset.hasEmployee === '1';
-        if (!hasEmployee) {
-            btnNuevo.setAttribute('disabled', 'disabled');
-            btnNuevo.setAttribute('aria-disabled', 'true');
-            btnNuevo.title = 'Selecciona un usuario para habilitar';
-        } else {
-            btnNuevo.removeAttribute('disabled');
-            btnNuevo.removeAttribute('aria-disabled');
-            btnNuevo.title = 'Nuevo Documento';
-        }
-
-        btnNuevo.addEventListener('click', function(e) {
-            const curHasEmployee = btnNuevo.dataset.hasEmployee === '1';
-            const curEmployeeId = btnNuevo.dataset.employeeId || '';
-
-            if (!curHasEmployee || !curEmployeeId) {
-                e.preventDefault();
-                showSelectEmployeeAlert();
-                return;
-            }
-
-            // Prefill del employee id en el formulario de subida
-            if (hiddenInput) {
-                hiddenInput.value = curEmployeeId;
-            }
-
-            uploadPanel.style.display = 'block';
-        });
-    }
-
-    if (btnCerrar) {
-        btnCerrar.onclick = function() {
-            uploadPanel.style.display = 'none';
-        };
-    }
-    if (btnCancelar) {
-        btnCancelar.onclick = function() {
-            uploadPanel.style.display = 'none';
-        };
-    }
-
-    // Mostrar alerta inicial si no hay empleado
-    if (btnNuevo && btnNuevo.dataset.hasEmployee !== '1') {
-        showSelectEmployeeAlert();
-    }
-
-    // Función pública para actualizar employee desde otras partes del código
-    window.hrmDocumentsSetEmployee = function(employeeId) {
-        if (!btnNuevo) return;
-        if (employeeId) {
-            btnNuevo.dataset.employeeId = employeeId;
-            btnNuevo.dataset.hasEmployee = '1';
-            btnNuevo.removeAttribute('disabled');
-            btnNuevo.removeAttribute('aria-disabled');
-            btnNuevo.title = 'Nuevo Documento';
-            if (hiddenInput) hiddenInput.value = employeeId;
-            clearAlert();
-
-            // Intentar cargar documentos para este empleado
-            if ( typeof window.loadEmployeeDocuments === 'function' ) {
-                window.loadEmployeeDocuments();
-            }
-        } else {
-            btnNuevo.dataset.employeeId = '';
-            btnNuevo.dataset.hasEmployee = '0';
-            btnNuevo.setAttribute('disabled', 'disabled');
-            btnNuevo.setAttribute('aria-disabled', 'true');
-            btnNuevo.title = 'Selecciona un usuario para habilitar';
-            if (hiddenInput) hiddenInput.value = '';
-            showSelectEmployeeAlert();
-        }
-    };
-
-    // Si hrmDocsListData está disponible (script cargado), usarlo para inicializar el estado
-    if (typeof hrmDocsListData !== 'undefined') {
-        if (hrmDocsListData.employeeId) {
-            window.hrmDocumentsSetEmployee(hrmDocsListData.employeeId);
-        }
-    }
-
-    // Año: sincronizar select con filtro oculto y manejar clear
-    (function(){
-        const yearSelect = document.getElementById('hrm-doc-year-filter-select');
-        const yearHidden = document.getElementById('hrm-doc-filter-year');
-        const yearClearBtn = document.querySelector('.hrm-filter-clear[data-filter="year"]');
-        if (!yearSelect || !yearHidden) return;
-
-        // Inicializar hidden con el valor seleccionado (por defecto año actual)
-        yearHidden.value = yearSelect.value || '';
-
-        function triggerReload() {
-            if ( typeof filterDocumentsByYear === 'function' ) {
-                try { filterDocumentsByYear( yearHidden.value ); } catch(e){ if ( typeof window.loadEmployeeDocuments === 'function' ) window.loadEmployeeDocuments(); }
-            } else if ( typeof window.loadEmployeeDocuments === 'function' ) {
-                window.loadEmployeeDocuments();
-            }
-        }
-
-        yearSelect.addEventListener('change', function(){
-            yearHidden.value = this.value || '';
-            if ( yearClearBtn ) yearClearBtn.style.display = this.value ? '' : 'none';
-            triggerReload();
-        });
-
-        if ( yearClearBtn ) {
-            yearClearBtn.style.display = yearSelect.value ? '' : 'none';
-            yearClearBtn.addEventListener('click', function(){
-                yearSelect.value = '';
-                yearHidden.value = '';
-                this.style.display = 'none';
-                triggerReload();
-            });
-        }
-    })();
-
-    // Helper: comprobar si el tipo es 'Empresa' (case-insensitive)
-    function isEmpresaType(name) {
-        return (typeof name === 'string' && name.trim().toLowerCase() === 'empresa');
-    }
-
-    // Mostrar mensaje breve en el panel de upload cuando se intenta seleccionar Empresa
-    function showUploadTypeBlockedMessage() {
-        const upMsg = document.getElementById('hrm-upload-message');
-        if (!upMsg) return;
-        upMsg.innerHTML = '<div class="alert alert-warning">El tipo "Empresa" no está disponible para subir documentos. Usa otro tipo.</div>';
-        setTimeout(() => { upMsg.innerHTML = ''; }, 4000);
-    }
-
-    // Deshabilitar entradas existentes con nombre 'Empresa' en los selectores y filtros
-    try {
+<?php // JS moved to assets/js/employees-documents.js and enqueued via per-view enqueue above ?>
         const tipoItems = document.querySelectorAll('#hrm-tipo-items .hrm-tipo-item');
         tipoItems.forEach(it => {
             const nm = it.getAttribute('data-tipo-name') || it.textContent || '';
@@ -545,7 +396,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const container = row.querySelector('div:last-child');
                 const confirmDiv = document.createElement('div');
                 confirmDiv.className = 'hrm-inline-confirm d-flex gap-2 align-items-center';
-                confirmDiv.style.marginLeft = '8px';
                 confirmDiv.innerHTML = '<small class="text-muted">¿Eliminar "' + name + '"? </small>' +
                     '<button type="button" class="btn btn-sm btn-danger hrm-inline-confirm-yes">Confirmar</button>' +
                     '<button type="button" class="btn btn-sm btn-secondary hrm-inline-confirm-no">Cancelar</button>';
@@ -589,6 +439,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             fitems.forEach( it => {
                                 if ( it.getAttribute('data-type-id') == id ) it.remove();
                             });
+
+                            // eliminar enlaces relacionados en sidebar (si existen)
+                            try {
+                                document.querySelectorAll("a[href*='hrm-mi-documentos-type-" + id + "']").forEach(el => el.remove());
+                                document.querySelectorAll('li').forEach(li => {
+                                    if ( li.querySelector("a[href*='hrm-mi-documentos-type-" + id + "']") ) {
+                                        li.remove();
+                                    }
+                                });
+                            } catch (e) { console.error('Error removing sidebar links', e); }
 
                             // actualizar cache local
                             if ( window.hrmDocsListData && Array.isArray( hrmDocsListData.types ) ) {

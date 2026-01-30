@@ -95,41 +95,4 @@ if ( ! empty( $contracts ) ) {
     </div>
 </div>
 
-<script>
-(function(){
-    document.addEventListener('DOMContentLoaded', function () {
-        const previewPanel  = document.getElementById('hrm-preview-panel');
-        const previewIframe = document.getElementById('hrm-preview-iframe');
-        const closeBtn      = document.getElementById('btn-cerrar-preview');
-
-        // Delegación: manejar clicks en cualquier botón de previsualizar (si existe el contenedor)
-        const misContainer = document.getElementById('hrm-mis-documents-container');
-        if ( misContainer ) {
-            misContainer.addEventListener('click', function (e) {
-                const btn = e.target.closest('.btn-preview-doc');
-                if (!btn) return;
-                const url = btn.dataset.url;
-                if (!url) return;
-
-                // Asegurarse que el documento sea de tipo 'contrato' (si se provee la info)
-                let type = '';
-                const row = btn.closest('tr');
-                if ( row ) type = row.getAttribute('data-type') || '';
-                if ( ! type ) type = btn.dataset.type || '';
-                if ( type && type.toLowerCase() !== 'contrato' ) return; // ignorar si no es contrato
-
-                previewIframe.src = url;
-                previewPanel.classList.remove('d-none');
-                setTimeout(() => previewPanel.scrollIntoView({ behavior: 'smooth' }), 50);
-            });
-        }
-
-        if ( closeBtn ) {
-            closeBtn.addEventListener('click', function () {
-                previewPanel.classList.add('d-none');
-                previewIframe.src = '';
-            });
-        }
-    });
-})();
-</script>
+<?php // JS moved to assets/js/mis-documentos.js (preview/delegation handled there) ?>

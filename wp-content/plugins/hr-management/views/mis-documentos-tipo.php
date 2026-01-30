@@ -129,32 +129,4 @@ if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employe
     </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const previewPanel  = document.getElementById('hrm-preview-panel');
-    const previewIframe = document.getElementById('hrm-preview-iframe');
-    const closeBtn      = document.getElementById('btn-cerrar-preview');
-
-    document.querySelectorAll('.btn-preview-doc').forEach(btn => {
-        btn.addEventListener('click', function () {
-            const url = this.dataset.url;
-            if (!url) return;
-
-            previewIframe.src = url;
-            previewPanel.style.display = 'block';
-
-            setTimeout(() => {
-                previewPanel.scrollIntoView({ behavior: 'smooth' });
-            }, 50);
-        });
-    });
-
-    if (closeBtn) {
-        closeBtn.addEventListener('click', function () {
-            previewPanel.style.display = 'none';
-            previewIframe.src = '';
-        });
-    }
-
-});
-</script>
+<?php // JS moved to assets/js/mis-documentos.js (preview behavior is handled centrally) ?>
