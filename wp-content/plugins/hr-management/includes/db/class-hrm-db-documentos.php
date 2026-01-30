@@ -190,17 +190,34 @@ class HRM_DB_Documentos extends HRM_DB_Table {
         
         if ( ! $result ) {
             error_log( 'HRM_DB_Documentos::create() failed - ' . $this->db->last_error . ' - Data: ' . json_encode( $insert_data ) );
+        } else {
+            // Invalidar transients relacionados con la lista de documentos del sidebar
+            // Consideramos dos nombres de tabla posibles que se usan en el plugin
+            $table1 = $this->db->prefix . 'rrhh_documentos_empresa';
+            $table2 = $this->db->prefix . 'rrhh_documentos';
+            delete_transient( 'hrm_sidebar_docs_' . md5( $table1 ) );
+            delete_transient( 'hrm_sidebar_docs_' . md5( $table2 ) );
         }
         
         return $result;
     }
 
     public function delete( $id ) {
-        return $this->db->delete( 
+        $res = $this->db->delete( 
             $this->table(), 
             [ $this->col('id') => $id ], 
             [ '%d' ] 
         );
+
+        if ( $res !== false ) {
+            // Invalidar transients relacionados con la lista de documentos del sidebar
+            $table1 = $this->db->prefix . 'rrhh_documentos_empresa';
+            $table2 = $this->db->prefix . 'rrhh_documentos';
+            delete_transient( 'hrm_sidebar_docs_' . md5( $table1 ) );
+            delete_transient( 'hrm_sidebar_docs_' . md5( $table2 ) );
+        }
+
+        return $res;
     }
 
     /**
@@ -241,6 +258,12 @@ class HRM_DB_Documentos extends HRM_DB_Table {
             return false;
         }
 
+        // Invalidar transients relacionados con la lista de documentos del sidebar
+        $table1 = $this->db->prefix . 'rrhh_documentos_empresa';
+        $table2 = $this->db->prefix . 'rrhh_documentos';
+        delete_transient( 'hrm_sidebar_docs_' . md5( $table1 ) );
+        delete_transient( 'hrm_sidebar_docs_' . md5( $table2 ) );
+
         return (int) $this->db->insert_id;
     }
 
@@ -267,6 +290,12 @@ class HRM_DB_Documentos extends HRM_DB_Table {
             error_log( 'HRM_DB_Documentos::delete_type failed - ' . $this->db->last_error . ' - ID: ' . $id );
             return false;
         }
+
+        // Invalidar transients relacionados con la lista de documentos del sidebar
+        $table1 = $this->db->prefix . 'rrhh_documentos_empresa';
+        $table2 = $this->db->prefix . 'rrhh_documentos';
+        delete_transient( 'hrm_sidebar_docs_' . md5( $table1 ) );
+        delete_transient( 'hrm_sidebar_docs_' . md5( $table2 ) );
 
         return (bool) $deleted;
     }

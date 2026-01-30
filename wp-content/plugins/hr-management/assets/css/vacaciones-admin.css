@@ -83,7 +83,8 @@
    MODALES (estructura que Bootstrap no proporciona)
    ===================================================== */
 .modal-comentarios,
-.modal-rechazo {
+.modal-rechazo,
+.modal-vacaciones-detalle {
     display: none;
     position: fixed;
     z-index: 100000;
@@ -98,7 +99,8 @@
 }
 
 .modal-comentarios.activo,
-.modal-rechazo.activo {
+.modal-rechazo.activo,
+.modal-vacaciones-detalle.activo {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -106,7 +108,8 @@
 }
 
 .modal-comentarios .modal-contenido,
-.modal-rechazo .modal-contenido {
+.modal-rechazo .modal-contenido,
+.modal-vacaciones-detalle .modal-contenido {
     animation: slideInModal 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -134,3 +137,9 @@
     background-color: rgba(0, 0, 0, 0.1);
     transform: rotate(90deg);
 }
+
+/* Utilities for admin */
+.hrm-tab-icon { font-size: 1.2rem; }
+.hrm-actions-col { min-width: 220px; }
+.hrm-notice-success { background-color:#198754; border-left-color:#0f5132; color:#ffffff; }
+.hrm-notice-text { color:#ffffff; margin:0; padding:6px 8px; }

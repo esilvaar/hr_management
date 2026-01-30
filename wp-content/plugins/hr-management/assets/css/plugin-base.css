@@ -196,3 +196,29 @@
 #deptos_checkboxes input[type="checkbox"]:checked {
     accent-color: #537345 !important;
 }
+/* ============================================================
+ * HRM UTILITIES - Shared reusable small components
+ * Moved here to avoid duplication across per-view CSS files.
+ * Keep per-view files for large/specific styles only.
+ * ============================================================ */
+
+/* Simple two-column grid utility */
+.hrm-grid-two { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+/* Small uppercase sign/title used in forms */
+.hrm-sign-title { text-align: center; font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 10px; }
+
+/* Generic helper class to hide elements */
+.hrm-hidden { display: none !important; }
+
+/* Document preview iframe (used across document views) */
+.hrm-preview-iframe { width: 100%; min-height: 600px; border: 1px solid #ccc; background: #fff; }
+
+/* Success modal used in various views */
+.hrm-success-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); padding: 40px; max-width: 500px; width: 90%; z-index: 10000; text-align: center; }
+.hrm-success-modal .hrm-success-icon { font-size: 60px; margin-bottom: 20px; }
+.hrm-success-modal .hrm-success-title { color: #4caf50; margin: 0 0 15px 0; font-size: 28px; }
+.hrm-success-modal .hrm-success-text { color: #666; margin: 0 0 20px 0; line-height: 1.6; }
+.hrm-success-modal .hrm-success-small { color: #999; margin: 0 0 20px 0; font-size: 14px; }
+.hrm-success-modal .hrm-success-button, .hrm-success-button { background: #4caf50; color: white; border: none; padding: 12px 30px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; }
+.hrm-success-backdrop { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; cursor: pointer; }

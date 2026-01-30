@@ -135,44 +135,76 @@ function hrm_get_next_cron_sync() {
  * @return array Array con información de la última ejecución
  */
 function hrm_get_last_sync_info() {
-    global $wpdb;
-    
-    // Buscar la última línea del log que contenga "HRM CRON:"
-    // Nota: Esto es aproximado, depende de cómo esté configurado el log en la instalación
+    // Buscar la última línea del log que contenga "HRM CRON:" leyendo solo las últimas KB para ahorrar memoria
     $debug_log = WP_CONTENT_DIR . '/debug.log';
-    
-    if ( ! file_exists( $debug_log ) ) {
+
+    if ( ! file_exists( $debug_log ) || ! is_readable( $debug_log ) ) {
         return [
             'existente' => false,
             'mensaje' => 'No se encontró archivo de log'
         ];
     }
-    
-    // Leer las últimas líneas del archivo
-    $lines = file( $debug_log, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
-    if ( ! $lines ) {
+
+    // Leer sólo las últimas N bytes (por defecto 64KB) para evitar cargar todo el log en memoria
+    $read_bytes = apply_filters( 'hrm_log_read_bytes', 65536 ); // 64KB
+
+    $fp = @fopen( $debug_log, 'r' );
+    if ( ! $fp ) {
+        return [
+            'existente' => false,
+            'mensaje' => 'No se pudo abrir el log para lectura'
+        ];
+    }
+
+    $stat = fstat( $fp );
+    $filesize = isset( $stat['size'] ) ? $stat['size'] : 0;
+    $start = $filesize > $read_bytes ? $filesize - $read_bytes : 0;
+    fseek( $fp, $start );
+    $data = stream_get_contents( $fp );
+    fclose( $fp );
+
+    if ( $data === '' ) {
         return [
             'existente' => false,
             'mensaje' => 'El archivo de log está vacío'
         ];
     }
-    
+
+    $lines = preg_split( "/\r\n|\n|\r/", $data );
+    // Si empezamos en medio de una línea, descartar la primera línea parcial
+    if ( $start !== 0 ) {
+        array_shift( $lines );
+    }
+
     // Buscar la última línea que contenga "HRM CRON:"
     $last_sync = null;
-    foreach ( array_reverse( $lines ) as $line ) {
-        if ( strpos( $line, 'HRM CRON:' ) !== false ) {
-            $last_sync = $line;
+    for ( $i = count( $lines ) - 1; $i >= 0; $i-- ) {
+        if ( strpos( $lines[ $i ], 'HRM CRON:' ) !== false ) {
+            $last_sync = $lines[ $i ];
             break;
         }
     }
-    
+
+    // Fallback: si no se encontró en los últimos KB, intentar con file() (safe fallback, pero más costoso)
+    if ( ! $last_sync ) {
+        $full = @file( $debug_log, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
+        if ( ! empty( $full ) ) {
+            foreach ( array_reverse( $full ) as $line ) {
+                if ( strpos( $line, 'HRM CRON:' ) !== false ) {
+                    $last_sync = $line;
+                    break;
+                }
+            }
+        }
+    }
+
     if ( ! $last_sync ) {
         return [
             'existente' => false,
             'mensaje' => 'No hay registro de sincronizaciones aún'
         ];
     }
-    
+
     return [
         'existente' => true,
         'ultima_ejecucion' => $last_sync

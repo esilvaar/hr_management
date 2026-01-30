@@ -22,55 +22,24 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
 ?>
 
 <?php if ( $solicitud_creada ) : ?>
-<div id="alertaSolicitudCreada" class="hrm-success-modal" style="
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    padding: 40px;
-    max-width: 500px;
-    width: 90%;
-    z-index: 10000;
-    text-align: center;
-">
-    <div style="font-size: 60px; margin-bottom: 20px;">✓</div>
-    <h2 style="color: #4caf50; margin: 0 0 15px 0; font-size: 28px;">¡Solicitud Creada Exitosamente!</h2>
-    <p style="color: #666; margin: 0 0 20px 0; line-height: 1.6;">
+<div id="alertaSolicitudCreada" class="hrm-success-modal">
+    <div class="hrm-success-icon">✓</div>
+    <h2 class="hrm-success-title">¡Solicitud Creada Exitosamente!</h2>
+    <p class="hrm-success-text">
         Tu solicitud de vacaciones ha sido creada y enviada a tu gerente directo y al editor de vacaciones para revisión.
     </p>
-    <p style="color: #999; margin: 0 0 20px 0; font-size: 14px;">
+    <p class="hrm-success-small">
         Recibirás un correo de confirmación en tu bandeja de entrada.
     </p>
-    <button onclick="document.getElementById('alertaSolicitudCreada').remove(); document.getElementById('alertaFondo').remove();" style="
-        background: #4caf50;
-        color: white;
-        border: none;
-        padding: 12px 30px;
-        border-radius: 6px;
-        font-weight: bold;
-        cursor: pointer;
-        font-size: 16px;
-    ">
+    <button onclick="document.getElementById('alertaSolicitudCreada').remove(); document.getElementById('alertaFondo').remove();" class="hrm-success-button">
         Continuar
     </button>
 </div>
 
-<div id="alertaFondo" onclick="document.getElementById('alertaSolicitudCreada').remove(); document.getElementById('alertaFondo').remove();" style="
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 9999;
-    cursor: pointer;
-"></div>
+<div id="alertaFondo" class="hrm-success-backdrop" onclick="document.getElementById('alertaSolicitudCreada').remove(); document.getElementById('alertaFondo').remove();"></div>
 <?php endif; ?>
 
-<div class="documento-formal p-5 mx-auto my-3" style="max-width: 900px; background: white;">
+<div class="documento-formal p-5 mx-auto my-3">
     <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" enctype="multipart/form-data">
         <input type="hidden" name="action" value="hrm_enviar_vacaciones">
         <input type="hidden" name="fecha_solicitud" value="<?php echo esc_attr( $fecha_hoy ); ?>">
@@ -123,8 +92,8 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
         </div>
         
         <!-- TIPO DE AUSENCIA (campo oculto visualmente, pero funcional) -->
-        <div style="margin-bottom: 20px; display: none;">
-            <label for="id_tipo" class="form-label fw-bold" style="display: block; margin-bottom: 10px;">Tipo de ausencia <span class="text-danger">*</span></label>
+        <div class="mb-3 d-none">
+            <label for="id_tipo" class="form-label fw-bold d-block mb-2">Tipo de ausencia <span class="text-danger">*</span></label>
             <?php 
             $lista_tipos = function_exists('hrm_get_tipos_ausencia_definidos') ? hrm_get_tipos_ausencia_definidos() : [];
             ?>
@@ -152,7 +121,7 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
         <!-- SECCIÓN: PERIODO DE VACACIONES -->
         <div class="titulo-seccion">Período de Ausencia</div>
         
-        <div style="margin-bottom: 20px;">
+        <div class="mb-3">
             <label for="fecha_inicio" class="form-label fw-bold">Fecha de inicio <span class="text-danger">*</span></label>
             <input type="date" 
                    name="fecha_inicio" 
@@ -162,7 +131,7 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
                    onchange="calcularDias()">
         </div>
         
-        <div style="margin-bottom: 20px;">
+        <div class="mb-3">
             <label for="fecha_fin" class="form-label fw-bold">Fecha de fin <span class="text-danger">*</span></label>
             <input type="date" 
                    name="fecha_fin" 
@@ -191,7 +160,7 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
         <input type="hidden" name="total_dias" id="total_dias_input" value="0">
         
         <!-- CAMPO DE COMENTARIOS (opcional) -->
-        <div style="margin-bottom: 20px;">
+        <div class="mb-3">
             <label for="descripcion" class="form-label fw-bold">Comentarios adicionales (opcional)</label>
             <textarea name="descripcion" 
                       id="descripcion" 
@@ -201,7 +170,7 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
         </div>
         
         <!-- CIERRE FORMAL -->
-        <div class="parrafo-formal" style="margin-top: 30px;">
+        <div class="parrafo-formal mt-4">
             Quedo atento(a) a la confirmación y aprobación de esta solicitud. Me comprometo a dejar mis tareas 
             debidamente coordinadas con mi jefatura directa antes de mi ausencia.
         </div>
@@ -216,21 +185,21 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
         <div class="seccion-rrhh">
             <div class="titulo-seccion" style="margin-top: 0;">Recursos Humanos / Jefatura Directa</div>
             
-            <div style="margin-bottom: 20px;">
-                <div class="form-label fw-bold" style="margin-bottom: 10px;">Respuesta:</div>
-                <div class="opciones-respuesta">
-                    <div class="opcion-respuesta">
+            <div class="mb-3">
+                <div class="form-label fw-bold mb-2">Respuesta:</div>
+                <div class="opciones-respuesta d-flex gap-4 mt-2">
+                    <div class="opcion-respuesta d-flex align-items-center gap-2">
                         <input type="radio" id="respuesta_aceptado" name="respuesta_rrhh" value="aceptado">
                         <label for="respuesta_aceptado">Aceptado</label>
                     </div>
-                    <div class="opcion-respuesta">
+                    <div class="opcion-respuesta d-flex align-items-center gap-2">
                         <input type="radio" id="respuesta_rechazado" name="respuesta_rrhh" value="rechazado">
                         <label for="respuesta_rechazado">Rechazado</label>
                     </div>
                 </div>
             </div>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div class="hrm-grid-two mb-3">
                 <div>
                     <label for="nombre_jefe" class="form-label fw-bold">Nombre de Jefe/RRHH:</label>
                     <input type="text" 
@@ -250,14 +219,14 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
                 </div>
             </div>
             
-            <div style="margin-bottom: 20px;">
-                <div style="text-align: center; font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 10px;">
+            <div class="mb-3">
+                <div class="hrm-sign-title">
                     Firma Gerente / Editor de Vacaciones
                 </div>
                 <div class="linea-firma"></div>
             </div>
             
-            <div style="margin-bottom: 20px;">
+            <div class="mb-3">
                 <label for="observaciones_rrhh" class="form-label fw-bold">Observaciones (Opcional):</label>
                 <textarea name="observaciones_rrhh" 
                           id="observaciones_rrhh" 
@@ -465,41 +434,41 @@ document.addEventListener('DOMContentLoaded', function () {
         
         // Crear el HTML de la vista previa
         const previewHTML = `
-            <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; overflow-y: auto;" id="previewModal">
-                <div style="background: white; border-radius: 8px; max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto; position: relative;">
-                    <div style="position: sticky; top: 0; background: #009929; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 10000;">
-                        <h2 style="margin: 0; font-size: 18px;">Vista Previa de la Solicitud</h2>
-                        <button onclick="document.getElementById('previewModal').remove()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0;">&times;</button>
+            <div id="previewModal" class="hrm-preview-modal">
+                <div class="hrm-preview-modal-content">
+                    <div class="hrm-preview-modal-header">
+                        <h2 class="hrm-preview-modal-title">Vista Previa de la Solicitud</h2>
+                        <button onclick="document.getElementById('previewModal').remove()" class="hrm-preview-modal-close">&times;</button> 
                     </div>
                     
-                    <div style="padding: 40px; background: #f0f8f0;">
-                        <div style="background: white; padding: 30px; border: 2px solid #003400; border-radius: 4px;">
+                    <div class="hrm-preview-modal-body">
+                        <div class="hrm-preview-modal-box">
                             <!-- Encabezado -->
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #003400;">
+                            <div class="hrm-preview-grid">
                                 <div>
-                                    <div style="margin-bottom: 15px;">
-                                        <div style="font-weight: bold; color: #003400; margin-bottom: 5px; font-size: 13px; text-transform: uppercase;">Nombre del Solicitante:</div>
-                                        <div style="color: #333; padding: 10px; background: white; border: 1px solid #ddd; border-radius: 3px;">
+                                    <div class="mb-3">
+                                        <div class="hrm-preview-label">Nombre del Solicitante:</div>
+                                        <div class="hrm-preview-value">
                                             <?php echo esc_html( $nombre_solicitante ); ?>
                                         </div>
                                     </div>
-                                    <div style="margin-bottom: 15px;">
-                                        <div style="font-weight: bold; color: #003400; margin-bottom: 5px; font-size: 13px; text-transform: uppercase;">RUT:</div>
-                                        <div style="color: #333; padding: 10px; background: white; border: 1px solid #ddd; border-radius: 3px;">
+                                    <div class="mb-3">
+                                        <div class="hrm-preview-label">RUT:</div>
+                                        <div class="hrm-preview-value">
                                             <?php echo esc_html( $empleado_data ? $empleado_data->rut : '—' ); ?>
                                         </div>
                                     </div>
                                 </div>
                                 <div>
-                                    <div style="margin-bottom: 15px;">
-                                        <div style="font-weight: bold; color: #003400; margin-bottom: 5px; font-size: 13px; text-transform: uppercase;">Cargo:</div>
-                                        <div style="color: #333; padding: 10px; background: white; border: 1px solid #ddd; border-radius: 3px;">
+                                    <div class="mb-3">
+                                        <div class="hrm-preview-label">Cargo:</div>
+                                        <div class="hrm-preview-value">
                                             <?php echo esc_html( $empleado_data ? $empleado_data->puesto : '—' ); ?>
                                         </div>
                                     </div>
-                                    <div style="margin-bottom: 15px;">
-                                        <div style="font-weight: bold; color: #003400; margin-bottom: 5px; font-size: 13px; text-transform: uppercase;">Fecha de Solicitud:</div>
-                                        <div style="color: #333; padding: 10px; background: white; border: 1px solid #ddd; border-radius: 3px;">
+                                    <div class="mb-3">
+                                        <div class="hrm-preview-label">Fecha de Solicitud:</div>
+                                        <div class="hrm-preview-value">
                                             <?php echo esc_html( $fecha_hoy_format ); ?>
                                         </div>
                                     </div>
@@ -507,14 +476,14 @@ document.addEventListener('DOMContentLoaded', function () {
                             </div>
                             
                             <!-- Solicitud -->
-                            <div style="font-size: 13px; font-weight: bold; text-transform: uppercase; color: white; background: #009929; padding: 10px 15px; margin: 30px 0 15px 0; border-radius: 3px;">Solicitud</div>
+                            <div class="hrm-preview-section-title">Solicitud</div>
                             
                             <div style="text-align: justify; margin-bottom: 15px; line-height: 1.8; color: #333;">
                                 Por medio de la presente, solicito formalmente la autorización para hacer uso de mis días de <strong>${escapeHtml(tipoLabel.toLowerCase())}</strong> correspondientes al período laboral ${new Date().getFullYear()}.
                             </div>
                             
                             <!-- Período -->
-                            <div style="font-size: 13px; font-weight: bold; text-transform: uppercase; color: white; background: #009929; padding: 10px 15px; margin: 30px 0 15px 0; border-radius: 3px;">Período de Ausencia</div>
+                            <div class="hrm-preview-section-title">Período de Ausencia</div>
                             
                             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin: 20px 0; padding: 15px; background: #98ff96; border: 2px solid #009929; border-radius: 3px;">
                                 <div style="text-align: center;">
@@ -533,7 +502,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             
                             ${descripcion ? `
                             <div style="font-size: 13px; font-weight: bold; text-transform: uppercase; color: white; background: #009929; padding: 10px 15px; margin: 30px 0 15px 0; border-radius: 3px;">Comentarios</div>
-                            <div style="background: #f9f9f9; padding: 15px; border-left: 4px solid #009929; margin-bottom: 20px; white-space: pre-wrap;">
+                            <div class="hrm-highlight-box">
                                 ${escapeHtml(descripcion)}
                             </div>
                             ` : ''}

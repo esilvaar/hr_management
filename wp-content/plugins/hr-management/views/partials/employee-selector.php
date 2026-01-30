@@ -40,7 +40,7 @@ if ( $curr_id > 0 ) {
             </span>
         </button>
         
-        <div class="dropdown-menu shadow" id="hrm-employee-list" aria-labelledby="hrm-employee-selector-btn" style="min-width: 300px; max-width: 500px;">
+        <div class="dropdown-menu shadow hrm-employee-dropdown" id="hrm-employee-list" aria-labelledby="hrm-employee-selector-btn">
             <!-- Search input -->
             <div class="p-2 border-bottom sticky-top bg-white">
                 <input 
@@ -52,7 +52,7 @@ if ( $curr_id > 0 ) {
             </div>
             
             <!-- Employee list -->
-            <div id="hrm-employee-items" style="max-height: 350px; overflow-y: auto;">
+            <div id="hrm-employee-items" class="hrm-employee-items">
                 <?php if ( ! empty( $all_emps ) ) : ?>
                     <?php foreach ( $all_emps as $e ) : ?>
                         <a 

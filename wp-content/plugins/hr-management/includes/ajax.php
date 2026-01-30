@@ -383,9 +383,9 @@ function hrm_ajax_get_employee_documents() {
     if ( empty( $documents ) ) {
         ob_start();
         ?>
-        <div style="max-width:900px; margin:0 auto;">
-            <div class="d-flex align-items-center justify-content-center" style="min-height: 240px;">
-                <h3 style="font-size:20px; color: #856404; text-align:center; max-width: 700px;">
+        <div class="hrm-no-docs-container">
+            <div class="hrm-no-docs-inner">
+                <h3 class="hrm-no-docs-title">
                     <strong>⚠️ Sin documentos:</strong> Este empleado no tiene documentos registrados.
                 </h3>
             </div>
@@ -436,32 +436,23 @@ function hrm_ajax_get_employee_documents() {
 
     ob_start();
     ?>
-    <div style="">
-        <style>
-            /* Styling focused on centering table content for better UX */
-            .hrm-documents-table th, .hrm-documents-table td { text-align: center !important; vertical-align: middle !important; }
-            .hrm-documents-table .d-flex.align-items-center { justify-content: center; }
-            .hrm-documents-table .flex-column { text-align: center; }
-            /* Alineación de menú dentro de la celda (acciones) */
-            .hrm-documents-table td.text-end { text-align: center !important; }
-            /* Mantener enlaces del menú alineados a la izquierda dentro del dropdown */
-            .hrm-documents-table .hrm-actions-menu a, .hrm-documents-table .hrm-actions-menu button { text-align: left; display:block; }
-        </style>
+    <div class="hrm-documents-wrapper">
+        <!-- styles moved to assets/css/documents-table.css -->
         <div class="table-responsive">
             <table class="table table-striped table-bordered table-sm mb-0 hrm-documents-table">
                 <thead class="table-dark small">
                     <tr>
-                        <th style="width:80px;">Año</th>
-                        <th style="width:160px;">Tipo</th>
+                        <th class="hrm-th-year">Año</th>
+                        <th class="hrm-th-type">Tipo</th>
                         <th>Archivo</th>
-                        <th style="width:120px;" class="text-end">Acciones</th>
+                        <th class="hrm-th-actions text-end">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="hrm-document-list">
                     <?php foreach ( $documents as $doc ) : ?>
                         <tr class="align-middle" data-type="<?= esc_attr( strtolower( $doc->tipo ) ) ?>" data-type-id="<?= esc_attr( $doc->tipo_id ) ?>" data-year="<?= esc_attr( $doc->anio ) ?>">
-                            <td style="vertical-align: middle;"><?= esc_html( $doc->anio ) ?></td>
-                            <td style="vertical-align: middle;"><small class="text-muted"><?= esc_html( ucfirst( $doc->tipo ) ?: '—' ) ?></small></td>
+                            <td class="align-middle"><?= esc_html( $doc->anio ) ?></td>
+                            <td class="align-middle"><small class="text-muted"><?= esc_html( ucfirst( $doc->tipo ) ?: '—' ) ?></small></td>
                             <td>
                                 <div class="d-flex align-items-center gap-3">
                                     <span class="dashicons dashicons-media-document text-secondary" aria-hidden="true"></span>
@@ -472,22 +463,22 @@ function hrm_ajax_get_employee_documents() {
                                 </div>
                             </td>
                             <td class="text-end">
-                                <div class="d-inline-flex align-items-center" style="gap:6px;">
-                                    <div class="hrm-actions-dropdown" style="position:relative; display:inline-block;">
+                                <div class="d-inline-flex align-items-center hrm-gap-6">
+                                    <div class="hrm-actions-dropdown">
                                         <button type="button" class="btn btn-sm btn-outline-secondary hrm-actions-toggle" aria-expanded="false" aria-controls="hrm-actions-menu-<?= esc_attr( $doc->id ) ?>" title="Acciones">
                                             <span class="dashicons dashicons-menu" aria-hidden="true"></span>
                                             <span class="visually-hidden">Acciones</span>
                                         </button>
-                                        <div id="hrm-actions-menu-<?= esc_attr( $doc->id ) ?>" class="hrm-actions-menu" style="position:absolute; right:0; top:calc(100% + 6px); background:#fff; border:1px solid #ddd; box-shadow:0 6px 18px rgba(0,0,0,0.08); display:none; min-width:160px; z-index:1100;">
+                                        <div id="hrm-actions-menu-<?= esc_attr( $doc->id ) ?>" class="hrm-actions-menu">
                                             <a class="d-block px-3 py-2 hrm-action-download" href="<?= esc_url( $doc->url ) ?>" target="_blank" rel="noopener noreferrer">Descargar</a>
                                             <?php if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) ) : ?>
-                                                <div style="height:1px; background:#e9ecef; margin:4px 0;"></div>
-                                                <form method="post" class="hrm-delete-form m-0 p-0" style="display:block;">
+                                                <div class="hrm-actions-sep"></div>
+                                                <form method="post" class="hrm-delete-form m-0 p-0">
                                                     <?php wp_nonce_field( 'hrm_delete_file', 'hrm_delete_nonce' ); ?>
                                                     <input type="hidden" name="hrm_action" value="delete_document">
                                                     <input type="hidden" name="doc_id" value="<?= esc_attr( $doc->id ) ?>">
                                                     <input type="hidden" name="employee_id" value="<?= esc_attr( $employee->id ) ?>">
-                                                    <button type="submit" class="d-block w-100 text-start px-3 py-2 text-danger" style="background:transparent; border:none;">Eliminar</button>
+                                                    <button type="submit" class="d-block w-100 text-start px-3 py-2 text-danger hrm-delete-btn">Eliminar</button>
                                                 </form>
                                             <?php endif; ?>
                                         </div>
@@ -629,7 +620,9 @@ function hrm_ajax_delete_employee_document() {
         'doc_id' => $doc_id
     ] );
 }
-// ...existing code...s
+
+// Duplicate definition removed. The canonical implementation of `hrm_ajax_create_document_type()` exists later in this file.
+// This avoids fatal redeclaration errors and ensures only one handler is registered.
 
 /**
  * =====================================================
@@ -797,6 +790,10 @@ function hrm_ajax_rechazar_solicitud_supervisor() {
 
 // Enganchar las funciones AJAX
 add_action( 'wp_ajax_hrm_get_employee_documents', 'hrm_ajax_get_employee_documents' );
+add_action( 'wp_ajax_hrm_create_document_type', 'hrm_ajax_create_document_type' );
+add_action( 'wp_ajax_hrm_delete_document_type', 'hrm_ajax_delete_document_type' );
+
+// Duplicate definition removed. The canonical implementation of `hrm_ajax_delete_document_type()` exists later in this file and includes additional cleanup (stubs removal, 'Empresa' protection, etc.). This avoids fatal redeclaration errors.
 
 /**
  * Endpoint AJAX: Crear nuevo tipo de documento desde el panel
@@ -1216,6 +1213,9 @@ function hrm_handle_anaconda_document_create() {
                 hrm_debug_log( 'HRM Anaconda: failed to write metadata with db_id for ' . $destination . ' - ' . $e->getMessage() );
             }
         }
+
+        // Invalidar transient usado por la sidebar para que el nuevo documento aparezca sin necesidad de borrar cache manualmente
+        delete_transient( 'hrm_sidebar_docs_' . md5( $table_name ) );
     }
 
     // Redirect back with success and filename
@@ -1269,6 +1269,23 @@ function hrm_handle_anaconda_document_delete() {
         // remove metadata if exists
         $meta = $file_path . '.json';
         if ( file_exists( $meta ) ) @unlink( $meta );
+
+        // Remove DB record if present (ruta exacta or basename match)
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'rrhh_documentos_empresa';
+        $deleted_db = $wpdb->delete( $table_name, array( 'ruta' => $file_path ), array( '%s' ) );
+        if ( $deleted_db === false ) {
+            // fallback: delete by basename match
+            try {
+                $like = '%' . $wpdb->esc_like( $basename );
+                $wpdb->query( $wpdb->prepare( "DELETE FROM {$table_name} WHERE ruta LIKE %s", $like ) );
+            } catch ( Exception $e ) {
+                hrm_debug_log( 'HRM Anaconda: failed to delete DB entry for ' . $file_path . ' - ' . $e->getMessage() );
+            }
+        }
+
+        // Invalidar transient de la sidebar
+        delete_transient( 'hrm_sidebar_docs_' . md5( $table_name ) );
     }
 
     $redirect = wp_get_referer() ?: admin_url();
@@ -1281,3 +1298,5 @@ function hrm_handle_anaconda_document_delete() {
     }
 }
 add_action( 'admin_post_anaconda_documents_delete', 'hrm_handle_anaconda_document_delete' );
+
+// AJAX handler for company documents removed per user request. Use page reloads to reflect changes in sidebar.

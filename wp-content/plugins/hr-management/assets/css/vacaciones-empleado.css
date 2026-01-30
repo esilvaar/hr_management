@@ -131,6 +131,16 @@ h3.h5 {
     color: #333;
 }
 
+/* Custom classes added during refactor */
+.hrm-vacaciones-card { max-width: 1200px; }
+.hrm-emp-heading { color: #1a1a1a; font-weight: 600; }
+.hrm-empty-alert { background-color: #f5f5f5; border: 1px solid #cccccc; color: #333; border-radius: 0; padding: 2rem; text-align: center; }
+.hrm-filter-select { max-width: 200px; }
+.hrm-new-request { display: inline-block; padding: 12px 40px; background: #232523; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 1.05rem; border: none; }
+.hrm-md-request { display: inline-block; padding: 12px 40px; background: #ff9800; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 1.05rem; border: none; }
+.hrm-new-request:hover { background: #111; }
+.hrm-md-request:hover { background: #e58500; }
+
 .alert.alert-light {
     background-color: #f9f9f9;
     border-color: #cccccc;

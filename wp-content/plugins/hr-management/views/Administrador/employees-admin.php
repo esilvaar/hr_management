@@ -344,8 +344,8 @@ if ( $tab !== 'list' ) {
             
             <?php if ( ! empty( $message_success ) ) : ?>
                 <?php if ( $tab === 'new' ) : // Mostrar el notice en blanco sobre la vista de creación ?>
-                    <div class="notice notice-success is-dismissible" style="background-color:#198754; border-left-color:#0f5132; color:#ffffff;">
-                        <p style="color:#ffffff; margin:0; padding:6px 8px;"><?= esc_html( $message_success ) ?></p>
+                    <div class="notice notice-success is-dismissible hrm-notice-success">
+                        <p class="hrm-notice-text mb-0 p-2"><?= esc_html( $message_success ) ?></p>
                     </div>
                 <?php else : ?>
                     <div class="notice notice-success is-dismissible"><p><?= esc_html( $message_success ) ?></p></div>
@@ -381,8 +381,8 @@ if ( $tab !== 'list' ) {
                 <?php hrm_get_template_part( 'employees-create', '', compact( 'hrm_departamentos', 'hrm_puestos', 'hrm_tipos_contrato', 'message_success', 'message_error' ) ); ?>
 
             <?php elseif ( $tab === 'profile' && ! $id ) : ?>
-                <div class="d-flex align-items-center justify-content-center" style="min-height: 400px;">
-                    <h2 style="font-size: 24px; color: #856404; text-align: center; max-width: 500px;"><strong>⚠️ Atención:</strong> Por favor selecciona un usuario para continuar.</h2>
+                <div class="hrm-empty-placeholder">
+                    <h2><strong>⚠️ Atención:</strong> Por favor selecciona un usuario para continuar.</h2>
                 </div>
             <?php endif; ?>
 

@@ -56,91 +56,7 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
 
 ?>
 
-<style>
-    /* Responsive unified sidebar: center sections vertically on desktop, move certain blocks to bottom on mobile */
-    .hrm-nav.d-flex {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .hrm-nav .hrm-profile-mid,
-    .hrm-nav .hrm-convivencia-mid {
-        margin: 0;
-    }
-
-    @media (max-width: 767.98px) {
-
-        .hrm-nav .hrm-profile-mid,
-        .hrm-nav .hrm-convivencia-mid {
-            margin-top: auto;
-            margin-bottom: 0;
-        }
-    }
-
-    @media (min-width: 768px) {
-
-        .hrm-nav .hrm-profile-mid,
-        .hrm-nav .hrm-convivencia-mid {
-            margin: auto 0;
-        }
-    }
-
-    /* Mobile sidebar: hidden by default, slide in when open */
-    .hrm-mobile-toggle {
-        display: none;
-    }
-
-    .hrm-sidebar-overlay {
-        display: none;
-    }
-
-    @media (max-width: 767.98px) {
-        .hrm-mobile-toggle {
-            display: block;
-            position: fixed;
-            top: 12px;
-            left: 12px;
-            z-index: 1052;
-            border-radius: 6px;
-            padding: .45rem .5rem;
-            box-shadow: 0 2px 6px rgba(0,0,0,.18);
-        }
-
-        .hrm-sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100vh;
-            width: 280px;
-            max-width: 85%;
-            transform: translateX(-110%);
-            transition: transform .28s ease;
-            z-index: 1053;
-            box-shadow: 2px 0 8px rgba(0,0,0,.12);
-        }
-
-        body.hrm-sidebar-open .hrm-sidebar {
-            transform: translateX(0);
-        }
-
-        .hrm-sidebar-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,.45);
-            z-index: 1051;
-            display: none;
-        }
-
-        body.hrm-sidebar-open .hrm-sidebar-overlay {
-            display: block;
-        }
-
-        /* Ensure toggle hides when sidebar open to avoid duplicate controls */
-        body.hrm-sidebar-open .hrm-mobile-toggle {
-            opacity: .9;
-        }
-    }
-</style>
+<!-- Sidebar styles moved to assets/css/sidebar.css -->
 
 <!-- Mobile toggle button (visible on small screens) -->
 <button class="hrm-mobile-toggle btn btn-primary d-md-none" aria-controls="hrm-sidebar" aria-expanded="false" aria-label="Abrir menú">
@@ -153,7 +69,7 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
     <div class="hrm-sidebar-header d-flex align-items-center justify-content-center p-3 border-bottom">
         <a href="<?= esc_url(admin_url('admin.php?page=hrm-empleados&tab=list')); ?>"
             class="d-flex align-items-center justify-content-center">
-            <img src="<?= $logo_url; ?>" class="img-fluid" style="max-height:48px;" alt="Logo">
+            <img src="<?= $logo_url; ?>" class="img-fluid hrm-logo" alt="Logo">
         </a>
     </div>
 
@@ -316,7 +232,7 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
         <?php endif; ?>
 
         <!-- Centramos la sección 'Mi Perfil' verticalmente usando flexbox (no absoluto) -->
-        <div class="hrm-profile-mid" style="margin: auto 0; padding: .5rem 0;">
+        <div class="hrm-profile-mid">
             <!-- Perfil (visible para empleados, editores de vacaciones y administradores) -->
             <?php if (!$profile_first) {
                 echo $profile_html;
@@ -330,16 +246,24 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
                 </summary>
                 <ul class="list-unstyled px-2 mb-2">
                     <?php
-                    // Mostrar documentos guardados en la tabla personalizada
+                    // Mostrar documentos guardados en la tabla personalizada (listar todos y cachear resultados)
                     global $wpdb;
                     $table = $wpdb->prefix . 'rrhh_documentos_empresa';
-                    $docs = $wpdb->get_results( "SELECT id, titulo FROM {$table} ORDER BY fecha_creacion DESC" );
+                    $cache_key = 'hrm_sidebar_docs_' . md5( $table );
+                    $docs = get_transient( $cache_key );
+                    if ( false === $docs ) {
+                        // Obtener todos los documentos (ordenados por fecha desc)
+                        $sql = "SELECT id, titulo FROM {$table} ORDER BY fecha_creacion DESC";
+                        $docs = $wpdb->get_results( $sql );
+                        $timeout = defined( 'HRM_CACHE_TIMEOUT' ) ? HRM_CACHE_TIMEOUT : HOUR_IN_SECONDS;
+                        set_transient( $cache_key, $docs, $timeout );
+                    }
                     if ( ! empty( $docs ) ) :
                         foreach ( $docs as $d ) :
                             $doc_id = intval( $d->id );
                             $title = esc_html( $d->titulo ? $d->titulo : 'Documento ' . $doc_id );
-                            $is_active = (string) hrm_get_query_var('doc_id') === (string) $doc_id ? ' active' : '';
-                            $href = esc_url( add_query_arg( array( 'page' => 'hrm-convivencia', 'doc_id' => $doc_id ), admin_url('admin.php') ) );
+                            $is_active = (string) hrm_get_query_var( 'doc_id' ) === (string) $doc_id ? ' active' : '';
+                            $href = esc_url( add_query_arg( array( 'page' => 'hrm-convivencia', 'doc_id' => $doc_id ), admin_url( 'admin.php' ) ) );
                             ?>
                             <li>
                                 <a class="nav-link px-3 py-2<?= $is_active ?>" href="<?= $href ?>"><?= $title ?></a>

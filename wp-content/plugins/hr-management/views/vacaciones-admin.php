@@ -1,6 +1,8 @@
 <?php
 // Los estilos se cargan en functions.php mediante hooks de WordPress
 // No encolar estilos aquí, ya que es demasiado tarde en el ciclo
+// En este caso agregamos un enqueue por-vista para reglas menores y utilidades
+wp_enqueue_style( 'hrm-vacaciones-admin', plugins_url( 'hr-management/assets/css/vacaciones-admin.css' ), array(), '1.0.0' );
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -121,7 +123,7 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                             role="tab" 
                             aria-controls="contenido-solicitudes" 
                             aria-selected="<?php echo $tab_activo === 'solicitudes' ? 'true' : 'false'; ?>">
-                        <span style="font-size: 1.2rem;">📋</span>
+                        <span class="hrm-tab-icon">📋</span>
                         <span class="fw-semibold">Solicitudes de Día Completo<?php echo ( $count_dia_completo > 0 ) ? ' (' . intval( $count_dia_completo ) . ')' : ''; ?></span>
                     </button>
                 </li>
@@ -132,7 +134,7 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                             role="tab" 
                             aria-controls="contenido-departamentos" 
                             aria-selected="<?php echo $tab_activo === 'departamentos' ? 'true' : 'false'; ?>">
-                        <span style="font-size: 1.2rem;">🏢</span>
+                        <span class="hrm-tab-icon">🏢</span>
                         <span class="fw-semibold">Resumen de Departamentos</span>
                     </button>
                 </li>
@@ -143,7 +145,7 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                             role="tab" 
                             aria-controls="contenido-medio-dia" 
                             aria-selected="<?php echo $tab_activo === 'medio-dia' ? 'true' : 'false'; ?>">
-                        <span style="font-size: 1.2rem;">⏰</span>
+                        <span class="hrm-tab-icon">⏰</span>
                         <span class="fw-semibold">Solicitudes de Medio Día<?php echo ( $count_medio_dia > 0 ) ? ' (' . intval( $count_medio_dia ) . ')' : ''; ?></span>
                     </button>
                 </li>
@@ -241,7 +243,7 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                         <th class="py-3 px-4"> Hasta</th>
                         <th class="py-3 px-4 text-center"> Días</th>
                         <th class="py-3 px-4 text-center"> Estado</th>
-                        <th class="py-3 px-4 text-center" style="min-width: 220px;"> Acciones</th>
+                        <th class="py-3 px-4 text-center hrm-actions-col"> Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="text-secondary small">

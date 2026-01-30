@@ -105,7 +105,7 @@ $show = sanitize_key( $_GET['show'] ?? '' );
 $form_admin_url = add_query_arg( 'show', 'form' );
 ?>
 
-<div class="card shadow-sm mx-auto mt-3" style="max-width: 1200px;">
+<div class="card shadow-sm mx-auto mt-3 hrm-vacaciones-card">
     <div class="card-header bg-dark text-white">
         <h2 class="mb-0">
             <span class="dashicons dashicons-calendar-alt me-2"></span> Mis Vacaciones
@@ -140,7 +140,7 @@ $form_admin_url = add_query_arg( 'show', 'form' );
             
             <!-- Saldo de Vacaciones - Cálculo según Ley Chilena -->
             <div class="mb-4">
-                <h3 class="h5 mb-3" style="color: #1a1a1a; font-weight: 600;">
+                <h3 class="h5 mb-3 hrm-emp-heading">
                     
                 </h3>
                 
@@ -254,8 +254,8 @@ $form_admin_url = add_query_arg( 'show', 'form' );
 
                 <!-- Selector de Estado -->
                 <div class="mb-3 d-flex gap-2 align-items-center">
-                    <label for="estado_filtro" class="form-label mb-0" style="font-weight: 600;">Filtrar por:</label>
-                    <select id="estado_filtro" class="form-select" style="max-width: 200px;" onchange="window.location.href = '<?php echo esc_url( remove_query_arg( 'estado' ) ); ?>' + (this.value ? '&estado=' + this.value : '');">
+                    <label for="estado_filtro" class="form-label mb-0 fw-semibold">Filtrar por:</label>
+                    <select id="estado_filtro" class="form-select hrm-filter-select" onchange="window.location.href = '<?php echo esc_url( remove_query_arg( 'estado' ) ); ?>' + (this.value ? '&estado=' + this.value : '');">
                         <option value="PENDIENTE" <?php selected( $estado_filtro, 'PENDIENTE' ); ?>>
                             ⏳ Pendiente (Por Revisar)
                         </option>
@@ -303,7 +303,7 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                 
                 <?php if ( empty( $solicitudes_filtradas ) ) : ?>
                     
-                    <div class="alert" style="background-color: #f5f5f5; border: 1px solid #cccccc; border-left: 1px solid #cccccc; color: #333; border-radius: 0; padding: 2rem; text-align: center;" role="alert">
+                    <div class="alert hrm-empty-alert" role="alert">
                         <span class="dashicons dashicons-info fs-1"></span>
                         <p class="lead mb-0 mt-2">No tienes solicitudes de vacaciones registradas.</p>
                     </div>
@@ -357,7 +357,7 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                                                 $action = $es_medio_dia ? 'hrm_cancelar_solicitud_medio_dia' : 'hrm_cancelar_solicitud_vacaciones';
                                                 $nonce_action = $es_medio_dia ? 'hrm_cancelar_solicitud_medio_dia' : 'hrm_cancelar_solicitud';
                                                 ?>
-                                                <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" style="display: inline;" onsubmit="return confirm('¿Deseas cancelar esta solicitud? Esta acción no se puede deshacer.');">
+                                                <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" class="d-inline" onsubmit="return confirm('¿Deseas cancelar esta solicitud? Esta acción no se puede deshacer.');">
                                                     <input type="hidden" name="action" value="<?= esc_attr( $action ) ?>">
                                                     <input type="hidden" name="id_solicitud" value="<?= esc_attr( $s['id_solicitud'] ?? '' ) ?>">
                                                     <?php wp_nonce_field( $nonce_action, 'hrm_nonce' ); ?>
@@ -380,10 +380,10 @@ $form_admin_url = add_query_arg( 'show', 'form' );
             
             <!-- Botones Nueva Solicitud -->
             <div class="text-center mt-4 pt-3 border-top d-flex gap-3 justify-content-center">
-                <a href="<?= esc_url( $form_admin_url ) ?>" style="display: inline-block; padding: 12px 40px; background: #232523; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 1.05rem; border: none; transition: background 0.3s ease;">
+                <a href="<?= esc_url( $form_admin_url ) ?>" class="hrm-new-request btn btn-dark">
                     <span class="dashicons dashicons-plus me-2"></span> Nueva solicitud de vacaciones
                 </a>
-                <a href="<?= esc_url( add_query_arg( 'show', 'medio-dia' ) ) ?>" style="display: inline-block; padding: 12px 40px; background: #ff9800; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 1.05rem; border: none; transition: background 0.3s ease;">
+                <a href="<?= esc_url( add_query_arg( 'show', 'medio-dia' ) ) ?>" class="hrm-md-request btn btn-warning">
                     <span class="dashicons dashicons-clock me-2"></span> Solicitar medio día
                 </a>
             </div>
