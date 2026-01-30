@@ -43,6 +43,7 @@ if ( $doc_id ) {
     }
 } 
 ?>
+<?php // Styles merged into plugin-common.css: assets/css/plugin-common.css - specific view file removed. ?>
 
 <div class="hrm-page-header">
     <h1 class="hrm-page-title">
@@ -54,7 +55,7 @@ if ( $doc_id ) {
 <div class="hrm-card">
     <div class="hrm-card-body">
         <div class="mb-4">
-            <iframe src="https://docs.google.com/gview?url=<?= esc_url($pdf_url) ?>&embedded=true" style="width:100%; min-height:600px; border:1px solid #ccc; border-radius:8px; background:#fff;"></iframe>
+            <iframe src="https://docs.google.com/gview?url=<?= esc_url($pdf_url) ?>&embedded=true" class="hrm-doc-iframe"></iframe>
         </div>
         <a href="<?= esc_url($pdf_url) ?>" class="btn btn-primary" download target="_blank">
             <span class="dashicons dashicons-download"></span> Descargar Reglamento en PDF

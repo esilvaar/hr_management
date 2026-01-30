@@ -147,6 +147,8 @@ $fecha_solicitud = ! empty( $solicitud->fecha_creacion ) ? $solicitud->fecha_cre
 
 // Cargar estilos CSS
 wp_enqueue_style( 'hrm-vacaciones-formulario', plugins_url( 'hr-management/assets/css/vacaciones-formulario.css' ), array(), '1.0.0' );
+// Enqueue view-specific rules
+// Styles merged into plugin-common.css: assets/css/plugin-common.css (vacaciones-formulario-vista rules moved there).
 ?>
 
 <div class="wrap">
@@ -172,7 +174,7 @@ wp_enqueue_style( 'hrm-vacaciones-formulario', plugins_url( 'hr-management/asset
             <input type="hidden" name="solicitud_id" value="<?php echo esc_attr( $id_solicitud ); ?>">
             <?php wp_nonce_field( 'hrm_respuesta_rrhh', 'hrm_nonce' ); ?>
             
-            <div class="documento-formal p-5 mx-auto" style="max-width: 900px; background: white;">
+            <div class="documento-formal p-5 mx-auto">
                 
                 <!-- ENCABEZADO CON DATOS DEL SOLICITANTE -->
                 <div class="seccion-encabezado">
@@ -242,13 +244,13 @@ wp_enqueue_style( 'hrm-vacaciones-formulario', plugins_url( 'hr-management/asset
                 <!-- MOSTRAR COMENTARIOS SI EXISTEN -->
                 <?php if ( ! empty( $solicitud->motivo ) || ! empty( $solicitud->descripcion ) ) : ?>
                     <div class="titulo-seccion">Comentarios del Solicitante</div>
-                    <div class="parrafo-formal" style="background: #f9f9f9; padding: 15px; border-left: 4px solid #0d6efd; margin-bottom: 20px;">
+                    <div class="parrafo-formal hrm-highlight-info">
                         <?php echo nl2br( esc_html( $solicitud->motivo ?: $solicitud->descripcion ) ); ?>
                     </div>
                 <?php endif; ?>
                 
                 <!-- CIERRE FORMAL -->
-                <div class="parrafo-formal" style="margin-top: 30px;">
+                <div class="parrafo-formal mt-4">
                     Quedo atento(a) a la confirmación y aprobación de esta solicitud. Me comprometo a dejar mis tareas 
                     debidamente coordinadas con mi jefatura directa antes de mi ausencia.
                 </div>
@@ -259,7 +261,7 @@ wp_enqueue_style( 'hrm-vacaciones-formulario', plugins_url( 'hr-management/asset
                 
                 <!-- SECCIÓN RECURSOS HUMANOS (EDITABLE PARA ADMIN) -->
                 <div class="seccion-rrhh">
-                    <div class="titulo-seccion" style="margin-top: 0; border-bottom: 1px solid #ffc107;">
+                    <div class="titulo-seccion hrm-rrhh-title">
                         ⭐ Recursos Humanos / Jefatura Directa
                     </div>
                     
@@ -269,33 +271,33 @@ wp_enqueue_style( 'hrm-vacaciones-formulario', plugins_url( 'hr-management/asset
                     ?>
                     
                     <?php if ( $solicitud_bloqueada ) : ?>
-                        <div style="padding: 15px; margin-bottom: 20px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; color: #856404;">
+                        <div class="hrm-blocked-alert">
                             <strong>⚠️ Solicitud Bloqueada</strong><br>
                             Esta solicitud ya ha sido <strong><?php echo $solicitud->estado === 'APROBADA' ? 'APROBADA' : 'RECHAZADA'; ?></strong> 
                             y no puede ser modificada. Solo está permitida la visualización del contenido.
                         </div>
                     <?php endif; ?>
                     
-                    <div style="margin-bottom: 20px;">
-                        <div class="form-label fw-bold" style="margin-bottom: 10px;">Respuesta:</div>
-                        <div style="display: flex; gap: 30px;">
-                            <div style="display: flex; gap: 10px; align-items: center;">
+                    <div class="mb-3">
+                        <div class="form-label fw-bold mb-2">Respuesta:</div>
+                        <div class="opciones-respuesta">
+                            <div class="d-flex align-items-center gap-2">
                                 <input type="radio" id="respuesta_aceptado" name="respuesta_rrhh" value="aceptado" 
                                        <?php checked( $solicitud->estado, 'APROBADA' ); ?>
                                        <?php echo $solicitud_bloqueada ? 'disabled' : ''; ?>>
-                                <label for="respuesta_aceptado" style="cursor: pointer; margin: 0; opacity: <?php echo $solicitud_bloqueada ? '0.6' : '1'; ?>;">Aceptado</label>
+                                <label for="respuesta_aceptado" class="mb-0 hrm-radio-label <?php echo $solicitud_bloqueada ? 'disabled' : ''; ?>">Aceptado</label>
                             </div>
-                            <div style="display: flex; gap: 10px; align-items: center;">
+                            <div class="d-flex align-items-center gap-2">
                                 <input type="radio" id="respuesta_rechazado" name="respuesta_rrhh" value="rechazado"
                                        <?php checked( $solicitud->estado, 'RECHAZADA' ); ?>
                                        <?php echo $solicitud_bloqueada ? 'disabled' : ''; ?>>
-                                <label for="respuesta_rechazado" style="cursor: pointer; margin: 0; opacity: <?php echo $solicitud_bloqueada ? '0.6' : '1'; ?>;">Rechazado</label>
+                                <label for="respuesta_rechazado" class="mb-0 hrm-radio-label <?php echo $solicitud_bloqueada ? 'disabled' : ''; ?>">Rechazado</label>
                             </div>
-                            <div style="display: flex; gap: 10px; align-items: center;">
+                            <div class="d-flex align-items-center gap-2">
                                 <input type="radio" id="respuesta_pendiente" name="respuesta_rrhh" value="pendiente"
                                        <?php checked( $solicitud->estado, 'PENDIENTE' ); ?>
                                        <?php echo $solicitud_bloqueada ? 'disabled' : ''; ?>>
-                                <label for="respuesta_pendiente" style="cursor: pointer; margin: 0; opacity: <?php echo $solicitud_bloqueada ? '0.6' : '1'; ?>;">Pendiente de Revisar</label>
+                                <label for="respuesta_pendiente" class="mb-0 hrm-radio-label <?php echo $solicitud_bloqueada ? 'disabled' : ''; ?>">Pendiente de Revisar</label>
                             </div>
                         </div>
                     </div>
@@ -309,7 +311,7 @@ wp_enqueue_style( 'hrm-vacaciones-formulario', plugins_url( 'hr-management/asset
                     $nombre_jefe_value = ! empty( $solicitud->nombre_jefe ) ? $solicitud->nombre_jefe : $nombre_usuario_logueado;
                     ?>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div class="hrm-grid-two mb-3">
                         <div>
                             <label for="nombre_jefe" class="form-label fw-bold">Nombre de Jefe/RRHH:</label>
                             <input type="text" 

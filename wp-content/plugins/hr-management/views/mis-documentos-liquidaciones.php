@@ -63,7 +63,8 @@ if ( ! empty( $documents ) && is_array( $documents ) ) {
 wp_localize_script( 'hrm-mis-documentos', 'hrmMisDocsData', array(
     'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 ) );
-?>
+// Enqueue per-view styles
+// Styles for liquidaciones merged into plugin-common.css (assets/css/plugin-common.css) - removed specific enqueue to reduce small files. ?>
 
 <div class="container-fluid mt-4">
     <div class="row">
@@ -85,24 +86,24 @@ wp_localize_script( 'hrm-mis-documentos', 'hrmMisDocsData', array(
 
                     <div class="mb-3 d-flex align-items-center gap-2">
                         <label for="hrm-mis-year-select" class="me-2 mb-0 fw-bold">Filtrar por año:</label>
-                        <select id="hrm-mis-year-select" class="form-select" style="max-width:160px;">
+                        <select id="hrm-mis-year-select" class="form-select hrm-year-select">
                             <option value="">Todos</option>
                             <?php $anio_actual = (int) date('Y'); for ($y = $anio_actual; $y >= 2000; $y--) : ?>
                                 <option value="<?= esc_attr( $y ); ?>" <?= $y === $anio_actual ? 'selected' : ''; ?>><?= esc_html( $y ); ?></option>
                             <?php endfor; ?>
                         </select>
-                        <div id="hrm-mis-download" style="position:relative;">
-                            <button id="hrm-mis-download-btn" class="btn btn-outline-primary btn-sm ms-2">Descargar ▾</button>
-                            <div id="hrm-mis-download-menu" style="display:none; position:absolute; top:calc(100% + 6px); left:0; background:#fff; border:1px solid #ddd; box-shadow:0 6px 18px rgba(0,0,0,0.08); z-index:1200; min-width:200px;">
-                                <a href="#" class="dropdown-item p-2" data-cantidad="1">Descargar última</a>
-                                <a href="#" class="dropdown-item p-2" data-cantidad="3">Descargar últimas 3</a>
-                                <a href="#" class="dropdown-item p-2" data-cantidad="6">Descargar últimas 6</a>
-                                <a href="#" class="dropdown-item p-2" data-cantidad="all">Descargar todas</a>
-                            </div>
+                        <div id="hrm-mis-download" class="dropdown ms-2">
+                            <button id="hrm-mis-download-btn" class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Descargar</button>
+                            <ul id="hrm-mis-download-menu" class="dropdown-menu">
+                                <li><a href="#" class="dropdown-item" data-cantidad="1">Descargar última</a></li>
+                                <li><a href="#" class="dropdown-item" data-cantidad="3">Descargar últimas 3</a></li>
+                                <li><a href="#" class="dropdown-item" data-cantidad="6">Descargar últimas 6</a></li>
+                                <li><a href="#" class="dropdown-item" data-cantidad="all">Descargar todas</a></li>
+                            </ul>
                         </div>
                     </div>
 
-                    <div id="hrm-mis-documents-container" style="visibility:hidden;">
+                    <div id="hrm-mis-documents-container" class="hrm-mis-documents-container d-none">
                         <?php if ( ! empty( $documents ) ) : ?>
                             <div class="table-responsive">
                                 <table class="table table-striped table-hover mb-0">
@@ -151,7 +152,7 @@ wp_localize_script( 'hrm-mis-documentos', 'hrmMisDocsData', array(
                             </div>
                         <?php else : ?>
                             <div class="alert alert-info text-center py-4">
-                                <span class="dashicons dashicons-media-document" style="font-size:48px;opacity:.5;"></span>
+                                <span class="dashicons dashicons-media-document fs-1 opacity-50"></span>
                                 <p class="mt-2 mb-0">No hay liquidaciones disponibles.</p>
                             </div>
                         <?php endif; ?>
@@ -159,15 +160,14 @@ wp_localize_script( 'hrm-mis-documentos', 'hrmMisDocsData', array(
 
                     <!-- PREVISUALIZACIÓN -->
                     <?php if ( empty( $GLOBALS['hrm_doc_preview_rendered'] ) ) : $GLOBALS['hrm_doc_preview_rendered'] = true; ?>
-                    <div class="mt-4" id="hrm-preview-panel" style="display:none;">
+                    <div class="mt-4 hrm-preview-panel d-none" id="hrm-preview-panel">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <h6 class="fw-bold mb-0">Previsualización de documento</h6>
                             <button type="button" id="btn-cerrar-preview" class="btn btn-sm btn-outline-secondary">
                                 Cerrar
                             </button>
                         </div>
-                        <iframe id="hrm-preview-iframe"
-                                style="width:100%;min-height:600px;border:1px solid #ccc;background:#fff;"></iframe>
+                        <iframe id="hrm-preview-iframe" class="hrm-preview-iframe"></iframe>
                     </div>
                     <?php else:
                         if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!url) return;
 
             previewIframe.src = url;
-            previewPanel.style.display = 'block';
+            previewPanel.classList.remove('d-none');
 
             setTimeout(() => {
                 previewPanel.scrollIntoView({ behavior: 'smooth' });
@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (closeBtn) {
         closeBtn.addEventListener('click', function () {
-            previewPanel.style.display = 'none';
+            previewPanel.classList.add('d-none');
             previewIframe.src = '';
         });
     }
@@ -242,10 +242,10 @@ document.addEventListener('DOMContentLoaded', function () {
         // Inicializar filtro (el select viene por defecto con el año actual seleccionado)
         filterRowsByYear();
         // Mostrar el contenedor una vez aplicado el filtro para evitar mostrar todos brevemente
-        try { container.style.visibility = 'visible'; } catch(e) { /* no-op */ }
+        try { container.classList.remove('d-none'); } catch(e) { /* no-op */ }
     })();
 
-    // Descargas: manejar el menú de descarga para liquidaciones (última/3/6/todas)
+    // Descargas: manejar el menú de descarga para liquidaciones (última/3/6/todas) usando Bootstrap dropdown
     (function(){
         const btn = document.getElementById('hrm-mis-download-btn');
         const menu = document.getElementById('hrm-mis-download-menu');
@@ -253,61 +253,47 @@ document.addEventListener('DOMContentLoaded', function () {
         const employeeId = <?= isset($employee->id) ? intval($employee->id) : 0; ?>;
         if (!btn || !menu || !yearSelect) return;
 
-        btn.addEventListener('click', function(e){
-            e.preventDefault();
-            // Antes de mostrar, actualizar visibilidad de opciones según documentos disponibles
-            updateDownloadMenuVisibility();
-            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
-        });
-
-        document.addEventListener('click', function(e){
-            if (!e.target.closest || (!e.target.closest('#hrm-mis-download') && !e.target.closest('#hrm-mis-download-menu') )) {
-                menu.style.display = 'none';
-            }
-        });
-
         const menuItems = menu.querySelectorAll('a[data-cantidad]');
         function updateDownloadMenuVisibility(){
-            // Contar filas disponibles según el año seleccionado
             const year = yearSelect.value || '';
             const rows = document.querySelectorAll('#hrm-mis-documents-container table tbody tr');
             let count = 0;
             rows.forEach(function(r){ if (!year || String(r.dataset.year) === String(year)) count++; });
 
-            // Mostrar solo las opciones pertinentes
             menuItems.forEach(function(mi){
+                const li = mi.closest('li') || mi;
                 const c = mi.getAttribute('data-cantidad');
                 if (c === 'all') {
-                    mi.style.display = (count > 0) ? 'block' : 'none';
+                    li.style.display = (count > 0) ? 'block' : 'none';
                 } else {
-                    const n = parseInt(c, 10) || 0;
-                    mi.style.display = (count >= n) ? 'block' : 'none';
+                    const n = parseInt(c,10) || 0;
+                    li.style.display = (count >= n) ? 'block' : 'none';
                 }
             });
 
-            // Si no hay opciones visibles, deshabilitar el botón
-            const visibleCount = Array.from(menuItems).filter(m => m.style.display !== 'none').length;
+            const visibleCount = Array.from(menuItems).filter(m => {
+                const li = m.closest('li') || m;
+                return li.style.display !== 'none';
+            }).length;
+
             btn.disabled = visibleCount === 0;
         }
 
-        // Actualizar al cambiar año
-        yearSelect.addEventListener('change', function(){ updateDownloadMenuVisibility(); });
+        yearSelect.addEventListener('change', updateDownloadMenuVisibility);
 
         menuItems.forEach(function(a){
             a.addEventListener('click', function(e){
                 e.preventDefault();
                 const cantidad = this.getAttribute('data-cantidad');
                 const year = yearSelect.value || '';
-                // Construir URL al endpoint que genera el ZIP
                 let url = '<?= admin_url( "admin-ajax.php" ); ?>?action=hrm_descargar_liquidaciones&cantidad=' + encodeURIComponent(cantidad);
                 if ( year ) url += '&year=' + encodeURIComponent(year);
                 if ( employeeId ) url += '&employee_id=' + encodeURIComponent(employeeId);
-                // Abrir en nueva ventana/pestaña para permitir descarga sin navegar fuera
                 window.open(url, '_blank');
-                menu.style.display = 'none';
+                try { const bsDropdown = bootstrap.Dropdown.getInstance(btn) || new bootstrap.Dropdown(btn); bsDropdown.hide(); } catch(e) { /* no-op */ }
             });
         });
-        // Inicializar visibilidad
+
         try { updateDownloadMenuVisibility(); } catch(e) { /* no-op */ }
     })();
 

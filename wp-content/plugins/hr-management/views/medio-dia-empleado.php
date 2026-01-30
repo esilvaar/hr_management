@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Cargar estilos CSS
-wp_enqueue_style( 'hrm-vacaciones-empleado', plugins_url( 'hr-management/assets/css/vacaciones-empleado.css' ), array(), '2.2.0' );
+// Styles merged into plugin-common.css: assets/css/plugin-common.css (medio-dia-empleado rules moved there).
 
 $db_emp   = new HRM_DB_Empleados();
 $user_id_to_use = isset( $current_user_id ) ? $current_user_id : get_current_user_id();
@@ -50,9 +50,9 @@ $show = sanitize_key( $_GET['show'] ?? '' );
 $form_admin_url = add_query_arg( 'show', 'form' );
 ?>
 
-<div class="card shadow-sm mx-auto mt-3" style="max-width: 1200px;">
+<div class="card shadow-sm mx-auto mt-3 hrm-md-card">
     <div class="card-header bg-dark text-white">
-        <h2 class="mb-0">
+        <h2 class="mb-0 hrm-md-title">
             <span class="dashicons dashicons-clock me-2"></span> Mis Medios Días
         </h2>
         <small><?= esc_html( $employee->nombre . ' ' . $employee->apellido ) ?> (RUT: <?= esc_html( $employee->rut ) ?>)</small>
@@ -81,21 +81,21 @@ $form_admin_url = add_query_arg( 'show', 'form' );
             
             <!-- Mis Solicitudes de Medio Día -->
             <div class="mb-4">
-                <h3 class="h5 mb-3" style="color: #1a1a1a; font-weight: 600;">
+                <h3 class="h5 mb-3 hrm-md-heading">
                     <span class="dashicons dashicons-list-view me-2"></span> Mis Solicitudes de Medio Día
                 </h3>
                 
                 <?php if ( empty( $solicitudes_medio_dia ) ) : ?>
                     
-                    <div class="alert" style="background-color: #f5f5f5; border: 1px solid #cccccc; border-left: 1px solid #cccccc; color: #333; border-radius: 0; padding: 2rem; text-align: center;" role="alert">
+                    <div class="alert hrm-md-empty" role="alert">
                         <span class="dashicons dashicons-info fs-1"></span>
                         <p class="lead mb-0 mt-2">No tienes solicitudes de medio día registradas.</p>
                     </div>
                     
                 <?php else : ?>
                     
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0 align-middle">
+                    <div class="table-responsive hrm-md-table">
+                        <table class="table table-hover mb-0 align-middle hrm-md-table-inner">
                             <thead class="bg-light">
                                 <tr>
                                     <th class="py-3 ps-4">Fecha</th>
@@ -138,7 +138,7 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                                         </td>
                                         <td class="pe-4">
                                             <?php if ( strtoupper( $s['estado'] ?? '' ) === 'PENDIENTE' ) : ?>
-                                                <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" style="display: inline;" onsubmit="return confirm('¿Deseas cancelar esta solicitud? Esta acción no se puede deshacer.');">
+                                                <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" class="d-inline" onsubmit="return confirm('¿Deseas cancelar esta solicitud? Esta acción no se puede deshacer.');">
                                                     <input type="hidden" name="action" value="hrm_cancelar_solicitud_vacaciones">
                                                     <input type="hidden" name="id_solicitud" value="<?= esc_attr( $s['id_solicitud'] ?? '' ) ?>">
                                                     <?php wp_nonce_field( 'hrm_cancelar_solicitud', 'hrm_nonce' ); ?>
@@ -161,7 +161,7 @@ $form_admin_url = add_query_arg( 'show', 'form' );
             
             <!-- Botón Nueva Solicitud -->
             <div class="text-center mt-4 pt-3 border-top">
-                <a href="<?= esc_url( $form_admin_url ) ?>" style="display: inline-block; padding: 12px 40px; background: #232523; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 1.05rem; border: none; transition: background 0.3s ease;">
+                <a href="<?= esc_url( $form_admin_url ) ?>" class="hrm-md-new btn btn-dark">
                     <span class="dashicons dashicons-plus me-2"></span> Solicitar Medio Día
                 </a>
             </div>

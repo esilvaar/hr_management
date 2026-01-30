@@ -2,7 +2,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // Cargar estilos CSS
-wp_enqueue_style( 'hrm-vacaciones-formulario', plugins_url( 'hr-management/assets/css/vacaciones-formulario.css' ), array(), '1.0.0' );
+// Styles merged into plugin-common.css: assets/css/plugin-common.css (medio-dia-form rules moved there).
 
 // Obtener datos del empleado logueado usando la función centralizada
 $empleado_data = hrm_obtener_datos_empleado();
@@ -22,55 +22,24 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
 ?>
 
 <?php if ( $solicitud_creada ) : ?>
-<div id="alertaSolicitudCreada" class="hrm-success-modal" style="
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    padding: 40px;
-    max-width: 500px;
-    width: 90%;
-    z-index: 10000;
-    text-align: center;
-">
-    <div style="font-size: 60px; margin-bottom: 20px;">✓</div>
-    <h2 style="color: #4caf50; margin: 0 0 15px 0; font-size: 28px;">¡Solicitud Creada Exitosamente!</h2>
-    <p style="color: #666; margin: 0 0 20px 0; line-height: 1.6;">
+<div id="alertaSolicitudCreada" class="hrm-success-modal">
+    <div class="hrm-success-icon">✓</div>
+    <h2 class="hrm-success-title">¡Solicitud Creada Exitosamente!</h2>
+    <p class="hrm-success-text">
         Tu solicitud de medio día ha sido creada y enviada a tu gerente directo y al editor de vacaciones para revisión.
     </p>
-    <p style="color: #999; margin: 0 0 20px 0; font-size: 14px;">
+    <p class="hrm-success-small">
         Recibirás un correo de confirmación en tu bandeja de entrada.
     </p>
-    <button onclick="document.getElementById('alertaSolicitudCreada').remove(); document.getElementById('alertaFondo').remove();" style="
-        background: #4caf50;
-        color: white;
-        border: none;
-        padding: 12px 30px;
-        border-radius: 6px;
-        font-weight: bold;
-        cursor: pointer;
-        font-size: 16px;
-    ">
+    <button onclick="document.getElementById('alertaSolicitudCreada').remove(); document.getElementById('alertaFondo').remove();" class="hrm-success-button">
         Continuar
     </button>
 </div>
 
-<div id="alertaFondo" onclick="document.getElementById('alertaSolicitudCreada').remove(); document.getElementById('alertaFondo').remove();" style="
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 9999;
-    cursor: pointer;
-"></div>
+<div id="alertaFondo" onclick="document.getElementById('alertaSolicitudCreada').remove(); document.getElementById('alertaFondo').remove();" class="hrm-success-backdrop"></div>
 <?php endif; ?>
 
-<div class="documento-formal p-5 mx-auto my-3" style="max-width: 900px; background: white;">
+<div class="documento-formal p-5 mx-auto my-3">
     <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" enctype="multipart/form-data">
         <input type="hidden" name="action" value="hrm_enviar_medio_dia">
         <input type="hidden" name="fecha_solicitud" value="<?php echo esc_attr( $fecha_hoy ); ?>">
@@ -116,7 +85,7 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
         <!-- SECCIÓN: SOLICITUD FORMAL -->
         <div class="titulo-seccion">Solicitud de Medio Día</div>
         
-        <div class="parrafo-formal">
+        <div class="parrafo-formal mt-4">
             Por medio de la presente, solicito formalmente la autorización para faltar medio día 
             (<strong id="periodo_text">mañana</strong>) 
             correspondiente al período laboral <?php echo esc_html( date( 'Y' ) ); ?>.
@@ -128,7 +97,7 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
         <!-- SECCIÓN: FECHA DEL MEDIO DÍA -->
         <div class="titulo-seccion">Fecha del Medio Día</div>
         
-        <div style="margin-bottom: 20px;">
+        <div class="mb-3">
             <label for="fecha_medio_dia" class="form-label fw-bold">Fecha <span class="text-danger">*</span></label>
             <input type="date" 
                    name="fecha_medio_dia" 
@@ -139,16 +108,16 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
         </div>
         
         <!-- PERÍODO DEL DÍA -->
-        <div style="margin-bottom: 20px;">
+        <div class="mb-3">
             <label class="form-label fw-bold">Período del día <span class="text-danger">*</span></label>
-            <div class="opciones-respuesta" style="display: flex; gap: 30px; margin-top: 10px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="opciones-respuesta d-flex gap-4 mt-2">
+                <div class="d-flex align-items-center gap-2">
                     <input type="radio" id="periodo_manana" name="periodo_ausencia" value="mañana" checked onchange="actualizarTexto()">
-                    <label for="periodo_manana" style="margin-bottom: 0; cursor: pointer;">Mañana</label>
+                    <label for="periodo_manana" class="mb-0 cursor-pointer">Mañana</label>
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="d-flex align-items-center gap-2">
                     <input type="radio" id="periodo_tarde" name="periodo_ausencia" value="tarde" onchange="actualizarTexto()">
-                    <label for="periodo_tarde" style="margin-bottom: 0; cursor: pointer;">Tarde</label>
+                    <label for="periodo_tarde" class="mb-0 cursor-pointer">Tarde</label>
                 </div>
             </div>
         </div>
@@ -174,7 +143,7 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
         <input type="hidden" name="total_dias" id="total_dias_input" value="0.5">
         
         <!-- CAMPO DE COMENTARIOS (opcional) -->
-        <div style="margin-bottom: 20px;">
+        <div class="mb-3">
             <label for="descripcion" class="form-label fw-bold">Motivo (opcional)</label>
             <textarea name="descripcion" 
                       id="descripcion" 
@@ -184,7 +153,7 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
         </div>
         
         <!-- CIERRE FORMAL -->
-        <div class="parrafo-formal" style="margin-top: 30px;">
+        <div class="parrafo-formal mt-4">
             Quedo atento(a) a la confirmación y aprobación de esta solicitud. Me comprometo a dejar mis tareas 
             debidamente coordinadas con mi jefatura directa.
         </div>
@@ -197,23 +166,23 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
         <!-- SECCIÓN RECURSOS HUMANOS (solo visible para admins) -->
         <?php if ( $is_admin ) : ?>
         <div class="seccion-rrhh">
-            <div class="titulo-seccion" style="margin-top: 0;">Recursos Humanos / Jefatura Directa</div>
+            <div class="titulo-seccion">Recursos Humanos / Jefatura Directa</div>
             
-            <div style="margin-bottom: 20px;">
-                <div class="form-label fw-bold" style="margin-bottom: 10px;">Respuesta:</div>
-                <div class="opciones-respuesta">
-                    <div class="opcion-respuesta">
+            <div class="mb-3">
+                <div class="form-label fw-bold mb-2">Respuesta:</div>
+                <div class="opciones-respuesta d-flex gap-4 mt-2">
+                    <div class="opcion-respuesta d-flex align-items-center gap-2">
                         <input type="radio" id="respuesta_aceptado" name="respuesta_rrhh" value="aceptado">
                         <label for="respuesta_aceptado">Aceptado</label>
                     </div>
-                    <div class="opcion-respuesta">
+                    <div class="opcion-respuesta d-flex align-items-center gap-2">
                         <input type="radio" id="respuesta_rechazado" name="respuesta_rrhh" value="rechazado">
                         <label for="respuesta_rechazado">Rechazado</label>
                     </div>
                 </div>
             </div>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div class="hrm-grid-two mb-3">
                 <div>
                     <label for="nombre_jefe" class="form-label fw-bold">Nombre de Jefe/RRHH:</label>
                     <input type="text" 
@@ -233,14 +202,14 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
                 </div>
             </div>
             
-            <div style="margin-bottom: 20px;">
-                <div style="text-align: center; font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 10px;">
+            <div class="mb-3">
+                <div class="hrm-sign-title">
                     Firma Gerente / Editor de Vacaciones
                 </div>
                 <div class="linea-firma"></div>
             </div>
             
-            <div style="margin-bottom: 20px;">
+            <div class="mb-3">
                 <label for="observaciones_rrhh" class="form-label fw-bold">Observaciones (Opcional):</label>
                 <textarea name="observaciones_rrhh" 
                           id="observaciones_rrhh" 

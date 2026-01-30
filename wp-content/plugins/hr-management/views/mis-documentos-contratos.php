@@ -39,6 +39,7 @@ if ( ! empty( $contracts ) ) {
     $latest_contract = null;
 }
 ?>
+<?php // Styles merged into plugin-common.css: assets/css/plugin-common.css - individual enqueue removed. ?>
 
 <div class="container-fluid mt-4">
     <div class="row">
@@ -71,12 +72,12 @@ if ( ! empty( $contracts ) ) {
                     <!-- PREVISUALIZACIÓN (mostrada inmediatamente si existe contrato) -->
                     <?php if ( $latest_contract ) : ?>
                         <?php if ( empty( $GLOBALS['hrm_doc_preview_rendered'] ) ) : $GLOBALS['hrm_doc_preview_rendered'] = true; ?>
-                        <div class="mb-4" id="hrm-preview-panel" style="display:block;">
+                        <div class="mb-4 hrm-preview-panel" id="hrm-preview-panel">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <h6 class="fw-bold mb-0">Previsualización del contrato <?= '(' . esc_html( $latest_contract->anio ) . ')' ?></h6>
                             </div>
 
-                            <iframe id="hrm-preview-iframe" src="<?= esc_url( $latest_contract->url ) ?>" style="width:100%;min-height:600px;border:1px solid #ccc;background:#fff;"></iframe>
+                            <iframe id="hrm-preview-iframe" src="<?= esc_url( $latest_contract->url ) ?>" class="hrm-preview-iframe"></iframe>
                         </div>
                         <?php else: error_log('[HRM-DEBUG] Skipping duplicated contract preview render for employee id=' . intval( $employee->id ) ); endif; ?>
                     <?php else : ?>
@@ -118,14 +119,14 @@ if ( ! empty( $contracts ) ) {
                 if ( type && type.toLowerCase() !== 'contrato' ) return; // ignorar si no es contrato
 
                 previewIframe.src = url;
-                previewPanel.style.display = 'block';
+                previewPanel.classList.remove('d-none');
                 setTimeout(() => previewPanel.scrollIntoView({ behavior: 'smooth' }), 50);
             });
         }
 
         if ( closeBtn ) {
             closeBtn.addEventListener('click', function () {
-                previewPanel.style.display = 'none';
+                previewPanel.classList.add('d-none');
                 previewIframe.src = '';
             });
         }

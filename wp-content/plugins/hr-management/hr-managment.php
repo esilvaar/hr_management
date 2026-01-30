@@ -217,29 +217,16 @@ function hrm_enqueue_admin_assets()
                 HRM_PLUGIN_VERSION
             );
 
-            // CSS del sidebar - Layout
+            // Consolidated small view styles (merged into plugin-common.css)
             wp_enqueue_style(
-                'hrm-admin-sidebar',
-                HRM_PLUGIN_URL . 'assets/css/layout-sidebar-admin.css',
-                array(),
+                'hrm-plugin-common',
+                HRM_PLUGIN_URL . 'assets/css/plugin-common.css',
+                array('hrm-style','hrm-bootstrap'),
                 HRM_PLUGIN_VERSION
             );
 
-            // CSS del sidebar - Navegación
-            wp_enqueue_style(
-                'hrm-sidebar-navigation',
-                HRM_PLUGIN_URL . 'assets/css/sidebar-nav.css',
-                array('hrm-admin-sidebar'),
-                HRM_PLUGIN_VERSION
-            );
-
-            // CSS del sidebar - Dark Theme
-            wp_enqueue_style(
-                'hrm-sidebar-dark',
-                HRM_PLUGIN_URL . 'assets/css/sidebar-theme-dark.css',
-                array('hrm-admin-sidebar'),
-                HRM_PLUGIN_VERSION
-            );
+            // CSS del sidebar - Responsive (kept separate because it's larger / specialized)
+            // NOTE: Enqueue below (unchanged)
 
             // CSS del sidebar - Responsive
             wp_enqueue_style(

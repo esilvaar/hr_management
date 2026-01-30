@@ -81,17 +81,10 @@ function hrm_enqueue_main_styles( $hook ) {
         HRM_PLUGIN_VERSION
     );
 
-    // Cargar estilos personalizados de checkboxes DESPUÉS de Bootstrap
-    // Usar filemtime para forzar recarga del caché
-    $checkboxes_css_file = plugin_dir_path( __DIR__ ) . 'assets/css/checkboxes-custom.css';
-    $checkboxes_css_version = file_exists( $checkboxes_css_file ) ? filemtime( $checkboxes_css_file ) : HRM_PLUGIN_VERSION;
-    
-    wp_enqueue_style(
-        'hrm-checkboxes-custom',
-        HRM_PLUGIN_URL . 'assets/css/checkboxes-custom.css',
-        array( 'hrm-bootstrap' ), // Depende de Bootstrap
-        $checkboxes_css_version
-    );
+    // Note: Small per-view styles have been consolidated into plugin-common.css
+    // They will be enqueued centrally in hrm_enqueue_admin_assets to reduce per-view files and duplication.
+    // See: assets/css/plugin-common.css (merged from checkboxes-custom, sidebar, employee-selector, others)
+
 }
 add_action( 'admin_enqueue_scripts', 'hrm_enqueue_main_styles' );
 
@@ -110,21 +103,9 @@ function hrm_enqueue_vacaciones_admin_styles( $hook ) {
         HRM_PLUGIN_VERSION
     );
     
-    // Encolador de estilos de las vistas de vacaciones
-    wp_enqueue_style(
-        'hrm-vacaciones-admin-estilos',
-        HRM_PLUGIN_URL . 'assets/css/vacaciones-admin-estilos.css',
-        array(),
-        HRM_PLUGIN_VERSION
-    );
-    
-    // Encolador de estilos de tabs
-    wp_enqueue_style(
-        'hrm-vacaciones-tabs',
-        HRM_PLUGIN_URL . 'assets/css/vacaciones-tabs.css',
-        array(),
-        HRM_PLUGIN_VERSION
-    );
+    // NOTE: Small vacation styles (estilos & tabs) were consolidated into plugin-common.css. Keep panel CSS separate.
+    // (vacaciones-admin-panel.css remains enqueued above)
+    // Vacations small view styles moved to: assets/css/plugin-common.css
 }
 add_action( 'admin_enqueue_scripts', 'hrm_enqueue_vacaciones_admin_styles' );
 
@@ -162,6 +143,9 @@ function hrm_enqueue_documents_list_scripts( $hook ) {
         HRM_PLUGIN_VERSION,
         true
     );
+
+    // Estilos para la tabla de documentos y menús asociados
+    // Documents table styles are now part of plugin-common.css (consolidated small rules).
 }
 add_action( 'admin_enqueue_scripts', 'hrm_enqueue_documents_list_scripts' );
 
@@ -206,6 +190,9 @@ function hrm_enqueue_documents_upload_scripts( $hook ) {
         HRM_PLUGIN_VERSION,
         true
     );
+
+    // Estilos para el panel de administración de documentos (filtros y paneles)
+    // Documents admin styles merged into plugin-common.css to reduce small per-view files.
 }
 add_action( 'admin_enqueue_scripts', 'hrm_enqueue_documents_upload_scripts' );
 
@@ -312,6 +299,30 @@ function mi_script_toggle() {
 }
 add_action('wp_enqueue_scripts', 'mi_script_toggle');
 add_action('admin_enqueue_scripts', 'mi_script_toggle');
+
+/**
+ * Encolar script para refrescar la lista de Documentos-Reglamentos en la sidebar
+ */
+function hrm_enqueue_sidebar_refresh_script( $hook ) {
+    // Solo en páginas del plugin
+    if ( strpos( $hook, 'hrm' ) === false ) {
+        return;
+    }
+
+    wp_enqueue_script(
+        'hrm-sidebar-refresh',
+        HRM_PLUGIN_URL . 'assets/js/sidebar-refresh.js',
+        array(),
+        HRM_PLUGIN_VERSION,
+        true
+    );
+
+    wp_localize_script( 'hrm-sidebar-refresh', 'hrmSidebarData', array(
+        'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+        'nonce' => wp_create_nonce( 'hrm_get_company_documents' ),
+    ) );
+}
+add_action( 'admin_enqueue_scripts', 'hrm_enqueue_sidebar_refresh_script' );
 
 /**
  * Encolar script de manejo de avatares
