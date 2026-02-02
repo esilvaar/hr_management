@@ -89,6 +89,34 @@ function hrm_enqueue_main_styles( $hook ) {
 add_action( 'admin_enqueue_scripts', 'hrm_enqueue_main_styles' );
 
 /**
+ * Encolar estilos y scripts de Dark Mode
+ */
+function hrm_enqueue_dark_mode_assets( $hook ) {
+    // Cargar en todas las páginas del admin del plugin
+    if ( strpos( $hook, 'hrm' ) === false ) {
+        return;
+    }
+
+    // CSS para dark mode (variables y temas)
+    wp_enqueue_style(
+        'hrm-dark-mode-css',
+        HRM_PLUGIN_URL . 'assets/css/dark-mode.css',
+        array(),
+        HRM_PLUGIN_VERSION
+    );
+
+    // JavaScript para manejar el toggle y localStorage
+    wp_enqueue_script(
+        'hrm-dark-mode-js',
+        HRM_PLUGIN_URL . 'assets/js/dark-mode.js',
+        array(),
+        HRM_PLUGIN_VERSION,
+        true
+    );
+}
+add_action( 'admin_enqueue_scripts', 'hrm_enqueue_dark_mode_assets' );
+
+/**
  * Encolar estilos del módulo de vacaciones en admin
  */
 function hrm_enqueue_vacaciones_admin_styles( $hook ) {
