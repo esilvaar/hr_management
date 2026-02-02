@@ -1,33 +1,47 @@
 /* Styles for anaconda-documents-create.php */
 .hrm-admin-wrap h1 { font-size:22px; font-weight:700; margin:0 0 12px; }
-.hrm-admin-wrap h2 { font-size:16px; font-weight:600; margin:18px 0 8px; }
-.hrm-admin-wrap h3 { font-size:15px; font-weight:600; margin:0; }
-.anaconda-header { display:flex; align-items:center; justify-content:space-between; margin:12px 0 18px 0; max-width:980px; margin-left:auto; margin-right:auto; }
-.anaconda-header-actions { margin-left:12px; }
-.anaconda-open-btn { padding:6px 10px; background:#0073aa; color:#fff; border:0; }
-.anaconda-modal { display: none; }
+.hrm-admin-wrap h2 { font-size:16px; font-weight:600; margin:0; }
+.anaconda-modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:999; }
+.anaconda-modal[aria-hidden="false"] { display:flex; }
 .anaconda-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; }
-.anaconda-modal-dialog { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1001; background:#fff; border-radius:6px; max-width:640px; width:94%; box-shadow:0 10px 30px rgba(0,0,0,0.2); }
-.anaconda-modal-header { padding:14px 18px; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between; }
-.anaconda-modal-header h3 { margin:0; font-size:16px; }
-.anaconda-modal-close { background:transparent; border:0; font-size:20px; line-height:1; cursor:pointer; }
-.anaconda-modal-body { padding:16px; }
-.anaconda-modal-actions { margin-top:12px; text-align:right; }
-.anaconda-cancel { margin-right:8px; padding:8px 12px; }
-.anaconda-form { max-width:520px; font-family: Arial, sans-serif; margin:0 auto; }
-.anaconda-form label { display:block; margin-top:12px; margin-bottom:6px; font-weight:600; }
-.anaconda-form input[type="text"]{ width:100%; padding:8px; margin-bottom:8px; box-sizing:border-box; }
-.drop-area { border:2px dashed #bbb; padding:18px; text-align:center; cursor:pointer; color:#444; background:#fafafa; margin-bottom:8px; }
-.drop-area.dragover { border-color:#2b90d9; background:#f0fbff; }
-.file-info { font-size:13px; color:#222; margin-top:6px; }
-.error { color:#c00; font-size:13px; margin-top:6px; }
-button.anaconda-submit { background:#0073aa; color:#fff; padding:8px 12px; border:0; cursor:pointer; }
+.anaconda-modal-dialog { position:relative; z-index:1001; background:#fff; border-radius:8px; max-width:640px; width:94%; box-shadow:0 10px 40px rgba(0,0,0,0.3); max-height:90vh; overflow-y:auto; }
+.anaconda-modal-header { padding:20px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; justify-content:space-between; background:#f8f9fa; border-radius:8px 8px 0 0; }
+.anaconda-modal-header h3 { margin:0; font-size:18px; font-weight:600; color:#333; }
+.anaconda-modal-close { background:transparent; border:0; font-size:24px; line-height:1; cursor:pointer; color:#666; transition:color 0.2s; }
+.anaconda-modal-close:hover { color:#000; }
+.anaconda-modal-body { padding:24px; }
+.anaconda-modal-actions { margin-top:16px; text-align:right; display:flex; gap:8px; justify-content:flex-end; }
+.anaconda-cancel { margin-right:0; padding:10px 16px; border:1px solid #ddd; background:#fff; color:#333; border-radius:4px; cursor:pointer; transition:all 0.2s; }
+.anaconda-cancel:hover { background:#f5f5f5; border-color:#999; }
+.anaconda-form { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin:0; }
+.anaconda-form label { display:block; margin-top:16px; margin-bottom:8px; font-weight:600; color:#333; font-size:14px; }
+.anaconda-form input[type="text"]{ width:100%; padding:10px 12px; margin-bottom:0; box-sizing:border-box; border:1px solid #ddd; border-radius:4px; font-size:14px; transition:border-color 0.2s; }
+.anaconda-form input[type="text"]:focus { outline:none; border-color:#0073aa; box-shadow:0 0 0 3px rgba(0,115,170,0.1); }
+.drop-area { border:2px dashed #bbb; padding:24px; text-align:center; cursor:pointer; color:#666; background:#f9f9f9; margin-bottom:8px; border-radius:6px; transition:all 0.2s; font-size:14px; }
+.drop-area:hover { border-color:#0073aa; background:#f0fbff; }
+.drop-area.dragover { border-color:#0073aa; background:#e8f4f9; }
+.file-info { font-size:13px; color:#28a745; margin-top:8px; padding:8px 12px; background:#f0f8f5; border-radius:4px; }
+.error { color:#dc3545; font-size:13px; margin-top:8px; padding:8px 12px; background:#fff5f5; border-radius:4px; }
+button.anaconda-submit { background:#0073aa; color:#fff; padding:10px 16px; border:0; cursor:pointer; border-radius:4px; font-weight:500; transition:background 0.2s; }
+button.anaconda-submit:hover { background:#005a87; }
 button.anaconda-submit:disabled { opacity:0.6; cursor:not-allowed; }
 .anaconda-modal-open { overflow:hidden; }
-.anaconda-admin-controls { display:flex; gap:12px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
-.anaconda-table-wrap { overflow:auto; border:1px solid #e5e5e5; border-radius:4px; max-width:980px; margin:0 auto; }
-.anaconda-table { width:100%; border-collapse:collapse; min-width:720px; }
-.anaconda-td { padding:10px; vertical-align:middle; }
-.anaconda-table thead.table-dark { background:#343a40; color:#fff; }
-.anaconda-table tbody tr:nth-child(even) { background:#fbfbfb; }
-.anaconda-open-btn { background:#0073aa; color:#fff; border:0; }
+.anaconda-admin-controls { display:none; }
+.anaconda-table thead.table-dark { background:#2c3e50; color:#fff; font-weight:500; }
+.anaconda-filename { color:#333; font-size:14px; font-weight:500; }
+.edit-doc-btn { cursor:pointer; }
+.edit-title-input { width:100%; padding:8px 12px; border:2px solid #0073aa; border-radius:4px; font-size:14px; font-family:inherit; }
+.edit-title-input:focus { outline:none; box-shadow:0 0 0 3px rgba(0,115,170,0.1); }
+.dropdown-wrapper { position:relative; display:inline-block; }
+.dropdown-toggle-btn { background:#fff; border:1px solid #ddd; padding:6px 10px; font-size:18px; line-height:1; cursor:pointer; transition:all 0.2s; }
+.dropdown-toggle-btn:hover { background:#f0f0f0; border-color:#999; }
+.dropdown-menu { position:fixed; background:#fff; border:1px solid #ddd; border-radius:4px; box-shadow:0 4px 12px rgba(0,0,0,0.2); z-index:9999; min-width:160px; margin-top:0; display:none; }
+.dropdown-menu.show { display:block !important; }
+.dropdown-item { display:block; width:100%; text-align:left; padding:10px 16px; border:none; background:none; color:#333; text-decoration:none; cursor:pointer; font-size:14px; transition:background 0.2s; white-space:nowrap; }
+.dropdown-item .dashicons { width:16px; height:16px; font-size:16px; margin-right:8px; vertical-align:middle; display:inline-block; }
+.dropdown-item:first-child { border-radius:4px 4px 0 0; }
+.dropdown-item:last-child { border-radius:0 0 4px 4px; }
+.dropdown-item:hover { background:#f5f5f5; }
+.dropdown-item.text-danger { color:#dc3545; }
+.dropdown-item.text-danger:hover { background:#fff5f5; }
+table { overflow:visible; }

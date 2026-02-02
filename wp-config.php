@@ -85,9 +85,9 @@ define('WP_ALLOW_MULTISITE', true);
  *
  * @link https://wordpress.org/support/article/debugging-in-wordpress/
  */
-define( 'WP_DEBUG', true );
-define( 'WP_DEBUG_LOG', true );
-define( 'WP_DEBUG_DISPLAY', true );
+define( 'WP_DEBUG', false );
+define( 'WP_DEBUG_LOG', false );
+define( 'WP_DEBUG_DISPLAY', false );
 @ini_set( 'display_errors', 1 );
 /* That's all, stop editing! Happy publishing. */
 

@@ -67,7 +67,19 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
 
     <!-- Header -->
     <div class="hrm-sidebar-header d-flex align-items-center justify-content-center p-3 border-bottom">
-        <a href="<?= esc_url(admin_url('admin.php?page=hrm-empleados&tab=list')); ?>"
+        <?php
+        // Determinar URL del logo según el rol del usuario
+        $logo_href = admin_url('admin.php?page=hrm-mi-perfil-info'); // Por defecto empleado
+        
+        if (current_user_can('manage_options') || current_user_can('edit_hrm_employees')) {
+            // Admin o Supervisor: ir a lista de empleados
+            $logo_href = admin_url('admin.php?page=hrm-empleados&tab=list');
+        } elseif (current_user_can('manage_hrm_vacaciones')) {
+            // Gestor de vacaciones: ir a vacaciones
+            $logo_href = admin_url('admin.php?page=hrm-vacaciones');
+        }
+        ?>
+        <a href="<?= esc_url($logo_href); ?>"
             class="d-flex align-items-center justify-content-center">
             <img src="<?= $logo_url; ?>" class="img-fluid hrm-logo" alt="Logo">
         </a>
@@ -158,7 +170,13 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
         }
 
         // Empleados / Gestión (visible para roles administradores y supervisores)
-        if ($can_admin_views || $can_supervisor): ?>
+        // Determinar qué tab es active para marcar solo el correcto
+        $is_list_active = $current_page === 'hrm-empleados' && (!$tab || $tab === 'list') ? 'active' : '';
+        $is_profile_active = $current_page === 'hrm-empleados' && $tab === 'profile' ? 'active' : '';
+        $is_upload_active = $current_page === 'hrm-empleados' && $tab === 'upload' ? 'active' : '';
+        $is_new_active = $current_page === 'hrm-empleados' && $tab === 'new' ? 'active' : '';
+        ?>
+        <?php if ($can_admin_views || $can_supervisor): ?>
             <details <?= $section === 'empleados' ? 'open' : ''; ?>>
                 <summary class="d-flex align-items-center gap-2 px-3 py-2 fw-semibold">
                     <span class="dashicons dashicons-businessman"></span>
@@ -166,26 +184,26 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
                 </summary>
                 <ul class="list-unstyled px-2 mb-2">
                     <li>
-                        <a class="nav-link px-3 py-2 <?= in_array($current_page, array('hrm-empleados'), true) ? 'active' : '' ?>"
+                        <a class="nav-link px-3 py-2 <?= $is_list_active ?>"
                             href="<?= esc_url(admin_url('admin.php?page=hrm-empleados&tab=list')); ?>">
                             Lista de empleados
                         </a>
                     </li>
                     <li>
-                        <a class="nav-link px-3 py-2 <?= hrm_sidebar_is_active('hrm-empleados', 'profile'); ?>"
+                        <a class="nav-link px-3 py-2 <?= $is_profile_active ?>"
                             href="<?= esc_url($profile_url); ?>">
                             Perfil del Empleado
                         </a>
                     </li>
                     <li>
-                        <a class="nav-link px-3 py-2 <?= hrm_sidebar_is_active('hrm-empleados', 'upload'); ?>"
+                        <a class="nav-link px-3 py-2 <?= $is_upload_active ?>"
                             href="<?= esc_url($upload_url); ?>">
                             Documentos del Empleado
                         </a>
                     </li>
                     <?php if ($can_admin_views):  // Solo quien pueda administrar puede crear nuevos ?>
                         <li>
-                            <a class="nav-link px-3 py-2 <?= hrm_sidebar_is_active('hrm-empleados', 'new'); ?>"
+                            <a class="nav-link px-3 py-2 <?= $is_new_active ?>"
                                 href="<?= esc_url(admin_url('admin.php?page=hrm-empleados&tab=new')); ?>">
                                 Nuevo empleado
                             </a>
@@ -197,16 +215,33 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
 
         <?php if ($can_vacation || $can_admin_views): ?>
             <!-- Vacaciones -->
-            <details <?= $section === 'vacaciones' ? 'open' : ''; ?>>
-                <summary class="d-flex align-items-center gap-2 px-3 py-2 fw-semibold">
+            <?php 
+            $count_pendientes = function_exists('hrm_contar_solicitudes_pendientes') ? hrm_contar_solicitudes_pendientes() : 0;
+            $mostrar_dot = function_exists('hrm_mostrar_dot_notificacion') ? hrm_mostrar_dot_notificacion() : false;
+            ?>
+            <details <?= $section === 'vacaciones' ? 'open' : ''; ?> 
+                     id="hrmVacacionesDetails"
+                     data-hrm-section="vacaciones">
+                <summary class="d-flex align-items-center gap-2 px-3 py-2 fw-semibold position-relative">
                     <span class="dashicons dashicons-calendar-alt"></span>
                     <span class="flex-grow-1">Gestión de Vacaciones</span>
+                    <?php if ( $mostrar_dot ): ?>
+                        <span class="hrm-notification-dot" 
+                              id="hrmNotificationDot"
+                              aria-label="Hay solicitudes pendientes"
+                              title="Nuevas solicitudes pendientes"></span>
+                    <?php endif; ?>
                 </summary>
                 <ul class="list-unstyled px-2 mb-2">
                     <li>
-                        <a class="nav-link px-3 py-2 <?= hrm_sidebar_is_active('hrm-vacaciones'); ?>"
+                        <a class="nav-link px-3 py-2 <?= hrm_sidebar_is_active('hrm-vacaciones'); ?> d-flex align-items-center justify-content-between"
                             href="<?= esc_url(admin_url('admin.php?page=hrm-vacaciones')); ?>">
-                            Solicitudes de Vacaciones
+                            <span>Solicitudes de Vacaciones</span>
+                            <?php if ( $count_pendientes > 0 ): ?>
+                                <span class="hrm-notification-badge badge bg-danger rounded-pill">
+                                    <?= esc_html( $count_pendientes ); ?>
+                                </span>
+                            <?php endif; ?>
                         </a>
                     </li>
                 </ul>
@@ -281,58 +316,7 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
 <!-- Overlay para cerrar al tocar fuera (móvil) -->
 <div class="hrm-sidebar-overlay" aria-hidden="true"></div>
 
-<script>
-(function(){
-    var btn = document.querySelector('.hrm-mobile-toggle');
-    var overlay = document.querySelector('.hrm-sidebar-overlay');
-    var body = document.body;
-    var sidebar = document.getElementById('hrm-sidebar');
-
-    function openSidebar(){
-        body.classList.add('hrm-sidebar-open');
-        if(btn) btn.setAttribute('aria-expanded','true');
-        if(overlay) overlay.setAttribute('aria-hidden','false');
-        if(sidebar){
-            var first = sidebar.querySelector('a,button');
-            if(first) first.focus();
-        }
-    }
-    function closeSidebar(){
-        body.classList.remove('hrm-sidebar-open');
-        if(btn) btn.setAttribute('aria-expanded','false');
-        if(overlay) overlay.setAttribute('aria-hidden','true');
-        if(btn) btn.focus();
-    }
-
-    if(btn){
-        btn.addEventListener('click', function(e){
-            e.preventDefault();
-            body.classList.contains('hrm-sidebar-open') ? closeSidebar() : openSidebar();
-        });
-    }
-    if(overlay){
-        overlay.addEventListener('click', closeSidebar);
-    }
-    if(sidebar){
-        // Cerrar al pulsar cualquier link (en móvil)
-        sidebar.querySelectorAll('.nav-link').forEach(function(el){
-            el.addEventListener('click', function(){
-                if(window.innerWidth < 768) closeSidebar();
-            });
-        });
-    }
-
-    // Cerrar con Escape
-    document.addEventListener('keydown', function(e){
-        if(e.key === 'Escape' && body.classList.contains('hrm-sidebar-open')) closeSidebar();
-    });
-
-    // Asegurar que la sidebar quede cerrada al redimensionar a desktop
-    window.addEventListener('resize', function(){
-        if(window.innerWidth >= 768) closeSidebar();
-    });
-})();
-</script>
+<?php // JS moved to assets/js/sidebar.js - enqueued globally in includes/functions.php or per-view as needed ?>
 
     <!-- Logout -->
     <div class="p-3 border-top">

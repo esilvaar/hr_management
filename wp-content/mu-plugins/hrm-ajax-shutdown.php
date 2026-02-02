@@ -25,8 +25,6 @@ register_shutdown_function( function() {
             error_log( "HRM MU-PLUGIN AJAX SHUTDOWN ERROR: " . print_r( $err, true ) );
             error_log( 'HRM MU-PLUGIN AJAX SHUTDOWN - ACTION SNIPPET: ' . print_r( array_intersect_key( $_REQUEST, array( 'action' => 1, 'email' => 1, 'email_b64' => 1, 'nonce' => 1 ) ), true ) );
             error_log( 'HRM MU-PLUGIN AJAX SHUTDOWN - SERVER SNIPPET: ' . print_r( array_intersect_key( $_SERVER, array( 'REQUEST_METHOD' => 1, 'REQUEST_URI' => 1, 'REMOTE_ADDR' => 1, 'HTTP_USER_AGENT' => 1 ) ), true ) );
-            // Also write to a file in wp-content to ensure persistence
-            @file_put_contents( WP_CONTENT_DIR . '/hrm_ajax_debug.log', date( 'c' ) . " - SHUTDOWN ERROR: " . print_r( $err, true ) . "\nACTION_SNIPPET: " . print_r( array_intersect_key( $_REQUEST, array( 'action' => 1, 'email' => 1, 'email_b64' => 1, 'nonce' => 1 ) ), true ) . "\nSERVER_SNIPPET: " . print_r( array_intersect_key( $_SERVER, array( 'REQUEST_METHOD' => 1, 'REQUEST_URI' => 1, 'REMOTE_ADDR' => 1, 'HTTP_USER_AGENT' => 1 ) ), true ) . PHP_EOL, FILE_APPEND );
         }
     }
 } );

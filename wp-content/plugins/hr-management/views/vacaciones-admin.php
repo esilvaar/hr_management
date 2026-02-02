@@ -4,6 +4,30 @@
 // En este caso agregamos un enqueue por-vista para reglas menores y utilidades
 wp_enqueue_style( 'hrm-vacaciones-admin', plugins_url( 'hr-management/assets/css/vacaciones-admin.css' ), array(), '1.0.0' );
 
+// Encolar el comportamiento de la vista (JS extraído de inline)
+wp_enqueue_script(
+    'hrm-vacaciones-admin',
+    HRM_PLUGIN_URL . 'assets/js/vacaciones-admin.js',
+    array(),
+    HRM_PLUGIN_VERSION,
+    true
+);
+
+// Preparar datos localizados necesarios por el JS
+$vacaciones_js_solicitudes = array();
+foreach ( $solicitudes as $s ) {
+    $vacaciones_js_solicitudes[ isset($s['id_solicitud']) ? $s['id_solicitud'] : 0 ] = array(
+        'nombre' => isset($s['nombre']) ? $s['nombre'] . ' ' . ($s['apellido'] ?? '') : '',
+        'comentario' => isset($s['comentario_empleado']) ? $s['comentario_empleado'] : ''
+    );
+}
+
+wp_localize_script( 'hrm-vacaciones-admin', 'hrmVacacionesAdminData', array(
+    'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+    'sincronizarNonce' => wp_create_nonce( 'hrm_sincronizar_personal' ),
+    'solicitudesData' => $vacaciones_js_solicitudes,
+) );
+
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // IMPORTANTE: Forzar actualización de capacidades del usuario actual
@@ -83,13 +107,17 @@ if ( $es_supervisor && ! $es_editor_vacaciones ) {
     }
 }
 
-$solicitudes = hrm_get_all_vacaciones( $search_term, $estado_filtro );
+// Paginación: obtener página actual
+$items_por_pagina = 20;
+$pagina_actual = isset( $_GET['paged'] ) ? max( 1, intval( $_GET['paged'] ) ) : 1;
+
+$solicitudes = hrm_get_all_vacaciones( $search_term, $estado_filtro, $pagina_actual, $items_por_pagina );
 
 $total_solicitudes = count( $solicitudes );
 
-// Contadores visibles (respetan permisos por rol y departamento)
-$count_dia_completo = function_exists( 'hrm_count_vacaciones_visibles' ) ? hrm_count_vacaciones_visibles() : 0;
-$count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count_medio_dia_visibles() : 0;
+// Contadores visibles (SOLO PENDIENTES - criterio operativo)
+$count_dia_completo = function_exists( 'hrm_count_vacaciones_visibles' ) ? hrm_count_vacaciones_visibles( 'PENDIENTE' ) : 0;
+$count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count_medio_dia_visibles( 'PENDIENTE' ) : 0;
 ?>
 
 <div class="wrap">
@@ -399,6 +427,43 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                 </tbody>
             </table>
         </div>
+        
+        <!-- Controles de Paginación -->
+        <?php if ( $total_solicitudes >= $items_por_pagina || $pagina_actual > 1 ) : ?>
+            <div class="hrm-panel-footer border-top px-4 py-3">
+                <nav aria-label="Paginación de solicitudes">
+                    <ul class="pagination justify-content-center mb-0">
+                        <?php if ( $pagina_actual > 1 ) : ?>
+                            <li class="page-item">
+                                <a class="page-link" href="<?php echo esc_url( add_query_arg( 'paged', $pagina_actual - 1 ) ); ?>" aria-label="Anterior">
+                                    <span aria-hidden="true">« Anterior</span>
+                                </a>
+                            </li>
+                        <?php else : ?>
+                            <li class="page-item disabled">
+                                <span class="page-link">« Anterior</span>
+                            </li>
+                        <?php endif; ?>
+                        
+                        <li class="page-item active">
+                            <span class="page-link">Página <?php echo $pagina_actual; ?></span>
+                        </li>
+                        
+                        <?php if ( $total_solicitudes >= $items_por_pagina ) : ?>
+                            <li class="page-item">
+                                <a class="page-link" href="<?php echo esc_url( add_query_arg( 'paged', $pagina_actual + 1 ) ); ?>" aria-label="Siguiente">
+                                    <span aria-hidden="true">Siguiente »</span>
+                                </a>
+                            </li>
+                        <?php else : ?>
+                            <li class="page-item disabled">
+                                <span class="page-link">Siguiente »</span>
+                            </li>
+                        <?php endif; ?>
+                    </ul>
+                </nav>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -595,9 +660,14 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                                 </thead>
                                 <tbody>
                                     <?php 
+                                    // Paginación para medio día
+                                    $pagina_md = isset( $_GET['paged_md'] ) ? max( 1, intval( $_GET['paged_md'] ) ) : 1;
+                                    
                                     $medio_dias = hrm_get_solicitudes_medio_dia( 
                                         $_GET['empleado_md'] ?? '', 
-                                        $_GET['estado_md'] ?? 'PENDIENTE'
+                                        $_GET['estado_md'] ?? 'PENDIENTE',
+                                        $pagina_md,
+                                        $items_por_pagina
                                     );
                                     
                                     if ( ! empty( $medio_dias ) ) : 
@@ -688,6 +758,43 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                                 </tbody>
                             </table>
                         </div>
+                        
+                        <!-- Controles de Paginación para Medio Día -->
+                        <?php if ( count( $medio_dias ) >= $items_por_pagina || $pagina_md > 1 ) : ?>
+                            <div class="hrm-panel-footer border-top px-4 py-3">
+                                <nav aria-label="Paginación de solicitudes de medio día">
+                                    <ul class="pagination justify-content-center mb-0">
+                                        <?php if ( $pagina_md > 1 ) : ?>
+                                            <li class="page-item">
+                                                <a class="page-link" href="<?php echo esc_url( add_query_arg( 'paged_md', $pagina_md - 1 ) ); ?>" aria-label="Anterior">
+                                                    <span aria-hidden="true">« Anterior</span>
+                                                </a>
+                                            </li>
+                                        <?php else : ?>
+                                            <li class="page-item disabled">
+                                                <span class="page-link">« Anterior</span>
+                                            </li>
+                                        <?php endif; ?>
+                                        
+                                        <li class="page-item active">
+                                            <span class="page-link">Página <?php echo $pagina_md; ?></span>
+                                        </li>
+                                        
+                                        <?php if ( count( $medio_dias ) >= $items_por_pagina ) : ?>
+                                            <li class="page-item">
+                                                <a class="page-link" href="<?php echo esc_url( add_query_arg( 'paged_md', $pagina_md + 1 ) ); ?>" aria-label="Siguiente">
+                                                    <span aria-hidden="true">Siguiente »</span>
+                                                </a>
+                                            </li>
+                                        <?php else : ?>
+                                            <li class="page-item disabled">
+                                                <span class="page-link">Siguiente »</span>
+                                            </li>
+                                        <?php endif; ?>
+                                    </ul>
+                                </nav>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -699,964 +806,6 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
     </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // =====================================================
-    // LÓGICA DE RECHAZO DE SOLICITUDES (Antes de cualquier otra lógica)
-    // =====================================================
-    setTimeout(function() {
-        const botonesRechazarSolicitud = document.querySelectorAll('.btn-rechazar-solicitud');
-        const botonesRechazarMedioDia = document.querySelectorAll('.btn-rechazar-medio-dia');
-        
-        // Manejador para botones de rechazo de solicitudes completas
-        botonesRechazarSolicitud.forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                const motivo = prompt('Por favor ingresa el motivo del rechazo:');
-                
-                if (motivo === null) {
-                    return;
-                }
-                
-                if (motivo.trim() === '') {
-                    alert('El motivo del rechazo es obligatorio.');
-                    return;
-                }
-                
-                if (motivo.trim().length < 5) {
-                    alert('El motivo debe tener al menos 5 caracteres.');
-                    return;
-                }
-                
-                const form = this.closest('form');
-                form.querySelector('input[name="motivo_rechazo"]').value = motivo;
-                form.submit();
-            });
-        });
-        
-        // Manejador para botones de rechazo de medio día
-        botonesRechazarMedioDia.forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                const motivo = prompt('Por favor ingresa el motivo del rechazo:');
-                
-                if (motivo === null) {
-                    return;
-                }
-                
-                if (motivo.trim() === '') {
-                    alert('El motivo del rechazo es obligatorio.');
-                    return;
-                }
-                
-                if (motivo.trim().length < 5) {
-                    alert('El motivo debe tener al menos 5 caracteres.');
-                    return;
-                }
-                
-                const form = this.closest('form');
-                form.querySelector('input[name="motivo_rechazo"]').value = motivo;
-                form.submit();
-            });
-        });
-    }, 100);
-
-    // =====================================================
-    // SINCRONIZACIÓN AUTOMÁTICA DE PERSONAL VIGENTE
-    // =====================================================
-    let ultimaSincronizacion = 0; // Timestamp de la última sincronización
-    const INTERVALO_MINIMO = 5000; // 5 segundos mínimo entre sincronizaciones
-    
-    function sincronizarPersonalAutomatico() {
-        const ahora = Date.now();
-        
-        // Evitar sincronizaciones muy frecuentes
-        if (ahora - ultimaSincronizacion < INTERVALO_MINIMO) {
-            console.log('Sincronización ignorada (demasiado frecuente)');
-            return;
-        }
-        
-        ultimaSincronizacion = ahora;
-        
-        // Obtener el nonce del botón
-        const btnSincronizar = document.getElementById('btnSincronizarPersonal');
-        if (!btnSincronizar) return;
-        
-        let nonce = btnSincronizar.getAttribute('data-nonce');
-        if (!nonce) {
-            nonce = '<?php echo esc_js( wp_create_nonce('hrm_sincronizar_personal') ); ?>';
-        }
-        
-        console.log('Sincronización automática de personal vigente...');
-        
-        // Realizar la solicitud AJAX silenciosamente
-        fetch('<?php echo esc_url( admin_url('admin-ajax.php') ); ?>', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                action: 'hrm_sincronizar_personal_vigente',
-                nonce: nonce
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Sincronización automática completada:', data);
-            if (!data.success) {
-                console.warn('Error en sincronización automática:', data);
-            }
-        })
-        .catch(error => {
-            console.error('Error en sincronización automática:', error);
-        });
-    }
-    
-    // Sincronizar automáticamente al cargar la página
-    sincronizarPersonalAutomatico();
-    
-    // Sincronizar automáticamente cada 5 minutos (300000 ms)
-    setInterval(sincronizarPersonalAutomatico, 300000);
-
-    // =====================================================
-    // EVENT LISTENER PARA BOTÓN DE SINCRONIZACIÓN MANUAL
-    // =====================================================
-    const btnSincronizar = document.getElementById('btnSincronizarPersonal');
-    if (btnSincronizar) {
-        btnSincronizar.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            // Cambiar estado del botón
-            const textoOriginal = btnSincronizar.innerHTML;
-            btnSincronizar.disabled = true;
-            btnSincronizar.innerHTML = '<span>⏳</span> <span>Sincronizando...</span>';
-            
-            let nonce = btnSincronizar.getAttribute('data-nonce');
-            if (!nonce) {
-                nonce = '<?php echo esc_js( wp_create_nonce('hrm_sincronizar_personal') ); ?>';
-            }
-            
-            console.log('Sincronización manual iniciada...');
-            
-            // Realizar la solicitud AJAX
-            fetch('<?php echo esc_url( admin_url('admin-ajax.php') ); ?>', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    action: 'hrm_sincronizar_personal_vigente',
-                    nonce: nonce
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Sincronización completada:', data);
-                
-                // Mostrar mensaje de éxito
-                if (data.success) {
-                    btnSincronizar.classList.add('btn-success');
-                    btnSincronizar.classList.remove('btn-primary');
-                    btnSincronizar.innerHTML = '<span>✅</span> <span>¡Sincronizado!</span>';
-                    
-                    // Mostrar notificación con detalles
-                    if (data.data && data.data.detalles) {
-                        let detalles = data.data.detalles.map(d => ({
-                            nombre: d.nombre,
-                            total_empleados: d.total_empleados_activos || d.total_empleados,
-                            personal_vigente: d.personal_vigente
-                        }));
-                        mostrarNotificacionExito(
-                            '✅ Sincronización Exitosa',
-                            'Personal vigente actualizado correctamente',
-                            detalles
-                        );
-                    }
-                    
-                    // Esperar 2 segundos y volver al estado normal
-                    setTimeout(() => {
-                        btnSincronizar.classList.remove('btn-success');
-                        btnSincronizar.classList.add('btn-primary');
-                        btnSincronizar.innerHTML = textoOriginal;
-                        btnSincronizar.disabled = false;
-                    }, 2000);
-                } else {
-                    btnSincronizar.classList.add('btn-danger');
-                    btnSincronizar.classList.remove('btn-primary');
-                    btnSincronizar.innerHTML = '<span>❌</span> <span>Error en sincronización</span>';
-                    
-                    // Mostrar notificación de error
-                    if (data.data && data.data.errores) {
-                        mostrarNotificacionError(
-                            '❌ Error en Sincronización',
-                            data.data.mensaje || 'No se pudo sincronizar el personal',
-                            data.data.errores
-                        );
-                    }
-                    
-                    // Volver al estado normal después de 3 segundos
-                    setTimeout(() => {
-                        btnSincronizar.classList.remove('btn-danger');
-                        btnSincronizar.classList.add('btn-primary');
-                        btnSincronizar.innerHTML = textoOriginal;
-                        btnSincronizar.disabled = false;
-                    }, 3000);
-                }
-            })
-            .catch(error => {
-                console.error('Error en sincronización:', error);
-                
-                btnSincronizar.classList.add('btn-danger');
-                btnSincronizar.classList.remove('btn-primary');
-                btnSincronizar.innerHTML = '<span>❌</span> <span>Error en solicitud</span>';
-                
-                mostrarNotificacionError(
-                    '❌ Error de Conexión',
-                    'No se pudo conectar con el servidor',
-                    [error.message]
-                );
-                
-                // Volver al estado normal después de 3 segundos
-                setTimeout(() => {
-                    btnSincronizar.classList.remove('btn-danger');
-                    btnSincronizar.classList.add('btn-primary');
-                    btnSincronizar.innerHTML = textoOriginal;
-                    btnSincronizar.disabled = false;
-                }, 3000);
-            });
-        });
-    }
-
-    // =====================================================
-    // LÓGICA DE NAVEGACIÓN DE TABS
-    // =====================================================
-    const tabButtons = document.querySelectorAll('[role="tab"]');
-    
-    tabButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            const targetId = this.getAttribute('aria-controls');
-            const tabName = this.id.replace('tab-', '');
-            console.log('Click en tab:', this.id, '-> mostrando:', targetId);
-            
-            // Remover active de todos los buttons
-            tabButtons.forEach(btn => {
-                btn.classList.remove('active');
-                btn.setAttribute('aria-selected', 'false');
-            });
-            
-            // Ocultar todos los panes
-            document.querySelectorAll('[role="tabpanel"]').forEach(pane => {
-                pane.classList.remove('show', 'active');
-            });
-            
-            // Activar el botón actual
-            this.classList.add('active');
-            this.setAttribute('aria-selected', 'true');
-            
-            // Mostrar el pane correspondiente
-            const targetPane = document.getElementById(targetId);
-            if (targetPane) {
-                targetPane.classList.add('show', 'active');
-                console.log('Tab mostrado:', targetId);
-                
-                // Actualizar URL sin recargar la página
-                const url = new URL(window.location);
-                url.searchParams.set('tab', tabName);
-                window.history.replaceState({}, '', url);
-            } else {
-                console.error('Pane no encontrado:', targetId);
-            }
-        });
-    });
-
-    // =====================================================
-    // LÓGICA DEL CALENDARIO
-    // =====================================================
-    let mesActual = new Date().getMonth();
-    let anoActual = new Date().getFullYear();
-    let feriados = {}; // Objeto para almacenar feriados
-    let vacacionesAprobadas = []; // Variable para almacenar vacaciones dinámicamente
-    let departamentoFiltro = ''; // Variable para almacenar el departamento seleccionado
-
-    // Función para cargar vacaciones del departamento seleccionado
-    function cargarVacacionesPorDepartamento(departamento) {
-        return fetch('<?php echo esc_url( admin_url('admin-ajax.php') ); ?>', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                action: 'hrm_get_vacaciones_calendario',
-                departamento: departamento
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                vacacionesAprobadas = data.data;
-                return true;
-            }
-            return false;
-        })
-        .catch(error => {
-            console.error('Error cargando vacaciones:', error);
-            return false;
-        });
-    }
-
-    // Event listener para el selector de departamento
-    const selectorDepartamento = document.getElementById('filtroCalendarioDepartamento');
-    if (selectorDepartamento) {
-        selectorDepartamento.addEventListener('change', function() {
-            departamentoFiltro = this.value;
-            cargarVacacionesPorDepartamento(departamentoFiltro).then(() => {
-                renderizarCalendario(mesActual, anoActual);
-            });
-        });
-    }
-
-    // Función para cargar feriados del año especificado
-    function cargarFeriadosDelAno(ano) {
-        return fetch('<?php echo esc_url( admin_url('admin-ajax.php') ); ?>', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                action: 'hrm_get_feriados',
-                ano: ano
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                feriados = data.data;
-                return true;
-            }
-            return false;
-        })
-        .catch(error => {
-            console.error('Error cargando feriados:', error);
-            return false;
-        });
-    }
-
-    // Cargar feriados iniciales y vacaciones del departamento seleccionado
-    cargarFeriadosDelAno(anoActual).then(() => {
-        cargarVacacionesPorDepartamento(departamentoFiltro);
-    });
-
-    function renderizarCalendario(mes, ano) {
-        const primerDia = new Date(ano, mes, 1);
-        const ultimoDia = new Date(ano, mes + 1, 0);
-        const diasEnMes = ultimoDia.getDate();
-        
-        // getDay() retorna: 0=domingo, 1=lunes, ..., 6=sábado
-        // Pero nuestra tabla empieza en lunes (posición 0)
-        // Convertir: domingo (0) -> 6, lunes (1) -> 0, martes (2) -> 1, etc.
-        let diaInicio = primerDia.getDay();
-        diaInicio = diaInicio === 0 ? 6 : diaInicio - 1;
-        
-        // Nombres de meses en español
-        const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-                      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-        
-        document.getElementById('mesesTitulo').textContent = meses[mes] + ' ' + ano;
-        
-        let html = '';
-        let diaActual = 1;
-        
-        // Calcular número de semanas
-        const totalCeldas = Math.ceil((diasEnMes + diaInicio) / 7) * 7;
-        
-        for (let i = 0; i < totalCeldas / 7; i++) {
-            html += '<tr>';
-            
-            for (let j = 0; j < 7; j++) {
-                const indice = i * 7 + j;
-                
-                if (indice < diaInicio || diaActual > diasEnMes) {
-                    html += '<td class="other-month"></td>';
-                } else {
-                    const fecha = new Date(ano, mes, diaActual);
-                    const fechaStr = ano + '-' + String(mes + 1).padStart(2, '0') + '-' + String(diaActual).padStart(2, '0');
-                    
-                    let clasesCelda = '';
-                    let contenido = '<span class="dia-numero">' + diaActual + '</span>';
-                    
-                    // Verificar si es un feriado
-                    let esFeriado = false;
-                    let nombreFeriado = '';
-                    
-                    if (fechaStr in feriados) {
-                        esFeriado = true;
-                        nombreFeriado = feriados[fechaStr];
-                        clasesCelda += ' feriado';
-                        contenido += '<div class="dia-info">🎉 Feriado</div>';
-                    }
-                    
-                    // Verificar si es fin de semana (sábado=6, domingo=0)
-                    if (j === 5 || j === 6) {
-                        clasesCelda += ' fin-semana';
-                    }
-                    
-                    // Verificar si hay vacaciones en este día (solo si no es feriado)
-                    let tieneVacaciones = false;
-                    let empleadosVacaciones = [];
-                    
-                    if (!esFeriado) {
-                        for (let vac of vacacionesAprobadas) {
-                            if (fechaStr >= vac.fecha_inicio && fechaStr <= vac.fecha_fin) {
-                                tieneVacaciones = true;
-                                empleadosVacaciones.push(vac.empleado);
-                            }
-                        }
-                        
-                        if (tieneVacaciones) {
-                            clasesCelda += ' vacaciones';
-                            contenido += '<div class="dia-info">🏖️ ' + empleadosVacaciones.length + ' empleado(s)</div>';
-                        }
-                    }
-                    
-                    // Verificar si es hoy
-                    const hoy = new Date();
-                    if (fecha.toDateString() === hoy.toDateString()) {
-                        clasesCelda += ' hoy';
-                    }
-                    
-                    // Agregar título (tooltip) con nombre del feriado
-                    const titulo = esFeriado ? ` title="${nombreFeriado}"` : '';
-                    
-                    html += '<td class="' + clasesCelda + '"' + titulo + '>' + contenido + '</td>';
-                    diaActual++;
-                }
-            }
-            
-            html += '</tr>';
-        }
-        
-        document.getElementById('diasCalendario').innerHTML = html;
-    }
-    
-    // Botones de navegación
-    document.getElementById('btnMesAnterior').addEventListener('click', function() {
-        const anoAnterior = anoActual;
-        
-        mesActual--;
-        if (mesActual < 0) {
-            mesActual = 11;
-            anoActual--;
-        }
-        
-        // Si cambió el año, cargar feriados del nuevo año
-        if (anoActual !== anoAnterior) {
-            cargarFeriadosDelAno(anoActual).then(() => {
-                renderizarCalendario(mesActual, anoActual);
-            });
-        } else {
-            renderizarCalendario(mesActual, anoActual);
-        }
-    });
-    
-    document.getElementById('btnMesSiguiente').addEventListener('click', function() {
-        const anoAnterior = anoActual;
-        
-        mesActual++;
-        if (mesActual > 11) {
-            mesActual = 0;
-            anoActual++;
-        }
-        
-        // Si cambió el año, cargar feriados del nuevo año
-        if (anoActual !== anoAnterior) {
-            cargarFeriadosDelAno(anoActual).then(() => {
-                renderizarCalendario(mesActual, anoActual);
-            });
-        } else {
-            renderizarCalendario(mesActual, anoActual);
-        }
-    });
-
-    // =====================================================
-    // LÓGICA DE NOTIFICACIONES
-    // =====================================================
-    
-    // Función para mostrar notificación de éxito
-    function mostrarNotificacionExito(titulo, mensaje, detalles) {
-        const notif = document.createElement('div');
-        notif.className = 'alert alert-success alert-dismissible fade show shadow-lg';
-        notif.setAttribute('role', 'alert');
-        notif.style.position = 'fixed';
-        notif.style.top = '20px';
-        notif.style.right = '20px';
-        notif.style.zIndex = '9999';
-        notif.style.minWidth = '400px';
-        
-        let detalleHtml = '';
-        if (detalles && detalles.length > 0) {
-            detalleHtml = '<ul class="mb-0 mt-2 small">';
-            detalles.forEach(detalle => {
-                detalleHtml += `<li>${detalle.nombre}: ${detalle.total_empleados} total, ${detalle.personal_vigente} vigente</li>`;
-            });
-            detalleHtml += '</ul>';
-        }
-        
-        notif.innerHTML = `
-            <div class="d-flex gap-2 align-items-start">
-                <span style="font-size: 1.5rem;">✅</span>
-                <div class="flex-grow-1">
-                    <strong>${titulo}</strong>
-                    <p class="mb-0">${mensaje}</p>
-                    ${detalleHtml}
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `;
-        
-        document.body.appendChild(notif);
-        
-        // Auto-cerrar después de 5 segundos
-        setTimeout(() => {
-            notif.remove();
-        }, 5000);
-    }
-    
-    // Función para mostrar notificación de error
-    function mostrarNotificacionError(titulo, mensaje, errores) {
-        const notif = document.createElement('div');
-        notif.className = 'alert alert-danger alert-dismissible fade show shadow-lg';
-        notif.setAttribute('role', 'alert');
-        notif.style.position = 'fixed';
-        notif.style.top = '20px';
-        notif.style.right = '20px';
-        notif.style.zIndex = '9999';
-        notif.style.minWidth = '400px';
-        
-        let erroresHtml = '';
-        if (errores && errores.length > 0) {
-            erroresHtml = '<ul class="mb-0 mt-2 small">';
-            errores.forEach(error => {
-                erroresHtml += `<li>${error}</li>`;
-            });
-            erroresHtml += '</ul>';
-        }
-        
-        notif.innerHTML = `
-            <div class="d-flex gap-2 align-items-start">
-                <span style="font-size: 1.5rem;">❌</span>
-                <div class="flex-grow-1">
-                    <strong>${titulo}</strong>
-                    <p class="mb-0">${mensaje}</p>
-                    ${erroresHtml}
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `;
-        
-        document.body.appendChild(notif);
-        
-        // Auto-cerrar después de 6 segundos
-        setTimeout(() => {
-            notif.remove();
-        }, 6000);
-    }
-
-    // =====================================================
-    // LÓGICA DEL MODAL DE COMENTARIOS
-    // =====================================================
-    
-    // Datos de las solicitudes con comentarios
-    const solicitudesData = {
-        <?php 
-        $primera = true;
-        foreach ( $solicitudes as $s ) {
-            if ( ! $primera ) echo ",";
-            echo "'" . esc_js( $s['id_solicitud'] ) . "': {";
-            echo "nombre: '" . esc_js( $s['nombre'] . ' ' . $s['apellido'] ) . "',";
-            echo "comentario: '" . esc_js( $s['comentario_empleado'] ?? '' ) . "'";
-            echo "}";
-            $primera = false;
-        }
-        ?>
-    };
-    
-    const botonesComentarios = document.querySelectorAll('.btn-comentarios');
-    const modal = document.getElementById('modalComentarios');
-    const btnCerrar = document.querySelector('.modal-cerrar');
-    const btnCerrarModal = document.querySelector('.btn-cerrar-modal');
-    
-    // Abrir modal
-    botonesComentarios.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const id = this.getAttribute('data-id');
-            const datos = solicitudesData[id];
-            
-            if (datos) {
-                document.getElementById('modalEmpleado').textContent = datos.nombre;
-                const contenidoComentario = document.getElementById('modalComentarioContenido');
-                
-                if (datos.comentario.trim() === '') {
-                    contenidoComentario.innerHTML = '<div class="text-muted fst-italic text-center py-4">No hay comentarios agregados</div>';
-                } else {
-                    contenidoComentario.textContent = datos.comentario;
-                }
-                
-                modal.classList.add('activo');
-            }
-        });
-    });
-    
-    // Cerrar modal - botón X
-    if (btnCerrar) {
-        btnCerrar.addEventListener('click', function() {
-            modal.classList.remove('activo');
-        });
-    }
-    
-    // Cerrar modal - botón Cerrar
-    if (btnCerrarModal) {
-        btnCerrarModal.addEventListener('click', function() {
-            modal.classList.remove('activo');
-        });
-    }
-    
-    // Cerrar modal - click fuera del modal
-    if (modal) {
-        modal.addEventListener('click', function(e) {
-            if (e.target === modal) {
-                modal.classList.remove('activo');
-            }
-        });
-    }
-    
-    // Cerrar modal con ESC
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && modal && modal.classList.contains('activo')) {
-            modal.classList.remove('activo');
-        }
-    });
-    
-    // =====================================================
-    // LÓGICA DEL MODAL DE RECHAZO CON MOTIVO
-    // =====================================================
-    
-    const modalRechazo = document.getElementById('modalRechazo');
-    const botonesModalRechazo = document.querySelectorAll('.btn-modal-rechazo');
-    const btnCerrarRechazo = document.querySelector('.modal-rechazo-cerrar');
-    const btnCancelarRechazo = document.querySelector('.btn-cancelar-rechazo');
-    const btnConfirmarRechazo = document.querySelector('.btn-confirmar-rechazo');
-    const formRechazo = document.getElementById('formRechazo');
-    
-    // Abrir modal de rechazo
-    botonesModalRechazo.forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const solicitudId = this.getAttribute('data-solicitud-id');
-            const nonce = this.getAttribute('data-nonce');
-            
-            // Establecer valores en el formulario
-            document.getElementById('solicitudIdRechazo').value = solicitudId;
-            document.getElementById('nonceRechazo').value = nonce;
-            document.getElementById('motivoRechazo').value = ''; // Limpiar campo
-            
-            // Mostrar modal
-            modalRechazo.classList.add('activo');
-        });
-    });
-    
-    // Cerrar modal - botón X
-    if (btnCerrarRechazo) {
-        btnCerrarRechazo.addEventListener('click', function() {
-            modalRechazo.classList.remove('activo');
-        });
-    }
-    
-    // Cerrar modal - botón Cancelar
-    if (btnCancelarRechazo) {
-        btnCancelarRechazo.addEventListener('click', function() {
-            modalRechazo.classList.remove('activo');
-        });
-    }
-    
-    // Cerrar modal - click fuera del modal
-    if (modalRechazo) {
-        modalRechazo.addEventListener('click', function(e) {
-            if (e.target === modalRechazo) {
-                modalRechazo.classList.remove('activo');
-            }
-        });
-    }
-    
-    // Confirmar rechazo - enviar formulario
-    if (btnConfirmarRechazo) {
-        btnConfirmarRechazo.addEventListener('click', function() {
-            const motivo = document.getElementById('motivoRechazo').value.trim();
-            
-            // Validación simple
-            if (motivo === '') {
-                alert('Por favor ingresa un motivo para el rechazo.');
-                return;
-            }
-            
-            if (motivo.length < 5) {
-                alert('El motivo debe tener al menos 5 caracteres.');
-                return;
-            }
-            
-            // Enviar el formulario
-            formRechazo.submit();
-        });
-    }
-    
-    // Cerrar modal con ESC
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && modalRechazo && modalRechazo.classList.contains('activo')) {
-            modalRechazo.classList.remove('activo');
-        }
-    });
-    
-    // =====================================================
-    // LÓGICA DEL MODAL DE EMPLEADOS EN VACACIONES
-    // =====================================================
-    const modalVacacionesDetalle = document.getElementById('modalVacacionesDetalle');
-    const botonesVacacionesDetalle = document.querySelectorAll('.btn-vacaciones-detalle');
-    const btnCerrarVacaciones = document.querySelectorAll('.modal-vacaciones-cerrar');
-    
-    // Abrir modal de detalles de vacaciones
-    botonesVacacionesDetalle.forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const departamento = this.getAttribute('data-departamento');
-            
-            // Cambiar contenido a "Cargando..."
-            document.getElementById('modalVacacionesContenido').innerHTML = '<div class="text-center"><span class="spinner-border spinner-border-sm me-2"></span> Cargando información...</div>';
-            
-            // Mostrar modal
-            modalVacacionesDetalle.style.display = 'flex';
-            
-            // Cargar datos
-            fetch('<?php echo esc_url( admin_url('admin-ajax.php') ); ?>', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    action: 'hrm_get_empleados_vacaciones_hoy',
-                    departamento: departamento
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.data.length > 0) {
-                    let html = '<div class="list-group">';
-                    
-                    data.data.forEach(function(empleado) {
-                        // Parsear fecha manualmente para evitar problemas de zona horaria
-                        const [year, month, day] = empleado.fecha_inicio.split('-');
-                        const fechaInicio = new Date(year, month - 1, day);
-                        
-                        const [yearFin, monthFin, dayFin] = empleado.fecha_fin.split('-');
-                        const fechaFin = new Date(yearFin, monthFin - 1, dayFin);
-                        
-                        const opciones = { year: 'numeric', month: 'long', day: 'numeric' };
-                        const fechaInicioFormato = fechaInicio.toLocaleDateString('es-ES', opciones);
-                        const fechaFinFormato = fechaFin.toLocaleDateString('es-ES', opciones);
-                        
-                        html += '<div class="list-group-item px-3 py-3 border-bottom">';
-                        html += '<h6 class="fw-bold text-dark mb-1">' + empleado.nombre + '</h6>';
-                        html += '<small class="text-muted d-block">📅 ' + fechaInicioFormato + ' hasta ' + fechaFinFormato + '</small>';
-                        html += '</div>';
-                    });
-                    
-                    html += '</div>';
-                    document.getElementById('modalVacacionesContenido').innerHTML = html;
-                } else {
-                    document.getElementById('modalVacacionesContenido').innerHTML = '<div class="alert alert-info">No hay empleados en vacaciones hoy</div>';
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('modalVacacionesContenido').innerHTML = '<div class="alert alert-danger">Error al cargar la información</div>';
-            });
-        });
-    });
-    
-    // Cerrar modal - botones cerrar
-    btnCerrarVacaciones.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            modalVacacionesDetalle.style.display = 'none';
-        });
-    });
-    
-    // Cerrar modal - click fuera del modal
-    if (modalVacacionesDetalle) {
-        modalVacacionesDetalle.addEventListener('click', function(e) {
-            if (e.target === modalVacacionesDetalle) {
-                modalVacacionesDetalle.style.display = 'none';
-            }
-        });
-    }
-    
-    // Cerrar modal con ESC
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && modalVacacionesDetalle && modalVacacionesDetalle.style.display === 'flex') {
-            modalVacacionesDetalle.style.display = 'none';
-        }
-    });
-
-    // =====================================================
-    // LÓGICA DE APROBACIÓN/RECHAZO DE MEDIO DÍA
-    // =====================================================
-    const modalVerMedioDia = document.getElementById('modalVerMedioDia');
-    const modalRechazoMedioDia = document.getElementById('modalRechazoMedioDia');
-    const botonesVerMedioDia = document.querySelectorAll('.btn-ver-medio-dia');
-    const botonesRechazarMd = document.querySelectorAll('.btn-modal-rechazo-md');
-    const btnCerrarMd = document.querySelectorAll('.btn-cerrar-md');
-    const btnCerrarRechazoMd = document.querySelectorAll('.btn-cerrar-rechazo-md');
-    const btnCancelarRechazoMd = document.querySelectorAll('.btn-cancelar-rechazo-md');
-    const btnConfirmarRechazoMd = document.querySelector('.btn-confirmar-rechazo-md');
-
-    // Ver detalles de solicitud de medio día
-    botonesVerMedioDia.forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const solicitudId = this.getAttribute('data-solicitud-id');
-            
-            // Hacer solicitud AJAX para obtener los detalles
-            fetch('<?php echo esc_url( admin_url('admin-ajax.php') ); ?>', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    action: 'hrm_get_detalles_medio_dia',
-                    solicitud_id: solicitudId
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const solicitud = data.data;
-                    
-                    // Llenar los campos del modal
-                    document.getElementById('mdEmpleado').textContent = solicitud.nombre + ' ' + solicitud.apellido;
-                    document.getElementById('mdFecha').textContent = new Date(solicitud.fecha_inicio).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
-                    
-                    const periodo = solicitud.periodo_ausencia.charAt(0).toUpperCase() + solicitud.periodo_ausencia.slice(1);
-                    const horario = periodo === 'Mañana' ? '🌅 08:00 - 12:00' : '🌆 14:00 - 18:00';
-                    document.getElementById('mdPeriodo').textContent = horario;
-                    
-                    const badgeEstado = document.getElementById('mdEstado');
-                    badgeEstado.className = '';
-                    if (solicitud.estado === 'PENDIENTE') {
-                        badgeEstado.className = 'badge bg-warning text-dark';
-                    } else if (solicitud.estado === 'APROBADA') {
-                        badgeEstado.className = 'badge bg-success';
-                    } else if (solicitud.estado === 'RECHAZADA') {
-                        badgeEstado.className = 'badge bg-danger';
-                    }
-                    badgeEstado.textContent = solicitud.estado;
-                    
-                    document.getElementById('mdComentario').textContent = solicitud.comentario_empleado || 'Sin comentarios';
-                    
-                    // Mostrar motivo de rechazo si está rechazada
-                    const rechazoSection = document.getElementById('mdRechazoSection');
-                    if (solicitud.estado === 'RECHAZADA' && solicitud.motivo_rechazo) {
-                        rechazoSection.style.display = 'block';
-                        document.getElementById('mdMotivoRechazo').textContent = solicitud.motivo_rechazo;
-                    } else {
-                        rechazoSection.style.display = 'none';
-                    }
-                    
-                    // Mostrar modal
-                    modalVerMedioDia.style.display = 'flex';
-                } else {
-                    alert('Error al cargar los detalles: ' + (data.message || 'Error desconocido'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error al cargar los detalles');
-            });
-        });
-    });
-
-    // Cerrar modal Ver Detalles
-    btnCerrarMd.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            modalVerMedioDia.style.display = 'none';
-        });
-    });
-
-    // Cerrar modal con click fuera
-    if (modalVerMedioDia) {
-        modalVerMedioDia.addEventListener('click', function(e) {
-            if (e.target === modalVerMedioDia) {
-                modalVerMedioDia.style.display = 'none';
-            }
-        });
-    }
-
-    // Abrir modal de rechazo
-    botonesRechazarMd.forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const solicitudId = this.getAttribute('data-solicitud-id');
-            const nonce = this.getAttribute('data-nonce');
-            
-            document.getElementById('solicitudIdRechazoMd').value = solicitudId;
-            document.getElementById('nonceRechazoMd').value = nonce;
-            document.getElementById('motivoRechazoMd').value = '';
-            
-            modalRechazoMedioDia.style.display = 'flex';
-        });
-    });
-
-    // Cerrar modal de rechazo
-    btnCerrarRechazoMd.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            modalRechazoMedioDia.style.display = 'none';
-        });
-    });
-
-    btnCancelarRechazoMd.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            modalRechazoMedioDia.style.display = 'none';
-        });
-    });
-
-    // Cerrar modal con click fuera
-    if (modalRechazoMedioDia) {
-        modalRechazoMedioDia.addEventListener('click', function(e) {
-            if (e.target === modalRechazoMedioDia) {
-                modalRechazoMedioDia.style.display = 'none';
-            }
-        });
-    }
-
-    // Validar y enviar rechazo
-    if (btnConfirmarRechazoMd) {
-        btnConfirmarRechazoMd.addEventListener('click', function(e) {
-            e.preventDefault();
-            const motivo = document.getElementById('motivoRechazoMd').value.trim();
-            
-            if (motivo === '') {
-                alert('Por favor ingresa un motivo para el rechazo.');
-                return;
-            }
-            
-            if (motivo.length < 5) {
-                alert('El motivo debe tener al menos 5 caracteres.');
-                return;
-            }
-            
-            document.getElementById('formRechazoMedioDia').submit();
-        });
-    }
-});
-</script>
 
 <!-- =====================================================
      MODAL DE RECHAZO CON MOTIVO

@@ -158,9 +158,24 @@ if ( ! empty( $lista_empleados ) ) {
                                             <?php
                                                 $roles = (array) ( wp_get_current_user()->roles ?? array() );
                                                 $can_manage = current_user_can( 'manage_options' ) || $is_anaconda || in_array( 'supervisor', $roles, true ) || current_user_can( 'edit_hrm_employees' );
+                                                
+                                                // Para administrador_anaconda, verificar si el empleado está fuera de su área de gerencia
+                                                $puede_ver_botones = $can_manage;
+                                                if ( $is_anaconda && ! current_user_can( 'manage_options' ) ) {
+                                                    // Obtener área de gerencia del usuario actual
+                                                    global $wpdb;
+                                                    $area_usuario = $wpdb->get_var(
+                                                        $wpdb->prepare(
+                                                            "SELECT area_gerencia FROM {$wpdb->prefix}rrhh_empleados WHERE user_id = %d LIMIT 1",
+                                                            get_current_user_id()
+                                                        )
+                                                    );
+                                                    // Mostrar botones solo si el empleado NO está en su área de gerencia
+                                                    $puede_ver_botones = $area_usuario && $empleado->area_gerencia !== $area_usuario;
+                                                }
                                             ?>
                                             <?php if ( $show_inactive ) : ?>
-                                                <?php if ( $can_manage ) : ?>
+                                                <?php if ( $puede_ver_botones ) : ?>
                                                     <form method="post" action="<?= esc_url( admin_url( 'admin.php?page=hrm-empleados&tab=list' ) ) ?>" style="display:inline-block; margin:0;">
                                                         <?php wp_nonce_field( 'hrm_toggle_employee_status', 'hrm_toggle_status_nonce' ); ?>
                                                         <input type="hidden" name="hrm_action" value="toggle_employee_status" />
@@ -180,7 +195,7 @@ if ( ! empty( $lista_empleados ) ) {
                                                         </button>
                                                     </form>
                                                 <?php else : ?>
-                                                    <span class="text-muted">Sin acciones disponibles</span>
+                                                    <span class="text-muted text-sm">Sin acciones</span>
                                                 <?php endif; ?>
                                             <?php else : ?>
                                                 <a href="<?= esc_url( admin_url( 'admin.php?page=hrm-empleados&tab=profile&id=' . rawurlencode( $emp_id ) ) ) ?>" 
@@ -240,37 +255,15 @@ if ( ! empty( $lista_empleados ) ) {
             </div>
         </div>
 
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const desactivarPanel = document.getElementById('hrm-desactivar-panel');
-            const desactivarMsg = document.getElementById('hrm-desactivar-msg');
-            let empleadoId = null;
-            let empleadoNombre = '';
-            document.querySelectorAll('.btn-desactivar-empleado').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    empleadoId = this.getAttribute('data-id');
-                    empleadoNombre = this.getAttribute('data-nombre');
-                    desactivarMsg.innerHTML = `<strong>¿Seguro que deseas desactivar a <span class='text-danger'>${empleadoNombre}</span>?<br>Esta acción bloqueará su acceso.</strong>`;
-                    desactivarPanel.style.display = 'block';
-                });
-            });
-            document.getElementById('btn-cerrar-desactivar').onclick = function() {
-                desactivarPanel.style.display = 'none';
-            };
-            document.getElementById('btn-cancelar-desactivar').onclick = function() {
-                desactivarPanel.style.display = 'none';
-            };
-            document.getElementById('btn-confirmar-desactivar').onclick = function() {
-                if (!empleadoId) return;
-                // Aquí puedes hacer el AJAX para desactivar
-                desactivarMsg.innerHTML = `<span class='text-success'>Desactivando empleado...</span>`;
-                // Simulación de AJAX
-                setTimeout(function() {
-                    desactivarMsg.innerHTML = `<span class='text-success'>Empleado desactivado correctamente.</span>`;
-                    setTimeout(function() { desactivarPanel.style.display = 'none'; location.reload(); }, 1200);
-                }, 1000);
-            };
-        });
-        </script>
+        <?php
+        // Encolar el script de manejo de empleados
+        wp_enqueue_script(
+            'hrm-employees-list',
+            HRM_PLUGIN_URL . 'assets/js/employees-list.js',
+            array(),
+            HRM_PLUGIN_VERSION,
+            true
+        );
+        ?>
     </div>    
 </div>

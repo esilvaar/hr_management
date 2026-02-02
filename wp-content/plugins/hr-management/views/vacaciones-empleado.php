@@ -353,7 +353,9 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                                             <?php if ( strtoupper( $s['estado'] ?? '' ) === 'PENDIENTE' ) : ?>
                                                 <?php 
                                                 // Determinar si es medio día o solicitud normal
-                                                $es_medio_dia = isset($s['fecha_inicio']) && isset($s['fecha_fin']) && $s['fecha_inicio'] === $s['fecha_fin'] && isset($s['total_dias']) && $s['total_dias'] == 0.5;
+                                                // La función hrm_get_vacaciones_empleado devuelve tipo_solicitud = 'medio_dia' para medio día
+                                                $es_medio_dia = ( isset($s['tipo_solicitud']) && $s['tipo_solicitud'] === 'medio_dia' ) || 
+                                                                ( isset($s['fecha_inicio']) && isset($s['fecha_fin']) && $s['fecha_inicio'] === $s['fecha_fin'] && isset($s['total_dias']) && floatval($s['total_dias']) == 0.5 );
                                                 $action = $es_medio_dia ? 'hrm_cancelar_solicitud_medio_dia' : 'hrm_cancelar_solicitud_vacaciones';
                                                 $nonce_action = $es_medio_dia ? 'hrm_cancelar_solicitud_medio_dia' : 'hrm_cancelar_solicitud';
                                                 ?>

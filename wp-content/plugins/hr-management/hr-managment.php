@@ -258,6 +258,15 @@ function hrm_enqueue_admin_assets()
                 )
             );
 
+            // JS de notificaciones del sidebar
+            wp_enqueue_script(
+                'hrm-sidebar-notifications',
+                HRM_PLUGIN_URL . 'assets/js/sidebar-notifications.js',
+                array(),
+                HRM_PLUGIN_VERSION,
+                true
+            );
+
             // CSS para vista de detalle de empleados
             wp_enqueue_style(
                 'hrm-employees-detail',
@@ -294,13 +303,28 @@ function hrm_enqueue_admin_assets()
                 true
             );
 
-            // Pasar ajaxUrl y nonce al script de crear empleados
+            // Pasar ajaxUrl, nonce y datos al script de crear empleados
             wp_localize_script(
                 'hrm-employees-create',
                 'hrmCreateData',
                 array(
                     'ajaxUrl' => admin_url('admin-ajax.php'),
                     'nonce' => wp_create_nonce('hrm_check_email_nonce'),
+                    'todosDeptos' => isset($GLOBALS['hrm_departamentos']) ? $GLOBALS['hrm_departamentos'] : array(),
+                    'deptosPredefinidos' => array(
+                        'comercial' => array('Soporte', 'Ventas'),
+                        'proyectos' => array('Desarrollo'),
+                        'operaciones' => array('Administracion', 'Gerencia', 'Sistemas'),
+                    ),
+                    // Mapa departamento -> puestos (se usará para filtrar el select de puestos)
+                    'mapaPuestos' => array(
+                        'soporte' => array('Ingeniero de Soporte', 'Practicante'),
+                        'desarrollo' => array('Desarrollador de Software', 'Diseñador Gráfico'),
+                        'ventas' => array('Asistente Comercial'),
+                        'administracion' => array('Administrativo(a) Contable'),
+                        'gerencia' => array('Gerente'),
+                        'sistemas' => array('Ingeniero en Sistemas'),
+                    ),
                 )
             );
         }

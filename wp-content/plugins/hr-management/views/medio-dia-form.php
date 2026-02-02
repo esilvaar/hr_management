@@ -31,12 +31,12 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
     <p class="hrm-success-small">
         Recibirás un correo de confirmación en tu bandeja de entrada.
     </p>
-    <button onclick="document.getElementById('alertaSolicitudCreada').remove(); document.getElementById('alertaFondo').remove();" class="hrm-success-button">
+    <button type="button" class="hrm-success-button hrm-success-close">
         Continuar
     </button>
 </div>
 
-<div id="alertaFondo" onclick="document.getElementById('alertaSolicitudCreada').remove(); document.getElementById('alertaFondo').remove();" class="hrm-success-backdrop"></div>
+<div id="alertaFondo" class="hrm-success-backdrop hrm-success-close"></div>
 <?php endif; ?>
 
 <div class="documento-formal p-5 mx-auto my-3">
@@ -103,8 +103,7 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
                    name="fecha_medio_dia" 
                    id="fecha_medio_dia" 
                    class="form-control" 
-                   required
-                   onchange="actualizarFechas()">
+                   required>
         </div>
         
         <!-- PERÍODO DEL DÍA -->
@@ -112,11 +111,11 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
             <label class="form-label fw-bold">Período del día <span class="text-danger">*</span></label>
             <div class="opciones-respuesta d-flex gap-4 mt-2">
                 <div class="d-flex align-items-center gap-2">
-                    <input type="radio" id="periodo_manana" name="periodo_ausencia" value="mañana" checked onchange="actualizarTexto()">
+                    <input type="radio" id="periodo_manana" name="periodo_ausencia" value="mañana" checked>
                     <label for="periodo_manana" class="mb-0 cursor-pointer">Mañana</label>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <input type="radio" id="periodo_tarde" name="periodo_ausencia" value="tarde" onchange="actualizarTexto()">
+                    <input type="radio" id="periodo_tarde" name="periodo_ausencia" value="tarde">
                     <label for="periodo_tarde" class="mb-0 cursor-pointer">Tarde</label>
                 </div>
             </div>
@@ -225,76 +224,20 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
             <button type="submit" name="hrm_enviar_solicitud" class="btn btn-primary px-5">
                 <span class="dashicons dashicons-yes"></span> Enviar Solicitud
             </button>
-            <button type="button" class="btn btn-secondary px-5" onclick="history.back();">
+            <button type="button" class="btn btn-secondary px-5 hrm-cancel-btn">
                 <span class="dashicons dashicons-no"></span> Cancelar
             </button>
         </div>
     </form>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const fechaInput = document.getElementById('fecha_medio_dia');
-    
-    // La fecha debe ser hoy o posterior (para permitir faltar en la tarde de hoy)
-    const hoy = new Date();
-    const fechaMinimaStr = hoy.toISOString().split('T')[0];
-    fechaInput.min = fechaMinimaStr;
-    
-    // Función para validar si una fecha es fin de semana
-    function esFinDeSemana(fechaStr) {
-        const fecha = new Date(fechaStr + 'T00:00:00');
-        const dia = fecha.getDay(); // 0 = domingo, 6 = sábado
-        return dia === 0 || dia === 6;
-    }
-    
-    // Función para formatear fecha
-    function formatearFecha(fechaStr) {
-        if (!fechaStr) return '—';
-        const fecha = new Date(fechaStr + 'T00:00:00');
-        return fecha.toLocaleDateString('es-CL', { year: 'numeric', month: '2-digit', day: '2-digit' });
-    }
-    
-    // Función para actualizar fechas (inicio y fin son iguales)
-    window.actualizarFechas = function() {
-        const fecha = document.getElementById('fecha_medio_dia').value;
-        
-        if (!fecha) {
-            document.getElementById('fecha_display').textContent = '—';
-            document.getElementById('fecha_inicio').value = '';
-            document.getElementById('fecha_fin').value = '';
-            return;
-        }
-        
-        if (esFinDeSemana(fecha)) {
-            alert('⚠️ La fecha no puede ser un fin de semana.');
-            document.getElementById('fecha_medio_dia').value = '';
-            document.getElementById('fecha_display').textContent = '—';
-            return;
-        }
-        
-        document.getElementById('fecha_display').textContent = formatearFecha(fecha);
-        document.getElementById('fecha_inicio').value = fecha;
-        document.getElementById('fecha_fin').value = fecha;
-    };
-    
-    // Función para actualizar el texto del período
-    window.actualizarTexto = function() {
-        const periodo = document.querySelector('input[name="periodo_ausencia"]:checked').value;
-        document.getElementById('periodo_text').textContent = periodo;
-        document.getElementById('periodo_display').textContent = periodo.charAt(0).toUpperCase() + periodo.slice(1);
-    };
-    
-    // Validar fecha cuando cambia
-    fechaInput.addEventListener('change', function () {
-        if (esFinDeSemana(fechaInput.value)) {
-            alert('⚠️ La fecha no puede ser un fin de semana.');
-            fechaInput.value = '';
-            actualizarFechas();
-            return;
-        }
-        
-        actualizarFechas();
-    });
-});
-</script>
+<?php
+// Encolar y cargar el comportamiento del formulario desde un archivo JS dedicado
+wp_enqueue_script(
+    'hrm-medio-dia-form',
+    HRM_PLUGIN_URL . 'assets/js/medio-dia-form.js',
+    array(),
+    HRM_PLUGIN_VERSION,
+    true
+);
+?>

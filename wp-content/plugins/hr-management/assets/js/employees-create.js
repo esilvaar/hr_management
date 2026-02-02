@@ -411,3 +411,199 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// -----------------------------
+// Comportamiento adicional movido aquí
+// -----------------------------
+
+document.addEventListener('DOMContentLoaded', function() {
+    var data = window.hrmCreateData || {};
+    var todosDeptos = data.todosDeptos || [];
+    var deptosPredef = data.deptosPredefinidos || {};
+    var mapaPuestos = data.mapaPuestos || {};
+    if (typeof console !== 'undefined' && console.debug) console.debug('[HRM] mapaPuestos loaded:', mapaPuestos);
+
+    var departamento = document.getElementById('hrm_departamento');
+    var puesto = document.getElementById('hrm_puesto');
+    var areaGerenciaSelect = document.getElementById('hrm_area_gerencia');
+    var deptosCheckboxesDiv = document.getElementById('hrm_deptos_checkboxes');
+    var deptosCargoContainer = document.getElementById('hrm_deptos_a_cargo_container');
+    var areaGerenciaSection = document.getElementById('area_gerencia_section');
+
+    if (!departamento || !puesto) return;
+
+    var opcionesOriginales = Array.from(puesto.options).map(function(opt){ return { value: opt.value, text: opt.text }; });
+
+    // Si por alguna razón el <select> fue renderizado sin opciones (o con solo el default),
+    // usar el fallback `data-all-puestos` del atributo o la localización `todosDeptos`.
+    if (!opcionesOriginales || opcionesOriginales.length <= 1) {
+        var fallbackPuestos = [];
+        try {
+            if (puesto.dataset && puesto.dataset.allPuestos) {
+                fallbackPuestos = JSON.parse(puesto.dataset.allPuestos);
+            } else if (data && data.todosDeptos) {
+                // historic key: todosDeptos contains the list of puestos fallback
+                fallbackPuestos = data.todosDeptos;
+            }
+        } catch (e) { fallbackPuestos = []; }
+
+        if (fallbackPuestos && fallbackPuestos.length) {
+            opcionesOriginales = [{ value: '', text: 'Selecciona...' }].concat(fallbackPuestos.map(function(p){ return { value: p, text: p }; }));
+        }
+    }
+
+    function normalizeText(str) {
+        if (!str) return '';
+        try {
+            // Normalizar y eliminar marcas diacríticas (más compatible que \p{Diacritic})
+            return str.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+        } catch (e) {
+            // Fallback sencillo
+            return String(str).toLowerCase().trim();
+        }
+    }
+
+    function agregarPuesto(nombre) {
+        if (!nombre) return;
+        var normalizedNombre = normalizeText(nombre);
+        // Buscar por coincidencia insensible (sin acentos)
+        var opt = opcionesOriginales.find(function(o){ return normalizeText(o.text) === normalizedNombre; });
+        if (!opt) {
+            // Intentar búsqueda por substring
+            opt = opcionesOriginales.find(function(o){ return normalizeText(o.text).indexOf(normalizedNombre) !== -1; });
+        }
+
+        var option = document.createElement('option');
+        if (opt) {
+            option.value = opt.value;
+            option.text = opt.text;
+        } else {
+            // Si no se encontró una opción original, añadir un option con el texto proporcionado
+            option.value = nombre;
+            option.text = nombre;
+        }
+        puesto.appendChild(option);
+    }
+
+    function restaurarTodos() {
+        opcionesOriginales.forEach(function(opt, idx) {
+            if (idx === 0) return;
+            var option = document.createElement('option');
+            option.value = opt.value; option.text = opt.text;
+            puesto.appendChild(option);
+        });
+    }
+
+    function filtrarPuestos() {
+        try {
+            var depto = (departamento.value || '').toLowerCase().trim();
+            puesto.innerHTML = '';
+            var optDefault = document.createElement('option'); optDefault.value = ''; optDefault.text = 'Selecciona...'; puesto.appendChild(optDefault);
+            // Preferir mapaPuestos (department -> puestos). Si no existe, intentar heurística o mostrar todos.
+            if (mapaPuestos[depto]) {
+                mapaPuestos[depto].forEach(function(nombre){ agregarPuesto(nombre); });
+                return;
+            }
+            // Si no hay mapping explícito, intentar usar las opciones originales por heurística (mostrar puestos que contengan parte del depto)
+            var anyAdded = false;
+            opcionesOriginales.forEach(function(opt){
+                try {
+                    if (opt.text.toLowerCase().indexOf(depto) !== -1) {
+                        var option = document.createElement('option'); option.value = opt.value; option.text = opt.text; puesto.appendChild(option); anyAdded = true;
+                    }
+                } catch (e) { console.warn('error comparando opción de puesto', e); }
+            });
+            if (anyAdded) return;
+            // Fallback: restaurar todos
+            restaurarTodos();
+
+            // Si después de todo no hay opciones (solo el default), intentar un fallback con todos los puestos conocidos
+            if (puesto && puesto.options && puesto.options.length <= 1) {
+                var fallbackAll = [];
+                try {
+                    if (puesto.dataset && puesto.dataset.allPuestos) {
+                        fallbackAll = JSON.parse(puesto.dataset.allPuestos);
+                    } else if (data && data.todosDeptos) {
+                        fallbackAll = data.todosDeptos;
+                    }
+                } catch (e) { fallbackAll = []; }
+
+                if (fallbackAll && fallbackAll.length) {
+                    fallbackAll.forEach(function(p){ var o = document.createElement('option'); o.value = p; o.text = p; puesto.appendChild(o); });
+                }
+            }
+        } catch (err) {
+            // En caso de error, dejar el select con fallback general
+            console.error('filtrarPuestos error:', err);
+            if (puesto && puesto.dataset && puesto.dataset.allPuestos) {
+                try { var fallback = JSON.parse(puesto.dataset.allPuestos); fallback.forEach(function(p){ var o = document.createElement('option'); o.value = p; o.text = p; puesto.appendChild(o); }); } catch(e){}
+            }
+        }
+    }
+
+    function loadDepartamentosCheckboxes() {
+        if (!areaGerenciaSelect || !deptosCheckboxesDiv) return;
+        var areaVal = (areaGerenciaSelect.value || '').toLowerCase().trim();
+        if (areaVal === '') { deptosCheckboxesDiv.innerHTML = ''; return; }
+        var deptosAMarcar = deptosPredef[areaVal] || [];
+        var html = '';
+        todosDeptos.forEach(function(depto, index){
+            if (depto.toLowerCase() === 'gerencia') return;
+            var estaPredefinido = deptosAMarcar.some(function(d){ return d.toLowerCase() === depto.toLowerCase(); });
+            var checked = estaPredefinido ? 'checked' : '';
+            var id = 'depto_checkbox_' + index;
+            html += '<div class="form-check"><input class="form-check-input hrm_depto_checkbox" type="checkbox" name="deptos_a_cargo[]" value="' + depto + '" id="' + id + '" ' + checked + '><label class="form-check-label" for="' + id + '">' + depto + '</label></div>';
+        });
+        deptosCheckboxesDiv.innerHTML = html;
+    }
+
+    function toggleAreaGerencia() {
+        var deptoValue = (departamento.value || '').toLowerCase().trim();
+        var esGerencia = deptoValue === 'gerencia';
+        if (esGerencia) {
+            if (areaGerenciaSection) areaGerenciaSection.style.display = 'block';
+            if (deptosCargoContainer) deptosCargoContainer.style.display = 'block';
+            loadDepartamentosCheckboxes();
+        } else {
+            if (areaGerenciaSection) areaGerenciaSection.style.display = 'none';
+            if (deptosCargoContainer) deptosCargoContainer.style.display = 'none';
+            if (areaGerenciaSelect) areaGerenciaSelect.value = '';
+            if (deptosCheckboxesDiv) deptosCheckboxesDiv.innerHTML = '';
+        }
+    }
+
+    function togglePracticanteBehavior() {
+        var selectedText = (puesto.options[puesto.selectedIndex] || {}).text || '';
+        var esPracticante = selectedText.toLowerCase().indexOf('practicante') !== -1;
+        var antig = document.getElementById('hrm_antiguedad_section');
+        var fechaRow = document.getElementById('hrm_fecha_termino_row');
+        var fechaInput = document.getElementById('hrm_fecha_termino');
+        var anosEmpresa = document.getElementById('hrm_anos_en_la_empresa');
+        var anosTotales = document.getElementById('hrm_anos_totales_trabajados');
+
+        if (esPracticante) {
+            if (antig) antig.style.display = 'none';
+            if (fechaRow) fechaRow.style.display = 'block';
+            if (fechaInput) fechaInput.required = true;
+            if (anosEmpresa) anosEmpresa.value = '0';
+            if (anosTotales) anosTotales.value = '0';
+            var h1 = document.getElementById('hrm_anos_en_la_empresa_hidden'); if (h1) h1.value = '0';
+            var h2 = document.getElementById('hrm_anos_totales_trabajados_hidden'); if (h2) h2.value = '0';
+        } else {
+            if (antig) antig.style.display = '';
+            if (fechaRow) fechaRow.style.display = 'none';
+            if (fechaInput) { fechaInput.required = false; fechaInput.value = ''; }
+            // trigger existing recalculation if available
+            var evt = document.createEvent('Event'); evt.initEvent('change', true, true); var fi = document.getElementById('hrm_fecha_ingreso'); if (fi) fi.dispatchEvent(evt);
+        }
+    }
+
+    departamento.addEventListener('change', function(){ filtrarPuestos(); toggleAreaGerencia(); });
+    puesto.addEventListener('change', function(){ toggleAreaGerencia(); togglePracticanteBehavior(); });
+    if (areaGerenciaSelect) areaGerenciaSelect.addEventListener('change', function(){ if ((departamento.value || '').toLowerCase().trim() === 'gerencia') { if ( areaGerenciaSelect.value !== '' ) { if ( deptosCargoContainer ) deptosCargoContainer.style.display = 'block'; loadDepartamentosCheckboxes(); } else { if ( deptosCargoContainer ) deptosCargoContainer.style.display = 'none'; if ( deptosCheckboxesDiv ) deptosCheckboxesDiv.innerHTML = ''; } } });
+
+    // init
+    filtrarPuestos();
+    toggleAreaGerencia();
+    togglePracticanteBehavior();
+});

@@ -122,7 +122,7 @@ if ( ! current_user_can( 'manage_options' ) && $current_user && $current_user->I
 
                         <div class="col-md-6">
                             <label for="hrm_puesto" class="form-label">Puesto <span class="text-danger">*</span></label>
-                            <select id="hrm_puesto" name="puesto" class="form-select" required>
+                            <select id="hrm_puesto" name="puesto" class="form-select" required data-all-puestos='<?= esc_attr( wp_json_encode( array_values( $hrm_puestos ) ) ) ?>'>
                                 <option value="">Selecciona...</option>
                                 <?php
                                 foreach ( $hrm_puestos as $puesto ) :
@@ -159,105 +159,7 @@ if ( ! current_user_can( 'manage_options' ) && $current_user && $current_user->I
                             <div class="col-md-6 mb-3">
                             </div>
 
-                            <script>
-                            document.addEventListener('DOMContentLoaded', function () {
-
-                                const departamento = document.getElementById('hrm_departamento');
-                                const puesto = document.getElementById('hrm_puesto');
-
-                                if (!departamento || !puesto) return;
-
-                                // Guardar todas las opciones originales
-                                const opcionesOriginales = Array.from(puesto.options).map(opt => ({
-                                    value: opt.value,
-                                    text: opt.text
-                                }));
-
-                                // Mapeo EXACTO departamento → puestos
-                                const mapaPuestos = {
-                                    'soporte': [
-                                        'Ingeniero de Soporte',
-                                        'Practicante'
-                                    ],
-                                    'desarrollo': [
-                                        'Desarrollador de Software',
-                                        'Diseñador Gráfico'
-                                    ],
-                                    'ventas': [
-                                        'Asistente Comercial'
-                                    ],
-                                    'administracion': [
-                                        'Administrativo(a) Contable'
-                                    ],
-                                    'gerencia': [
-                                        'Gerente'
-                                    ],
-                                    'sistemas': [
-                                        'Ingeniero en Sistemas'
-                                    ]
-                                };
-
-                                /**
-                                 * Agrega un puesto al select si existe
-                                 */
-                                function agregarPuesto(nombre) {
-                                    const opt = opcionesOriginales.find(o => o.text === nombre);
-                                    if (!opt) return;
-
-                                    const option = document.createElement('option');
-                                    option.value = opt.value;
-                                    option.text = opt.text;
-                                    puesto.appendChild(option);
-                                }
-
-                                /**
-                                 * Restaura todos los puestos
-                                 */
-                                function restaurarTodos() {
-                                    opcionesOriginales.forEach((opt, idx) => {
-                                        if (idx === 0) return;
-                                        const option = document.createElement('option');
-                                        option.value = opt.value;
-                                        option.text = opt.text;
-                                        puesto.appendChild(option);
-                                    });
-                                }
-
-                                /**
-                                 * Filtra los puestos según el departamento
-                                 */
-                                function filtrarPuestos() {
-
-                                    const depto = departamento.value.toLowerCase().trim();
-
-                                    // Limpiar select
-                                    puesto.innerHTML = '';
-
-                                    // Opción por defecto
-                                    const optDefault = document.createElement('option');
-                                    optDefault.value = '';
-                                    optDefault.text = 'Selecciona...';
-                                    puesto.appendChild(optDefault);
-
-                                    // Si existe mapeo, usarlo
-                                    if (mapaPuestos[depto]) {
-                                        mapaPuestos[depto].forEach(nombrePuesto => {
-                                            agregarPuesto(nombrePuesto);
-                                        });
-                                        return;
-                                    }
-
-                                    // Si no hay mapeo → mostrar todos
-                                    restaurarTodos();
-                                }
-
-                                // Evento
-                                departamento.addEventListener('change', filtrarPuestos);
-
-                                // Inicializar
-                                filtrarPuestos();
-                            });
-                            </script>
+                            <?php // JS moved to assets/js/employees-create.js - puesto filtering moved to centralized script. ?>
 
                         </div>
 
@@ -294,7 +196,7 @@ if ( ! current_user_can( 'manage_options' ) && $current_user && $current_user->I
 
                         <!-- SECCIÓN: ANTIGÜEDAD LABORAL -->
                         <hr class="my-4">
-                        <fieldset class="hrm-form-section mb-4">
+                        <fieldset id="hrm_antiguedad_section" class="hrm-form-section mb-4">
                             <legend class="h5 mb-3">
                                 <span class="dashicons dashicons-calendar-alt"></span>
                                 Antigüedad Laboral
@@ -333,7 +235,19 @@ if ( ! current_user_can( 'manage_options' ) && $current_user && $current_user->I
                                     <small class="form-text text-muted d-block mt-1">Cálculo automático</small>
                                 </div>
                             </div>
+
                         </fieldset>
+
+                        <!-- Fecha de Término (fuera del fieldset de antigüedad para poder mostrarse independientemente) -->
+                        <div id="hrm_fecha_termino_row" style="display:none; margin-top:1rem;">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="hrm_fecha_termino" class="form-label">Fecha de Término</label>
+                                    <input id="hrm_fecha_termino" name="fecha_termino" type="date" class="form-control">
+                                    <small class="form-text text-muted d-block mt-1">Fecha estimada de término (solo para practicantes).</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </fieldset>
 
@@ -439,245 +353,6 @@ if ( ! current_user_can( 'manage_options' ) && $current_user && $current_user->I
             </form>
 
         </div>
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var departamento = document.getElementById('hrm_departamento');
-            var areaGerenciaSection = document.getElementById('area_gerencia_section');
-            if ( ! departamento || ! areaGerenciaSection ) return;
-
-            function toggleAreaGerencia() {
-                var val = (departamento.value || '').toLowerCase().trim();
-                if ( val === 'gerencia' ) {
-                    areaGerenciaSection.style.display = 'block';
-                } else {
-                    areaGerenciaSection.style.display = 'none';
-                }
-            }
-
-            toggleAreaGerencia();
-            departamento.addEventListener('change', toggleAreaGerencia);
-        });
-        </script>
+<?php // JS moved to assets/js/employees-create.js - behavior consolidated there ?>
     </div>
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-        // Validación de email ahora centralizada en assets/js/employees-create.js
-        // (Se mantiene el div #hrm_email_feedback para mostrar mensajes desde el JS centralizado)
-        
-    const departamentoSelect = document.getElementById('hrm_departamento');
-    const puestoSelect = document.getElementById('hrm_puesto');
-    const areaGerenciaSelect = document.getElementById('hrm_area_gerencia');
-    const areaGerenciaContainer = areaGerenciaSelect ? areaGerenciaSelect.closest('.col-md-6') : null;
-    const deptosCargoContainer = document.getElementById('hrm_deptos_a_cargo_container');
-    const deptosCheckboxesDiv = document.getElementById('hrm_deptos_checkboxes');
-    
-    // Lista de todos los departamentos disponibles
-    const todosDeptos = <?= json_encode( $hrm_departamentos ) ?>;
-    
-    // Mapeo de áreas gerenciales con sus departamentos predefinidos
-    const deptosPredefinidos = {
-        'comercial': ['Soporte', 'Ventas'],
-        'proyectos': ['Desarrollo'],
-        'operaciones': ['Administracion', 'Gerencia', 'Sistemas']
-    };
-    
-    function loadDepartamentosCheckboxes() {
-        const areaValue = areaGerenciaSelect.value.toLowerCase().trim();
-        
-        if ( areaValue === '' ) {
-            deptosCheckboxesDiv.innerHTML = '';
-            return;
-        }
-        
-        // Obtener departamentos predefinidos para este área
-        const deptosAMarcar = deptosPredefinidos[areaValue] || [];
-        
-        // Generar checkboxes para todos los departamentos (excepto Gerencia)
-        let html = '';
-        todosDeptos.forEach( function( depto, index ) {
-            // Excluir Gerencia de los checkboxes
-            if ( depto.toLowerCase() === 'gerencia' ) {
-                return;
-            }
-            
-            // Verificar si este departamento debe estar marcado
-            const estaPredefinido = deptosAMarcar.some( d => d.toLowerCase() === depto.toLowerCase() );
-            const checked = estaPredefinido ? 'checked' : '';
-            
-            const id = 'depto_checkbox_' + index;
-            html += `
-                <div class="form-check">
-                    <input class="form-check-input hrm_depto_checkbox" type="checkbox" name="deptos_a_cargo[]" 
-                           value="${depto}" id="${id}" ${checked}>
-                    <label class="form-check-label" for="${id}">
-                        ${depto}
-                    </label>
-                </div>
-            `;
-        });
-        
-        deptosCheckboxesDiv.innerHTML = html;
-    }
-    
-    function toggleAreaGerencia() {
-        const deptoValue = departamentoSelect.value.toLowerCase().trim();
-        
-        // Mostrar área de gerencia y departamentos a cargo SOLO si el departamento seleccionado es "Gerencia"
-        const esGerencia = deptoValue === 'gerencia';
-        
-        if ( esGerencia ) {
-            if ( areaGerenciaContainer ) areaGerenciaContainer.style.display = 'block';
-            if ( deptosCargoContainer ) deptosCargoContainer.style.display = 'block';
-            loadDepartamentosCheckboxes();
-        } else {
-            if ( areaGerenciaContainer ) areaGerenciaContainer.style.display = 'none';
-            if ( deptosCargoContainer ) deptosCargoContainer.style.display = 'none';
-            if ( areaGerenciaSelect ) areaGerenciaSelect.value = '';
-            if ( deptosCheckboxesDiv ) deptosCheckboxesDiv.innerHTML = '';
-        }
-    }
-    
-    // Event listeners
-    departamentoSelect.addEventListener('change', toggleAreaGerencia);
-    puestoSelect.addEventListener('change', toggleAreaGerencia);
-    
-    areaGerenciaSelect.addEventListener('change', function() {
-        const deptoValue = departamentoSelect.value.toLowerCase().trim();
-        
-        if ( deptoValue === 'gerencia' ) {
-            if ( areaGerenciaSelect.value !== '' ) {
-                if ( deptosCargoContainer ) deptosCargoContainer.style.display = 'block';
-                loadDepartamentosCheckboxes();
-            } else {
-                if ( deptosCargoContainer ) deptosCargoContainer.style.display = 'none';
-                if ( deptosCheckboxesDiv ) deptosCheckboxesDiv.innerHTML = '';
-            }
-        }
-    });
-    
-    toggleAreaGerencia();
-
-    // ========================================
-    // CÁLCULO INTELIGENTE DE AÑOS EN LA EMPRESA
-    // ========================================
-    const fechaIngresoInput = document.getElementById('hrm_fecha_ingreso');
-    const anosAnterioresInput = document.getElementById('hrm_anos_acreditados_anteriores');
-    const anosEmpresaInput = document.getElementById('hrm_anos_en_la_empresa');
-    const anosTotalesInput = document.getElementById('hrm_anos_totales_trabajados');
-
-    /**
-     * Calcula los años en la empresa basado en la fecha de ingreso
-     * Solo muestra AÑOS COMPLETOS (sin decimales)
-     * Se actualiza solo cuando se cumple un aniversario
-     */
-    function calcularAnosEnEmpresa() {
-        if (!fechaIngresoInput.value) {
-            anosEmpresaInput.value = '0';
-            document.getElementById('hrm_anos_en_la_empresa_hidden').value = '0';
-            anosEmpresaInput.title = 'Selecciona una fecha de ingreso';
-            return 0;
-        }
-
-        // Validar que la fecha no sea futura
-        const fechaIngresoObj = new Date(fechaIngresoInput.value + 'T00:00:00');
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
-
-        if (fechaIngresoObj > hoy) {
-            anosEmpresaInput.value = '0';
-            document.getElementById('hrm_anos_en_la_empresa_hidden').value = '0';
-            anosEmpresaInput.title = 'Error: La fecha de ingreso no puede ser futura';
-            anosEmpresaInput.classList.add('is-invalid');
-            fechaIngresoInput.classList.add('is-invalid');
-            return 0;
-        }
-
-        // Remover clase de error si la fecha es válida
-        anosEmpresaInput.classList.remove('is-invalid');
-        fechaIngresoInput.classList.remove('is-invalid');
-
-        // Cálculo de años completos SOLO
-        const diffMs = hoy - fechaIngresoObj;
-        const diffDias = diffMs / (1000 * 60 * 60 * 24);
-        const anos = (diffDias / 365.25);
-        
-        // Solo usar la parte ENTERA (años completos)
-        const anosCompletos = Math.floor(anos);
-        
-        anosEmpresaInput.value = anosCompletos;
-        // Sincronizar con el hidden input
-        document.getElementById('hrm_anos_en_la_empresa_hidden').value = anosCompletos;
-        
-        // Actualizar el título con información sobre el próximo aniversario
-        const proximoAniversario = new Date(fechaIngresoObj);
-        proximoAniversario.setFullYear(proximoAniversario.getFullYear() + anosCompletos + 1);
-        const diasFaltantes = Math.ceil((proximoAniversario - hoy) / (1000 * 60 * 60 * 24));
-        
-        anosEmpresaInput.title = `${anosCompletos} año(s) en la empresa. Próximo aniversario en ${diasFaltantes} días`;
-        
-        return anosCompletos;
-    }
-
-    /**
-     * Calcula el total de años trabajados
-     * Solo suma AÑOS COMPLETOS (sin decimales)
-     */
-    function calcularTotalAnos() {
-        const anosAnteriores = parseInt(anosAnterioresInput.value) || 0;
-        const anosEmpresa = parseInt(anosEmpresaInput.value) || 0;
-        
-        const totalAnos = anosAnteriores + anosEmpresa;
-        
-        anosTotalesInput.value = totalAnos;
-        // Sincronizar con el hidden input
-        document.getElementById('hrm_anos_totales_trabajados_hidden').value = totalAnos;
-        
-        // Actualizar el título con información detallada
-        anosTotalesInput.title = `${totalAnos} año(s) de experiencia laboral total`;
-    }
-
-    /**
-     * Actualiza todos los cálculos
-     */
-    function actualizarCalculosAnos() {
-        calcularAnosEnEmpresa();
-        calcularTotalAnos();
-    }
-
-    // Event listeners para cálculo dinámico
-    fechaIngresoInput.addEventListener('change', actualizarCalculosAnos);
-    fechaIngresoInput.addEventListener('blur', actualizarCalculosAnos);
-    anosAnterioresInput.addEventListener('change', actualizarCalculosAnos);
-    anosAnterioresInput.addEventListener('input', actualizarCalculosAnos);
-    anosAnterioresInput.addEventListener('blur', actualizarCalculosAnos);
-
-    // Calcular al cargar la página
-    actualizarCalculosAnos();
-    
-    // IMPORTANTE: Sincronizar valores justo antes de enviar el formulario
-    const form = document.querySelector('form');
-
-    // Evitar que la tecla Enter confirme el formulario accidentalmente
-    // Permitimos Enter únicamente en `textarea` y en botones/inputs tipo submit
-    form.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            const tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
-            const type = e.target && e.target.type ? e.target.type.toLowerCase() : '';
-
-            // Si estamos en un textarea o en un botón/submit, permitir Enter
-            if (tag === 'textarea' || type === 'submit' || type === 'button') return;
-
-            // En cualquier otro campo, prevenir el comportamiento por defecto
-            e.preventDefault();
-            return false;
-        }
-    });
-
-    form.addEventListener('submit', function(e) {
-        // Asegurar que los valores estén actualizados antes de enviar
-        document.getElementById('hrm_anos_en_la_empresa_hidden').value = anosEmpresaInput.value;
-        document.getElementById('hrm_anos_totales_trabajados_hidden').value = anosTotalesInput.value;
-    });
-</script>
+<?php // JS moved to assets/js/employees-create.js - behavior consolidated there ?>

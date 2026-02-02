@@ -1005,10 +1005,6 @@ function hrm_ajax_check_email() {
     // Debug: registrar llamada para detectar problemas que causan 500 (solo si WP_DEBUG)
     $current_user_id = get_current_user_id();
     hrm_debug_log( "HRM AJAX hrm_check_email called by user_id={$current_user_id}. REQUEST=" . json_encode( array_intersect_key( $_REQUEST, array( 'action' => 1, 'email' => 1, 'email_b64' => 1, 'nonce' => 1 ) ) ) );
-    // Also append to a file in wp-content to capture logs if syslog is suppressed
-    if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-        @file_put_contents( WP_CONTENT_DIR . '/hrm_ajax_debug.log', date( 'c' ) . " - hrm_check_email invoked by user_id={$current_user_id} REQUEST_KEYS=" . json_encode( array_keys( $_REQUEST ) ) . PHP_EOL, FILE_APPEND );
-    }
 
     // Solo para usuarios con permisos de administración de empleados o creación de usuarios
     if ( ! current_user_can( 'edit_hrm_employees' ) && ! current_user_can( 'create_users' ) && ! current_user_can( 'manage_options' ) ) {
@@ -1298,5 +1294,98 @@ function hrm_handle_anaconda_document_delete() {
     }
 }
 add_action( 'admin_post_anaconda_documents_delete', 'hrm_handle_anaconda_document_delete' );
+
+/**
+ * AJAX handler to edit document (title and/or file)
+ * Expects POST: doc_id, title, doc_file (optional), nonce
+ */
+function hrm_handle_anaconda_documents_edit_doc() {
+    global $wpdb;
+    
+    // Verify nonce
+    if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['nonce'] ), 'anaconda_documents_edit' ) ) {
+        wp_send_json_error( array( 'message' => 'Nonce inválido' ), 403 );
+    }
+
+    // Check permissions
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error( array( 'message' => 'Permiso denegado' ), 403 );
+    }
+
+    // Get parameters
+    $doc_id = isset( $_POST['doc_id'] ) ? intval( $_POST['doc_id'] ) : 0;
+    $title = isset( $_POST['title'] ) ? sanitize_text_field( wp_unslash( $_POST['title'] ) ) : '';
+
+    if ( ! $doc_id || ! $title ) {
+        wp_send_json_error( array( 'message' => 'Parámetros inválidos' ), 400 );
+    }
+
+    // Get document
+    $table = $wpdb->prefix . 'rrhh_documentos_empresa';
+    $doc = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $doc_id ) );
+
+    if ( ! $doc ) {
+        wp_send_json_error( array( 'message' => 'Documento no encontrado' ), 404 );
+    }
+
+    $update_data = array( 'titulo' => $title );
+    $update_format = array( '%s' );
+
+    // Handle file if provided
+    if ( ! empty( $_FILES['doc_file']['tmp_name'] ) ) {
+        $file = $_FILES['doc_file'];
+        
+        // Validate
+        if ( $file['error'] !== UPLOAD_ERR_OK ) {
+            wp_send_json_error( array( 'message' => 'Error en archivo' ), 400 );
+        }
+        
+        if ( ! preg_match( '/\.pdf$/i', $file['name'] ) ) {
+            wp_send_json_error( array( 'message' => 'Solo PDF' ), 400 );
+        }
+        
+        if ( $file['size'] > 10485760 ) {
+            wp_send_json_error( array( 'message' => 'Muy grande' ), 400 );
+        }
+        
+        // Upload directory
+        $upload_dir = wp_upload_dir();
+        $dir_path = $upload_dir['basedir'] . '/hrm_docs/empresa/';
+        
+        if ( ! is_dir( $dir_path ) ) {
+            mkdir( $dir_path, 0755, true );
+        }
+        
+        $filename = sanitize_file_name( $file['name'] );
+        $filename = wp_unique_filename( $dir_path, $filename );
+        $file_path = $dir_path . $filename;
+        
+        // Move file
+        if ( ! move_uploaded_file( $file['tmp_name'], $file_path ) ) {
+            wp_send_json_error( array( 'message' => 'No se guardó' ), 500 );
+        }
+        
+        $update_data['ruta'] = $file_path;
+        $update_format[] = '%s';
+        
+        // Delete old file
+        if ( ! empty( $doc->ruta ) && file_exists( $doc->ruta ) ) {
+            unlink( $doc->ruta );
+        }
+    }
+
+    // Update DB
+    $result = $wpdb->update( $table, $update_data, array( 'id' => $doc_id ), $update_format, array( '%d' ) );
+
+    if ( $result === false ) {
+        wp_send_json_error( array( 'message' => 'Error actualizar' ), 500 );
+    }
+
+    // Clear cache
+    delete_transient( 'hrm_sidebar_docs_' . md5( $table ) );
+
+    wp_send_json_success( array( 'message' => 'Actualizado' ) );
+}
+add_action( 'wp_ajax_anaconda_documents_edit_doc', 'hrm_handle_anaconda_documents_edit_doc' );
 
 // AJAX handler for company documents removed per user request. Use page reloads to reflect changes in sidebar.

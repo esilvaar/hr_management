@@ -7,6 +7,11 @@ document.addEventListener('DOMContentLoaded', () => {
             modal.classList.add('hrm-detached');
         }
     });
+
+    // Debug: permisos enviados desde PHP (solo si existe)
+    if ( window.hrmPermDebug ) {
+        console.log('[HRM-PERM]', window.hrmPermDebug);
+    }
 });
 
 /**
@@ -155,4 +160,144 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Inicializar
     toggleAreaGerencia();
+});
+
+// Small helpers: select-on-click and avatar input submit
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.hrm-select-on-click').forEach(function(el){ el.addEventListener('click', function(){ this.select(); }); });
+    document.querySelectorAll('.hrm-avatar-input').forEach(function(el){ el.addEventListener('change', function(){ this.form.submit(); }); });
+});
+
+// Employee detail: antiguedad, password modal, toggle estado y color de iconos
+document.addEventListener('DOMContentLoaded', function() {
+    // 1) Cálculo de años de antigüedad
+    const fi = document.getElementById('fecha_ingreso');
+    const ap = document.getElementById('anos_acreditados_anteriores');
+    const ae = document.getElementById('anos_en_la_empresa');
+    const at = document.getElementById('anos_totales_trabajados');
+    const h_ae = document.getElementById('hrm_anos_en_la_empresa_hidden');
+    const h_at = document.getElementById('hrm_anos_totales_trabajados_hidden');
+
+    function calcular() {
+        if(!fi || !fi.value) return;
+        const ingreso = new Date(fi.value + 'T00:00:00');
+        const hoy = new Date();
+        if(ingreso > hoy) { if(ae) ae.value = 0; return; }
+        const diff = hoy - ingreso;
+        const anos = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
+        if (ae) ae.value = anos;
+        if (h_ae) h_ae.value = anos;
+        const previos = parseFloat(ap ? ap.value : 0) || 0;
+        const total = anos + previos;
+        if (at) at.value = total;
+        if (h_at) h_at.value = total;
+    }
+
+    if(fi) fi.addEventListener('change', calcular);
+    if(ap) ap.addEventListener('input', calcular);
+    calcular();
+
+    // 2) Modal contraseña
+    const openBtn = document.getElementById('hrm-open-pass-modal');
+    const panel = document.getElementById('hrm-pass-panel');
+    const closeBtn = document.getElementById('hrm-close-pass-panel');
+    const cancelBtn = document.getElementById('hrm_panel_cancel');
+    const saveModalBtn = document.getElementById('hrm_panel_save');
+    const inputNew = document.getElementById('hrm_panel_new_password');
+    const inputConfirm = document.getElementById('hrm_panel_confirm_password');
+    const inputNotify = document.getElementById('hrm_panel_notify_user');
+    const feedback = document.getElementById('hrm_panel_pass_feedback');
+    const hiddenPass = document.getElementById('hrm_new_password');
+    const hiddenConf = document.getElementById('hrm_confirm_password');
+    const hiddenNotify = document.getElementById('hrm_notify_user');
+    const mainForm = document.querySelector('form[name="hrm_update_employee_form"]');
+
+    if(openBtn) {
+        openBtn.addEventListener('click', function(e) {
+            if (e && typeof e.preventDefault === 'function') e.preventDefault();
+            if (panel) panel.style.display = 'block';
+            if(inputNew) inputNew.value = '';
+            if(inputConfirm) inputConfirm.value = '';
+            if(feedback) feedback.style.display = 'none';
+        });
+    }
+    function closePanel() { if (panel) panel.style.display = 'none'; }
+    if(closeBtn) closeBtn.addEventListener('click', closePanel);
+    if(cancelBtn) cancelBtn.addEventListener('click', closePanel);
+
+    if(saveModalBtn) {
+        saveModalBtn.addEventListener('click', function() {
+            const pass = inputNew ? inputNew.value.trim() : '';
+            const conf = inputConfirm ? inputConfirm.value.trim() : '';
+
+            if(pass.length < 8) {
+                if(feedback){ feedback.textContent = 'La contraseña debe tener al menos 8 caracteres.'; feedback.style.display = 'block'; }
+                return;
+            }
+            if(pass !== conf) {
+                if(feedback){ feedback.textContent = 'Las contraseñas no coinciden.'; feedback.style.display = 'block'; }
+                return;
+            }
+
+            if(hiddenPass) hiddenPass.value = pass;
+            if(hiddenConf) hiddenConf.value = conf;
+            if(inputNotify && hiddenNotify) hiddenNotify.value = inputNotify.checked ? '1' : '0';
+            if(mainForm) mainForm.submit();
+        });
+    }
+
+    // 3) Toggle estado
+    const btnDes = document.getElementById('btn-desactivar-empleado');
+    const btnAct = document.getElementById('btn-activar-empleado');
+    const togglePanel = document.getElementById('hrm-toggle-panel');
+    const btnCancelToggle = document.getElementById('btn-cancelar-toggle');
+    const toggleTitle = document.getElementById('hrm-toggle-title');
+    const toggleMsg = document.getElementById('hrm-toggle-msg');
+    const toggleConfirmBtn = document.getElementById('btn-confirmar-toggle');
+    const inputEstado = document.getElementById('input-current-estado');
+
+    if (btnDes) {
+        btnDes.addEventListener('click', function(){
+            if(inputEstado) inputEstado.value = '1';
+            if(toggleTitle) { toggleTitle.innerHTML = 'Desactivar Empleado'; toggleTitle.className = 'mb-3 text-danger'; }
+            if(toggleMsg) toggleMsg.innerHTML = '¿Seguro que deseas bloquear el acceso a este empleado?';
+            if(toggleConfirmBtn) toggleConfirmBtn.className = 'btn btn-danger';
+            if(togglePanel) togglePanel.style.display = 'block';
+        });
+    }
+    if (btnAct) {
+        btnAct.addEventListener('click', function(){
+            if(inputEstado) inputEstado.value = '0';
+            if(toggleTitle) { toggleTitle.innerHTML = 'Activar Empleado'; toggleTitle.className = 'mb-3 text-success'; }
+            if(toggleMsg) toggleMsg.innerHTML = '¿Reactivar acceso al sistema?';
+            if(toggleConfirmBtn) toggleConfirmBtn.className = 'btn btn-success';
+            if(togglePanel) togglePanel.style.display = 'block';
+        });
+    }
+    if (btnCancelToggle) btnCancelToggle.addEventListener('click', function(){ if(togglePanel) togglePanel.style.display = 'none'; });
+
+    // 4) Colorear iconos documentos
+    const ENFORCED_DOC_ICON = '#b0b5bd';
+    function applyDocIconColor(el) {
+        const icon = el.querySelector('.hrm-doc-btn-icon');
+        if ( icon ) {
+            try { el.style.setProperty('--hrm-doc-icon', ENFORCED_DOC_ICON); } catch (e) {}
+            try { icon.style.backgroundColor = ENFORCED_DOC_ICON; } catch (e) {}
+            try { el.setAttribute('data-icon-color', ENFORCED_DOC_ICON); } catch (e) {}
+        }
+    }
+    document.querySelectorAll('.hrm-doc-btn').forEach(applyDocIconColor);
+
+    const observer = new MutationObserver(mutations => {
+        for (const m of mutations) {
+            if (!m.addedNodes || !m.addedNodes.length) continue;
+            m.addedNodes.forEach(node => {
+                if (node.nodeType !== 1) return;
+                if (node.classList && node.classList.contains('hrm-doc-btn')) applyDocIconColor(node);
+                const children = node.querySelectorAll ? node.querySelectorAll('.hrm-doc-btn') : [];
+                children.forEach(ch => applyDocIconColor(ch));
+            });
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
 });

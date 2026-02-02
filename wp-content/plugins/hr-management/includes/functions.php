@@ -149,6 +149,20 @@ function hrm_enqueue_documents_list_scripts( $hook ) {
 }
 add_action( 'admin_enqueue_scripts', 'hrm_enqueue_documents_list_scripts' );
 
+// Encolar script general de la sidebar (maneja apertura/cierre en móvil)
+function hrm_enqueue_sidebar_script( $hook ) {
+    if ( strpos( $hook, 'hrm' ) === false ) return;
+
+    wp_enqueue_script(
+        'hrm-sidebar-js',
+        HRM_PLUGIN_URL . 'assets/js/sidebar.js',
+        array(),
+        HRM_PLUGIN_VERSION,
+        true
+    );
+}
+add_action( 'admin_enqueue_scripts', 'hrm_enqueue_sidebar_script' );
+
 /**
  * Encolar scripts del formulario de carga de documentos en admin
  */

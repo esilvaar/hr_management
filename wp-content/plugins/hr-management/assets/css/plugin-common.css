@@ -148,10 +148,19 @@
 /* Admin document management styles (dropdowns, panels, filters) */
 .hrm-filter-clear-inline{ position:absolute; right:8px; top:50%; transform:translateY(-50%); border:none; background:transparent; color:#d9534f; font-size:18px; padding:0; line-height:1; cursor:pointer; display:none; }
 .hrm-filter-input{ padding-right:36px; }
-.hrm-doc-type-filter-items, #hrm-tipo-items, #hrm-anio-items { position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #dee2e6; border-top:none; max-height:300px; overflow-y:auto; z-index:1000; display:none; }
+.hrm-doc-type-filter-items, #hrm-doc-type-filter-items, #hrm-tipo-items, #hrm-anio-items, #hrm-doc-year-filter-items { position:absolute; top:100%; left:0; right:0; background:#fff !important; border:1px solid #dee2e6; border-top:none; max-height:300px; overflow-y:auto; z-index:3000; display:none; box-shadow:0 6px 20px rgba(0,0,0,0.08); }
+
+/* Dropdown fade (used when detaching to body) */
+.hrm-dropdown { opacity: 0; transform: translateY(-6px); transition: opacity .18s ease, transform .18s ease; pointer-events: none; }
+.hrm-dropdown.hrm-dropdown--visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .hrm-upload-panel { max-width:600px; margin:0 auto; display:none; position:fixed; top:10%; left:50%; transform:translateX(-50%); z-index:9999; }
 .hrm-create-type-panel { max-width:520px; margin:0 auto; display:none; position:fixed; top:10%; left:50%; transform:translateX(-50%); z-index:9999; }
-.hrm-filter-container { position:relative; }
+/* Inside upload panel we want labels on top and inputs full width */
+.hrm-upload-panel .hrm-filter-container { display: block; width:100%; }
+.hrm-upload-panel .hrm-filter-container .form-control { width:100% !important; }
+.hrm-filter-container { position:relative; display: inline-block; vertical-align: middle; }
+.hrm-filter-container-type, .hrm-filter-container-year { min-width: 0; width: auto; }
+.hrm-filter-container-type .hrm-filter-input, .hrm-filter-container-year .form-control { width: 220px; min-width: 120px; }
 .hrm-filter-container-type { min-width:220px; max-width:320px; }
 .hrm-filter-container-year { min-width:150px; max-width:220px; }
 .hrm-type-row { display:flex; align-items:center; justify-content:space-between; }

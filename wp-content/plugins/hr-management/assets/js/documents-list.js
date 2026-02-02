@@ -89,6 +89,8 @@ function loadEmployeeDocuments() {
             setupYearFilter(); // <-- Reconfigura el filtro de año después de cargar los documentos
             setupTypeFilter(); // reconfigurar filtro de tipo después de cargar
             if ( typeof applyActiveFilters === 'function' ) applyActiveFilters(); // aplicar filtros combinados si hay alguno activo
+            // Ensure a sensible default year is selected (most recent) when documents load
+            if ( typeof window.hrmEnsureDefaultYearSelection === 'function' ) window.hrmEnsureDefaultYearSelection();
             // Inicializar menús de acciones personalizados
             if ( typeof setupActionMenus === 'function' ) setupActionMenus();
         } else {
@@ -130,21 +132,94 @@ function setupTypeFilter() {
 
     if ( ! searchInput || ! itemsContainer ) return;
 
+    // Prevent multiple handler attachments when called repeatedly
+    if ( itemsContainer.dataset.hrmTypeFilterAttached === '1' ) return;
+    itemsContainer.dataset.hrmTypeFilterAttached = '1';
+
+    // Helpers to detach/restore dropdown (keeps behaviour consistent with year filter)
+    function detachDropdown(container, anchor) {
+        if ( !container || !anchor ) return;
+        if ( !container._orig ) container._orig = { parent: container.parentNode, nextSibling: container.nextSibling };
+        container.classList.add('hrm-dropdown');
+        container.style.position = 'absolute';
+        // Ensure detached dropdown appears above other elements (default)
+        container.style.zIndex = 3000;
+        container.style.boxSizing = 'border-box';
+
+        const anchorInputRect = anchor.getBoundingClientRect();
+        const maxAllowed = Math.min(window.innerWidth - 32, 900);
+        const width = Math.min(Math.max(anchorInputRect.width, 220), maxAllowed);
+        container.style.width = width + 'px';
+        container.style.maxWidth = Math.min(maxAllowed, 600) + 'px';
+
+        const menuRect = container.getBoundingClientRect();
+        const viewportWidth = document.documentElement.clientWidth;
+        let left = anchorInputRect.left + window.scrollX;
+        if ( left + menuRect.width > window.scrollX + viewportWidth - 8 ) {
+            left = window.scrollX + viewportWidth - menuRect.width - 8;
+        }
+        left = Math.max( left, window.scrollX + 8 );
+        const top = anchorInputRect.bottom + 4 + window.scrollY;
+
+        container.style.left = left + 'px';
+        container.style.right = 'auto';
+        container.style.top = top + 'px';
+
+        document.body.appendChild( container );
+        container.style.display = 'block';
+        // animate in
+        window.requestAnimationFrame(() => container.classList.add('hrm-dropdown--visible'));
+        container.dataset.detached = '1';
+    }
+
+    function restoreDropdown(container) {
+        if ( !container ) return;
+        // animate out
+        container.classList.remove('hrm-dropdown--visible');
+        const done = () => {
+            if ( container.dataset.detached === '1' && container._orig && container._orig.parent ) {
+                const parent = container._orig.parent;
+                const next = container._orig.nextSibling;
+                parent.insertBefore( container, next );
+            }
+            container.style.display = 'none';
+            container.style.position = '';
+            container.style.left = '';
+            container.style.top = '';
+            container.style.width = '';
+            container.style.maxWidth = '';
+            container.style.boxSizing = '';
+            container.style.right = '';
+            delete container.dataset.detached;
+            container.removeEventListener('transitionend', done);
+        };
+        container.addEventListener('transitionend', done, { once: true });
+        setTimeout(done, 300); // fallback
+    }
+
+    // expose to other scripts
+    window.hrmShowDropdown = detachDropdown;
+    window.hrmHideDropdown = restoreDropdown;
+
     // Source of types: hrmDocsListData.types if available, otherwise derive from document rows
     function getTypesSource() {
-        if ( window.hrmDocsListData && Array.isArray( hrmDocsListData.types ) && hrmDocsListData.types.length ) {
-            return hrmDocsListData.types.map( t => ({ id: t.id, name: t.name }) );
-        }
-        // Derive from rows
-        const container = document.getElementById('hrm-documents-container');
-        const rows = container ? container.querySelectorAll('tbody tr') : [];
+        // Prefer types derived from rendered document rows (ensures only types with documents are shown)
+        const containerRows = document.getElementById('hrm-documents-container');
+        const rows = containerRows ? containerRows.querySelectorAll('tbody tr') : [];
         const set = new Map();
         rows.forEach( r => {
-            const id = r.getAttribute('data-type-id') || '';
+            const id = (r.getAttribute('data-type-id') || '').trim();
             const name = (r.getAttribute('data-type') || '').trim();
             if ( id || name ) set.set( id || name, { id: id || '', name: name || id } );
         });
-        return Array.from( set.values() );
+        if ( set.size ) {
+            return Array.from( set.values() );
+        }
+        // Fallback to global types if present (may include types without documents)
+        if ( window.hrmDocsListData && Array.isArray( hrmDocsListData.types ) && hrmDocsListData.types.length ) {
+            return hrmDocsListData.types.map( t => ({ id: t.id, name: t.name }) );
+        }
+        return [];
     }
 
     function populateItems( types ) {
@@ -165,7 +240,13 @@ function setupTypeFilter() {
             e.preventDefault();
             searchInput.value = '(Todos)';
             const hid = document.getElementById('hrm-doc-filter-type-id'); if ( hid ) hid.value = '';
-            itemsContainer.style.display = 'none';
+            // restore if detached
+            if ( typeof restoreDropdown === 'function' ) restoreDropdown(itemsContainer);
+            // update default year selection scoped to selected type
+            const currentTypeHidden = document.getElementById('hrm-doc-filter-type-id');
+            const currentTypeInput = document.getElementById('hrm-doc-type-filter-search');
+            const typeVal = (currentTypeHidden && currentTypeHidden.value) ? currentTypeHidden.value : (currentTypeInput ? currentTypeInput.value : '');
+            if ( typeof window.hrmEnsureDefaultYearSelection === 'function' ) window.hrmEnsureDefaultYearSelection(typeVal);
             if ( typeof applyActiveFilters === 'function' ) applyActiveFilters();
         });
         itemsContainer.appendChild( todos );
@@ -183,18 +264,22 @@ function setupTypeFilter() {
                 searchInput.value = t.name || t.id;
                 const hid = document.getElementById('hrm-doc-filter-type-id');
                 if ( hid ) hid.value = t.id || '';
+                // restore dropdown to avoid leaving it detached
+                if ( typeof restoreDropdown === 'function' ) restoreDropdown(itemsContainer);
                 itemsContainer.style.display = 'none';
                 if ( typeof applyActiveFilters === 'function' ) applyActiveFilters();
             });
             itemsContainer.appendChild( link );
         });
+
     }
 
     // Mostrar lista al focus
     searchInput.addEventListener('focus', function() {
         const types = getTypesSource();
         populateItems( types );
-        itemsContainer.style.display = 'block';
+        // detach to body to avoid layout shift
+        detachDropdown(itemsContainer, searchInput);
         if ( typeof updateFilterClearVisibility === 'function' ) updateFilterClearVisibility();
     });
 
@@ -203,7 +288,7 @@ function setupTypeFilter() {
         const query = this.value.toLowerCase();
         const types = getTypesSource().filter( t => (t.name || '').toLowerCase().includes( query ) || String(t.id).includes( query ) );
         populateItems( types );
-        itemsContainer.style.display = 'block';
+        detachDropdown(itemsContainer, searchInput);
         if ( typeof updateFilterClearVisibility === 'function' ) updateFilterClearVisibility();
     });
 
@@ -211,6 +296,8 @@ function setupTypeFilter() {
     document.addEventListener('click', function(e) {
         const target = e.target;
         if ( target !== searchInput && ! itemsContainer.contains( target ) && target !== itemsContainer ) {
+            // restore if detached
+            if ( typeof restoreDropdown === 'function' ) restoreDropdown(itemsContainer);
             itemsContainer.style.display = 'none';
         }
     });
@@ -222,6 +309,11 @@ function filterDocumentsByType( idOrName ) {
     const input = document.getElementById('hrm-doc-type-filter-search');
     if ( hid ) hid.value = idOrName || '';
     if ( input && idOrName && String(idOrName) !== '(Todos)') input.value = (typeof idOrName === 'string' && isNaN(idOrName)) ? idOrName : input.value;
+    // If no year selected, default to most recent available
+    const yearHidden = document.getElementById('hrm-doc-filter-year');
+    if ( yearHidden && ! yearHidden.value ) {
+        if ( typeof window.hrmEnsureDefaultYearSelection === 'function' ) window.hrmEnsureDefaultYearSelection();
+    }
     if ( typeof applyActiveFilters === 'function' ) applyActiveFilters();
 }
 
@@ -234,6 +326,10 @@ function setupYearFilter() {
     
     if ( ! searchInput || ! itemsContainer ) return;
     
+    // Prevent attaching multiple times
+    if ( itemsContainer.dataset.hrmYearFilterAttached === '1' ) return;
+    itemsContainer.dataset.hrmYearFilterAttached = '1';
+
     // Obtener años únicos de los documentos (dinámico)
     function getYearsSource() {
         const container = document.getElementById('hrm-documents-container');
@@ -248,11 +344,64 @@ function setupYearFilter() {
 
     let sortedYears = getYearsSource();
 
+    // Ensure default year selection (exposed globally)
+    // Accepts an optional typeIdOrName to restrict available years to that type
+    function ensureDefaultYearSelection( typeIdOrName ) {
+        const hid = document.getElementById('hrm-doc-filter-year');
+        const input = document.getElementById('hrm-doc-year-filter-search');
+        if ( ! hid ) return;
+
+        // Compute years from rows, optionally filtered by type
+        const container = document.getElementById('hrm-documents-container');
+        const rows = container ? Array.from(container.querySelectorAll('tbody tr')) : [];
+        const years = [];
+        rows.forEach( r => {
+            const rowTypeId = (r.getAttribute('data-type-id') || '').trim();
+            const rowTypeName = (r.getAttribute('data-type') || '').trim().toLowerCase();
+            const rowYear = (r.getAttribute('data-year') || '').trim();
+            if ( !rowYear ) return;
+            if ( typeIdOrName ) {
+                const t = typeIdOrName.toString().toLowerCase();
+                if ( String(rowTypeId) !== t && rowTypeName !== t ) return;
+            }
+            if ( ! years.includes(rowYear) ) years.push(rowYear);
+        });
+        // If none found and a type was specified, fallback to all years
+        if ( typeIdOrName && years.length === 0 ) {
+            const allYears = getYearsSource();
+            if ( allYears && allYears.length ) {
+                hid.value = allYears[0];
+                if ( input ) input.value = allYears[0];
+                if ( typeof updateFilterClearVisibility === 'function' ) updateFilterClearVisibility();
+                return;
+            }
+        }
+
+        years.sort().reverse();
+        if ( ! years.length ) return;
+
+        if ( ! hid.value || hid.value === '' ) {
+            hid.value = years[0];
+            if ( input ) input.value = years[0];
+        } else {
+            if ( years.indexOf(hid.value) === -1 ) {
+                hid.value = years[0];
+                if ( input ) input.value = years[0];
+            } else {
+                if ( input ) input.value = hid.value;
+            }
+        }
+        if ( typeof updateFilterClearVisibility === 'function' ) updateFilterClearVisibility();
+    }
+    window.hrmEnsureDefaultYearSelection = ensureDefaultYearSelection;
+
     // Mostrar lista cuando el usuario hace click
     searchInput.addEventListener('focus', function() {
         sortedYears = getYearsSource();
         populateYearItems( sortedYears, itemsContainer );
-        itemsContainer.style.display = 'block';
+        // show with fade/detach via global helper (if available)
+        if ( typeof window.hrmShowDropdown === 'function' ) window.hrmShowDropdown(itemsContainer, searchInput);
+        else if ( typeof detachDropdown === 'function' ) detachDropdown(itemsContainer, searchInput);
         if ( typeof updateFilterClearVisibility === 'function' ) updateFilterClearVisibility();
     });
     
@@ -264,7 +413,8 @@ function setupYearFilter() {
             sortedYears.filter( year => year.includes( query ) ), 
             itemsContainer 
         );
-        itemsContainer.style.display = 'block';
+        if ( typeof window.hrmShowDropdown === 'function' ) window.hrmShowDropdown(itemsContainer, searchInput);
+        else if ( typeof detachDropdown === 'function' ) detachDropdown(itemsContainer, searchInput);
         if ( typeof updateFilterClearVisibility === 'function' ) updateFilterClearVisibility();
     });
     
@@ -272,7 +422,7 @@ function setupYearFilter() {
     document.addEventListener('click', function(e) {
         const target = e.target;
         if ( target !== searchInput && !itemsContainer.contains( target ) && target !== itemsContainer ) {
-            itemsContainer.style.display = 'none';
+            if ( typeof restoreDropdown === 'function' ) restoreDropdown(itemsContainer);
         }
     });
 }
@@ -293,13 +443,21 @@ function populateYearItems( years, container ) {
     todos.href = '#';
     todos.className = 'dropdown-item py-2 px-3';
     todos.textContent = '(Todos)';
+    // mark active if no specific year selected
+    try {
+        const curH = document.getElementById('hrm-doc-filter-year');
+        const curV = document.getElementById('hrm-doc-year-filter-search');
+        const curVal = (curH && curH.value) ? curH.value : (curV ? curV.value : '');
+        if ( ! curVal || curVal === '(Todos)' ) todos.classList.add('active');
+    } catch(e){}
     todos.addEventListener('click', function(e) {
         e.preventDefault();
         const input = document.getElementById('hrm-doc-year-filter-search');
         const hid = document.getElementById('hrm-doc-filter-year');
         if ( input ) input.value = '(Todos)';
         if ( hid ) hid.value = '';
-        container.style.display = 'none';
+        if ( typeof window.hrmHideDropdown === 'function' ) window.hrmHideDropdown(container);
+        else { container.classList.remove('hrm-dropdown--visible'); setTimeout(()=>{ container.style.display = 'none'; }, 220); }
         if ( typeof applyActiveFilters === 'function' ) applyActiveFilters();
     });
     container.appendChild( todos );
@@ -309,13 +467,21 @@ function populateYearItems( years, container ) {
         link.href = '#';
         link.className = 'dropdown-item py-2 px-3';
         link.textContent = year;
+        // mark active if equals current hidden or visible
+        try {
+            const curH = document.getElementById('hrm-doc-filter-year');
+            const curV = document.getElementById('hrm-doc-year-filter-search');
+            const curVal = (curH && curH.value) ? curH.value : (curV ? curV.value : '');
+            if ( String(curVal) === String(year) ) link.classList.add('active');
+        } catch(e){}
         link.addEventListener('click', function(e) {
             e.preventDefault();
             const input = document.getElementById('hrm-doc-year-filter-search');
             const hid = document.getElementById('hrm-doc-filter-year');
             if ( input ) input.value = year;
             if ( hid ) hid.value = year;
-            container.style.display = 'none';
+            if ( typeof window.hrmHideDropdown === 'function' ) window.hrmHideDropdown(container);
+            else { container.classList.remove('hrm-dropdown--visible'); setTimeout(()=>{ container.style.display = 'none'; }, 220); }
             if ( typeof applyActiveFilters === 'function' ) applyActiveFilters();
         });
         container.appendChild( link );

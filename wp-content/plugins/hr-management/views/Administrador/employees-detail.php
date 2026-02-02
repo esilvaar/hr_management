@@ -1,87 +1,16 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-// Pasar datos de departamentos al script JavaScript
-echo '<script>
-window.hrmEmployeeData = {
-    departamentos: ' . json_encode( isset($hrm_departamentos) ? $hrm_departamentos : array() ) . ',
-    ajaxUrl: "' . esc_js( admin_url('admin-ajax.php') ) . '"
-};
-</script>';
+// Datos JS localizados para `employees-detail.js`
+wp_localize_script( 'hrm-employees-detail', 'hrmEmployeeData', array(
+    'departamentos' => isset( $hrm_departamentos ) ? $hrm_departamentos : array(),
+    'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+) );
 
-// Estilos CSS (Incluye ajuste para que el botón de contraseña se vea igual a los enlaces)
-echo "<style>
-.hrm-readonly{color:#6c757d;font-style:italic;display:flex;align-items:center;gap:6px;cursor:not-allowed}
-.hrm-readonly .dashicons{font-size:14px;opacity:.6}
-.hrm-readonly .hrm-readonly-text{display:inline-block}
-.hrm-readonly:hover{background-color:rgba(0,0,0,0.03)}
-
-/* Avatar styles are provided via assets/css/employees-detail.css to ensure consistency */
-.hrm-avatar-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
-    padding: 8px;
-    display: flex;
-    gap: 6px;
-    justify-content: center;
-    align-items: center;
-    background: rgba(255,255,255,0.92);
-    border-radius: 50%;
-    z-index: 5;
-}
-
-/* Clase utilitaria para resetear estilo de botón y que parezca enlace del panel */
-.hrm-btn-reset {
-    background: none;
-    border: none;
-    padding: 0;
-    margin: 0;
-    width: 100%;
-    text-align: left;
-    cursor: pointer;
-    display: flex; /* Para alinear icono, texto y flecha igual que los <a> */
-    align-items: center;
-    justify-content: space-between;
-    box-sizing: border-box;
-}
-.hrm-btn-reset:focus { outline: none; box-shadow: none; }
-
-/* Expandir el enlace para cubrir todo el ancho del panel (compensa el padding del .hrm-panel-body) */
-.hrm-panel .hrm-btn-reset {
-    width: calc(100% + 2.5rem);
-    margin-left: -1.25rem;
-    margin-right: -1.25rem;
-    padding-left: 1.25rem;
-    padding-right: 1.25rem;
-}
-
-/* Panel específico que contiene acciones tipo botón-enlace: ocupar toda la altura */
-.hrm-panel.hrm-panel-action { display: flex; flex-direction: column; }
-.hrm-panel.hrm-panel-action .hrm-panel-body { flex: 1 1 auto; padding: 0; }
-.hrm-panel.hrm-panel-action .hrm-btn-reset { height: 100%; align-items: center; }
-
-/* Responsive adjustments to avoid overlap on small screens */
-@media (max-width: 1200px) {
-    .avatar-hover-container { margin-bottom: 28px; max-width: 180px; }
-}
-@media (max-width: 992px) {
-    .avatar-hover-container { max-width: 160px; margin-bottom: 22px; }
-    .hrm-avatar-size { width: 120px; height: 120px; }
-}
-@media (max-width: 576px) {
-    .avatar-hover-container { max-width: 110px; margin-bottom: 14px; }
-    .hrm-avatar-size { width: 88px; height: 88px; }
-    /* Reset expanded button width to avoid horizontal overflow on narrow screens */
-    .hrm-panel .hrm-btn-reset { width: 100%; margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
-    /* Ensure overlay doesn't cover important content: make it compact */
-    .hrm-avatar-overlay { padding: 6px; font-size: 13px; }
-}
-
-</style>";
+// Estilos están en `assets/css/employees-detail.css`; se encolan desde `hrm_enqueue_employee_detail_assets` in `includes/functions.php`.
+?>
+<!-- Styles moved to assets/css/employees-detail.css -->
+<?php
 
 // Validar empleado
 if ( ! isset( $employee ) || ! is_object( $employee ) || empty( $employee->id ) ) {
@@ -120,8 +49,8 @@ if ( defined('WP_DEBUG') && WP_DEBUG ) {
         'employee_email'    => (string) $employee->email,
     );
 
-    echo '<script>console.log("[HRM-PERM]", ' . wp_json_encode( $perm_debug ) . ');</script>';
-}
+    wp_localize_script( 'hrm-employees-detail', 'hrmPermDebug', $perm_debug );
+} 
 
 // Determinar campos editables
 $editable_fields = array();
@@ -187,7 +116,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
             ?>
             <div class="d-flex align-items-center gap-2 mt-2">
                 <span class="dashicons dashicons-lock"></span> Nueva clave temporal: 
-                <input type="text" readonly value="<?= esc_attr( $temp_pass ) ?>" class="regular-text code" onclick="this.select();">
+                <input type="text" readonly value="<?= esc_attr( $temp_pass ) ?>" class="regular-text code hrm-select-on-click">
                 <small class="text-muted">(Cópiala, solo se muestra una vez)</small>
             </div>
             <?php
@@ -220,7 +149,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                                 <input type="hidden" name="employee_id" value="<?= absint( $employee->id ) ?>">
                                 <label class="btn btn-sm btn-light" style="cursor: pointer;">
                                     <span class="dashicons dashicons-camera"></span>
-                                    <input type="file" name="avatar" accept="image/*" class="d-none" onchange="this.form.submit();">
+                                    <input type="file" name="avatar" accept="image/*" class="d-none hrm-avatar-input">
                                 </label>
                             </form>
                             <?php if ( ! empty( $avatar_url ) ) : ?>
@@ -448,7 +377,11 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                             </div>
                         </div>
                          <div class="row mb-3">
-                            <?php if ( ! ( in_array( 'editor_vacaciones', (array) $user->roles, true ) && ! $is_admin ) ) : ?>
+                            <?php 
+                            // Mostrar el dropdown de Área Gerencia solo si el departamento es "Gerencia" o "Administracion"
+                            $es_gerencia = isset( $employee->departamento ) && ( strtolower( $employee->departamento ) === 'gerencia' || strtolower( $employee->departamento ) === 'administracion' );
+                            if ( ( ! ( in_array( 'editor_vacaciones', (array) $user->roles, true ) && ! $is_admin ) ) && $es_gerencia ) : 
+                            ?>
                             <div class="col-md-6">
                                 <label class="form-label">Área Gerencia</label>
                                 <?php if ( hrm_field_editable('area_gerencia', $is_admin, $editable_fields) ) : ?>
@@ -584,174 +517,6 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
     </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // 1. CÁLCULO DE AÑOS DE ANTIGÜEDAD
-    const fi = document.getElementById('fecha_ingreso');
-    const ap = document.getElementById('anos_acreditados_anteriores');
-    const ae = document.getElementById('anos_en_la_empresa');
-    const at = document.getElementById('anos_totales_trabajados');
-    const h_ae = document.getElementById('hrm_anos_en_la_empresa_hidden');
-    const h_at = document.getElementById('hrm_anos_totales_trabajados_hidden');
-
-    function calcular() {
-        if(!fi || !fi.value) return;
-        const ingreso = new Date(fi.value + 'T00:00:00');
-        const hoy = new Date();
-        if(ingreso > hoy) { ae.value = 0; return; }
-        
-        const diff = hoy - ingreso;
-        const anos = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
-        
-        ae.value = anos;
-        if(h_ae) h_ae.value = anos;
-
-        const previos = parseFloat(ap ? ap.value : 0) || 0;
-        const total = anos + previos;
-        at.value = total;
-        if(h_at) h_at.value = total;
-    }
-
-    if(fi) fi.addEventListener('change', calcular);
-    if(ap) ap.addEventListener('input', calcular);
-    calcular(); // Init
-
-    // 2. MODAL CONTRASEÑA
-    const openBtn = document.getElementById('hrm-open-pass-modal');
-    const panel = document.getElementById('hrm-pass-panel');
-    const closeBtn = document.getElementById('hrm-close-pass-panel');
-    const cancelBtn = document.getElementById('hrm_panel_cancel');
-    const saveModalBtn = document.getElementById('hrm_panel_save');
-    
-    // Inputs del modal
-    const inputNew = document.getElementById('hrm_panel_new_password');
-    const inputConfirm = document.getElementById('hrm_panel_confirm_password');
-    const inputNotify = document.getElementById('hrm_panel_notify_user');
-    const feedback = document.getElementById('hrm_panel_pass_feedback');
-
-    // Inputs ocultos del form principal
-    const hiddenPass = document.getElementById('hrm_new_password');
-    const hiddenConf = document.getElementById('hrm_confirm_password');
-    const hiddenNotify = document.getElementById('hrm_notify_user');
-    const mainForm = document.querySelector('form[name="hrm_update_employee_form"]');
-
-    if(openBtn) {
-        openBtn.addEventListener('click', function(e) {
-            if (e && typeof e.preventDefault === 'function') e.preventDefault();
-            panel.style.display = 'block';
-            if(inputNew) inputNew.value = '';
-            if(inputConfirm) inputConfirm.value = '';
-            if(feedback) feedback.style.display = 'none';
-        });
-    }
-
-    function closePanel() { panel.style.display = 'none'; }
-    if(closeBtn) closeBtn.addEventListener('click', closePanel);
-    if(cancelBtn) cancelBtn.addEventListener('click', closePanel);
-
-    if(saveModalBtn) {
-        saveModalBtn.addEventListener('click', function() {
-            const pass = inputNew.value.trim();
-            const conf = inputConfirm.value.trim();
-
-            if(pass.length < 8) {
-                feedback.textContent = 'La contraseña debe tener al menos 8 caracteres.';
-                feedback.style.display = 'block';
-                return;
-            }
-            if(pass !== conf) {
-                feedback.textContent = 'Las contraseñas no coinciden.';
-                feedback.style.display = 'block';
-                return;
-            }
-
-            // Mover datos a form principal
-            if(hiddenPass) hiddenPass.value = pass;
-            if(hiddenConf) hiddenConf.value = conf; // por seguridad doble check
-            if(inputNotify && hiddenNotify) {
-                hiddenNotify.value = inputNotify.checked ? '1' : '0';
-            }
-
-            // Enviar formulario principal
-            mainForm.submit();
-        });
-    }
-
-    // 3. TOGGLE ESTADO
-    const btnDes = document.getElementById('btn-desactivar-empleado');
-    const btnAct = document.getElementById('btn-activar-empleado');
-    const togglePanel = document.getElementById('hrm-toggle-panel');
-    const btnCancelToggle = document.getElementById('btn-cancelar-toggle');
-    const toggleTitle = document.getElementById('hrm-toggle-title');
-    const toggleMsg = document.getElementById('hrm-toggle-msg');
-    const toggleConfirmBtn = document.getElementById('btn-confirmar-toggle');
-    const inputEstado = document.getElementById('input-current-estado');
-
-    if(btnDes) {
-        btnDes.onclick = function() {
-            inputEstado.value = '1';
-            toggleTitle.innerHTML = 'Desactivar Empleado';
-            toggleTitle.className = 'mb-3 text-danger';
-            toggleMsg.innerHTML = '¿Seguro que deseas bloquear el acceso a este empleado?';
-            toggleConfirmBtn.className = 'btn btn-danger';
-            togglePanel.style.display = 'block';
-        }
-    }
-    if(btnAct) {
-        btnAct.onclick = function() {
-            inputEstado.value = '0';
-            toggleTitle.innerHTML = 'Activar Empleado';
-            toggleTitle.className = 'mb-3 text-success';
-            toggleMsg.innerHTML = '¿Reactivar acceso al sistema?';
-            toggleConfirmBtn.className = 'btn btn-success';
-            togglePanel.style.display = 'block';
-        }
-    }
-    if(btnCancelToggle) btnCancelToggle.onclick = function() { togglePanel.style.display = 'none'; }
-
-    // 4. COLOREAR ICONOS DOCUMENTOS
-    // Enforce a single icon color for all document buttons to avoid later JS/inline changes
-    const ENFORCED_DOC_ICON = '#b0b5bd';
-    document.querySelectorAll('.hrm-doc-btn').forEach(btn => {
-        const icon = btn.querySelector('.hrm-doc-btn-icon');
-        if ( icon ) {
-            try { btn.style.setProperty('--hrm-doc-icon', ENFORCED_DOC_ICON); } catch (e) {}
-            try { icon.style.backgroundColor = ENFORCED_DOC_ICON; } catch (e) {}
-            // normalize data-attribute so other scripts that read it won't change appearance
-            try { btn.setAttribute('data-icon-color', ENFORCED_DOC_ICON); } catch (e) {}
-        }
-    });
-
-    // Observe dynamic additions and apply the same coloring to newly inserted .hrm-doc-btn elements
-    const observer = new MutationObserver(mutations => {
-        for (const m of mutations) {
-            if (!m.addedNodes || !m.addedNodes.length) continue;
-            m.addedNodes.forEach(node => {
-                if (node.nodeType !== 1) return;
-                if (node.classList && node.classList.contains('hrm-doc-btn')) {
-                    const icon = node.querySelector('.hrm-doc-btn-icon');
-                    if (icon) {
-                        try { node.style.setProperty('--hrm-doc-icon', ENFORCED_DOC_ICON); } catch (e) {}
-                        try { icon.style.backgroundColor = ENFORCED_DOC_ICON; } catch (e) {}
-                        try { node.setAttribute('data-icon-color', ENFORCED_DOC_ICON); } catch (e) {}
-                    }
-                }
-                // Also check descendants
-                const children = node.querySelectorAll ? node.querySelectorAll('.hrm-doc-btn') : [];
-                children.forEach(ch => {
-                    const icon = ch.querySelector('.hrm-doc-btn-icon');
-                    if (icon) {
-                        try { ch.style.setProperty('--hrm-doc-icon', ENFORCED_DOC_ICON); } catch (e) {}
-                        try { icon.style.backgroundColor = ENFORCED_DOC_ICON; } catch (e) {}
-                        try { ch.setAttribute('data-icon-color', ENFORCED_DOC_ICON); } catch (e) {}
-                    }
-                });
-            });
-        }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-});
-</script>
 
 <?php
 // Carga de scripts de Upload y Listado de Documentos
@@ -806,70 +571,3 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
 ?>
 
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const uploadPanel = document.getElementById('hrm-upload-panel');
-    const btnNuevo = document.getElementById('btn-nuevo-documento');
-    const btnCerrar = document.getElementById('btn-cerrar-upload');
-    const btnCancelar = document.getElementById('btn-cancelar-upload');
-    const msgDiv = document.getElementById('hrm-documents-message');
-    const hiddenInput = document.getElementById('hrm_upload_employee_id');
-
-    function showSelectEmployeeAlert() {
-        const bigMsg = '<div class="alert alert-warning text-center" style="font-size:1.25rem; padding:2rem;"><span class="me-2">⚠️</span><strong>Atención:</strong> Por favor selecciona un usuario para continuar.</div>';
-        if (msgDiv) { msgDiv.innerHTML = bigMsg; msgDiv.scrollIntoView({behavior: 'smooth', block: 'center'}); }
-        const container = document.getElementById('hrm-documents-container');
-        if (container) container.innerHTML = bigMsg;
-    }
-
-    function clearAlert() {
-        if (msgDiv) msgDiv.innerHTML = '';
-        const container = document.getElementById('hrm-documents-container');
-        if (container) container.innerHTML = '';
-    }
-
-    if (btnNuevo) {
-        btnNuevo.addEventListener('click', function(e) {
-            const curHasEmployee = btnNuevo.dataset.hasEmployee === '1';
-            const curEmployeeId = btnNuevo.dataset.employeeId || '';
-            if (!curHasEmployee || !curEmployeeId) {
-                e.preventDefault();
-                showSelectEmployeeAlert();
-                return;
-            }
-            if (hiddenInput) hiddenInput.value = curEmployeeId;
-            uploadPanel.style.display = 'block';
-        });
-    }
-
-    if (btnCerrar) btnCerrar.onclick = function() { uploadPanel.style.display = 'none'; };
-    if (btnCancelar) btnCancelar.onclick = function() { uploadPanel.style.display = 'none'; };
-
-    if (btnNuevo && btnNuevo.dataset.hasEmployee !== '1') showSelectEmployeeAlert();
-
-    window.hrmDocumentsSetEmployee = function(employeeId) {
-        if (!btnNuevo) return;
-        if (employeeId) {
-            btnNuevo.dataset.employeeId = employeeId;
-            btnNuevo.dataset.hasEmployee = '1';
-            btnNuevo.removeAttribute('disabled');
-            btnNuevo.removeAttribute('aria-disabled');
-            btnNuevo.title = 'Nuevo Documento';
-            if (hiddenInput) hiddenInput.value = employeeId;
-            clearAlert();
-            if ( typeof window.loadEmployeeDocuments === 'function' ) window.loadEmployeeDocuments();
-        } else {
-            btnNuevo.dataset.employeeId = '';
-            btnNuevo.dataset.hasEmployee = '0';
-            btnNuevo.setAttribute('disabled', 'disabled');
-            btnNuevo.setAttribute('aria-disabled', 'true');
-            if (hiddenInput) hiddenInput.value = '';
-            showSelectEmployeeAlert();
-        }
-    };
-
-    if (typeof hrmDocsListData !== 'undefined' && hrmDocsListData.employeeId) {
-        window.hrmDocumentsSetEmployee(hrmDocsListData.employeeId);
-    }
-});
-</script>

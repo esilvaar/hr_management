@@ -19,7 +19,8 @@ function setupDocumentTypeSearch() {
     if ( ! searchInput || ! itemsContainer ) return;
     
     searchInput.addEventListener('focus', function() {
-        itemsContainer.style.display = 'block';
+        if ( typeof window.hrmShowDropdown === 'function' ) window.hrmShowDropdown(itemsContainer, searchInput);
+        else { itemsContainer.style.display = 'block'; itemsContainer.classList.add('hrm-dropdown--visible'); }
     });
     
     searchInput.addEventListener('input', function() {
@@ -32,10 +33,40 @@ function setupDocumentTypeSearch() {
         });
         
         if ( query.length === 0 ) {
-            itemsContainer.style.display = 'block';
+            if ( typeof window.hrmShowDropdown === 'function' ) window.hrmShowDropdown(itemsContainer, searchInput);
+            else { itemsContainer.style.display = 'block'; itemsContainer.classList.add('hrm-dropdown--visible'); }
         }
     });
     
+    // Helper: hide/show year depending on type
+    function toggleYearVisibilityForTypeName(name) {
+        const nm = (name || '').toString().trim().toLowerCase();
+        const yearContainer = document.getElementById('hrm-anio-items') ? document.getElementById('hrm-anio-items').parentElement : null;
+        const yearInput = document.getElementById('hrm-anio-search');
+        const yearHidden = document.getElementById('hrm_anio_documento');
+        const yearLabel = document.querySelector('label[for="hrm-anio-search"]');
+        if ( ! yearContainer || !yearInput || !yearHidden ) return;
+
+        if ( nm === 'contrato' ) {
+            // hide year label + field and disable validation
+            if ( yearLabel ) yearLabel.style.display = 'none';
+            yearContainer.style.display = 'none';
+            yearInput.disabled = true;
+            yearInput.classList.add('visually-hidden');
+            yearHidden.value = '';
+            yearHidden.removeAttribute('required');
+        } else {
+            if ( yearLabel ) yearLabel.style.display = '';
+            yearContainer.style.display = '';
+            yearInput.disabled = false;
+            yearInput.classList.remove('visually-hidden');
+            yearHidden.setAttribute('required','required');
+        }
+    }
+
+    // Expose helper globally so other modules can trigger the same behaviour
+    window.hrmToggleYearForTypeName = toggleYearVisibilityForTypeName;
+
     // Seleccionar tipo (soporta data-tipo-id + data-tipo-name ó legacy data-tipo)
     const items = itemsContainer.querySelectorAll('.hrm-tipo-item');
     items.forEach( item => {
@@ -45,10 +76,18 @@ function setupDocumentTypeSearch() {
             const tipoName = this.getAttribute('data-tipo-name') || this.getAttribute('data-tipo') || this.textContent.trim();
             searchInput.value = tipoName;
             hiddenInput.value = tipoId;
-            itemsContainer.style.display = 'none';
+            if ( typeof window.hrmHideDropdown === 'function' ) window.hrmHideDropdown(itemsContainer);
+            else { itemsContainer.classList.remove('hrm-dropdown--visible'); setTimeout(()=>{ itemsContainer.style.display = 'none'; }, 220); }
+            // toggle year visibility
+            toggleYearVisibilityForTypeName(tipoName);
             // Si existe la función global para actualizar visibilidad de clears, ejecutarla
             if ( typeof updateFilterClearVisibility === 'function' ) updateFilterClearVisibility();
         });
+    });
+
+    // Also react to typing in the type input (for custom typed values)
+    searchInput.addEventListener('input', function() {
+        toggleYearVisibilityForTypeName(this.value);
     });
 
     // Botón crear tipo
@@ -74,7 +113,7 @@ function setupDocumentTypeSearch() {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: data
             })
-            .then( r => r.json() )
+                    .then( r => r.json() )
             .then( json => {
                 if ( json && json.success ) {
                     const id = json.data.id;
@@ -88,6 +127,8 @@ function setupDocumentTypeSearch() {
                     a.setAttribute('data-tipo-name', name );
                     a.innerHTML = '<strong>' + name + '</strong>';
                     itemsContainer.insertBefore( a, itemsContainer.firstChild );
+                    // Attach the same click handler so new items follow same behavior
+                    a.addEventListener('click', function(e){ e.preventDefault(); const tipoId = this.getAttribute('data-tipo-id') || ''; const tipoName = this.getAttribute('data-tipo-name') || this.textContent.trim(); searchInput.value = tipoName; hiddenInput.value = tipoId; if ( typeof window.hrmHideDropdown === 'function' ) window.hrmHideDropdown(itemsContainer); else { itemsContainer.classList.remove('hrm-dropdown--visible'); setTimeout(()=>{ itemsContainer.style.display = 'none'; }, 220); } toggleYearVisibilityForTypeName(tipoName); if ( typeof updateFilterClearVisibility === 'function' ) updateFilterClearVisibility(); });
 
                     // Añadir también al filtro de tipos si existe
                     const filterItems = document.getElementById('hrm-doc-type-filter-items');
@@ -116,7 +157,8 @@ function setupDocumentTypeSearch() {
                     // Seleccionarlo automáticamente
                     searchInput.value = name;
                     hiddenInput.value = id;
-                    itemsContainer.style.display = 'none';
+                    if ( typeof window.hrmHideDropdown === 'function' ) window.hrmHideDropdown(itemsContainer);
+                    else { itemsContainer.classList.remove('hrm-dropdown--visible'); setTimeout(()=>{ itemsContainer.style.display = 'none'; }, 220); }
                     // Actualizar visibilidad de clears en el listado (si existe)
                     if ( typeof updateFilterClearVisibility === 'function' ) updateFilterClearVisibility();
 
@@ -128,7 +170,6 @@ function setupDocumentTypeSearch() {
                 }
             })
             .catch( e => {
-                console.error('Error crear tipo:', e);
                 showUploadMessage('Error al crear tipo', 'error');
             })
             .finally( () => {
@@ -151,7 +192,8 @@ function setupDocumentTypeSearch() {
     // Cerrar al hacer click fuera
     document.addEventListener('click', function(e) {
         if ( e.target !== searchInput && e.target !== itemsContainer ) {
-            itemsContainer.style.display = 'none';
+            if ( typeof window.hrmHideDropdown === 'function' ) window.hrmHideDropdown(itemsContainer);
+            else { itemsContainer.classList.remove('hrm-dropdown--visible'); setTimeout(()=>{ itemsContainer.style.display = 'none'; }, 220); }
         }
     });
 }
@@ -167,7 +209,8 @@ function setupYearSearch() {
     if ( ! searchInput || ! itemsContainer ) return;
     
     searchInput.addEventListener('focus', function() {
-        itemsContainer.style.display = 'block';
+        if ( typeof window.hrmShowDropdown === 'function' ) window.hrmShowDropdown(itemsContainer, searchInput);
+        else itemsContainer.style.display = 'block';
     });
     
     searchInput.addEventListener('input', function() {
@@ -180,7 +223,8 @@ function setupYearSearch() {
         });
         
         if ( query.length === 0 ) {
-            itemsContainer.style.display = 'block';
+            if ( typeof window.hrmShowDropdown === 'function' ) window.hrmShowDropdown(itemsContainer, searchInput);
+            else itemsContainer.style.display = 'block';
         }
     });
     
@@ -192,7 +236,8 @@ function setupYearSearch() {
             const anio = this.getAttribute('data-anio');
             searchInput.value = anio;
             hiddenInput.value = anio;
-            itemsContainer.style.display = 'none';
+            if ( typeof window.hrmHideDropdown === 'function' ) window.hrmHideDropdown(itemsContainer);
+            else { itemsContainer.classList.remove('hrm-dropdown--visible'); setTimeout(()=>{ itemsContainer.style.display = 'none'; }, 220); }
         });
     });
     // Año por defecto 2026
@@ -204,7 +249,8 @@ function setupYearSearch() {
     // Cerrar al hacer click fuera
     document.addEventListener('click', function(e) {
         if ( e.target !== searchInput && e.target !== itemsContainer ) {
-            itemsContainer.style.display = 'none';
+            if ( typeof window.hrmHideDropdown === 'function' ) window.hrmHideDropdown(itemsContainer);
+            else { itemsContainer.classList.remove('hrm-dropdown--visible'); setTimeout(()=>{ itemsContainer.style.display = 'none'; }, 220); }
         }
     });
 }
@@ -235,7 +281,9 @@ function setupFormSubmit() {
             return;
         }
         
-        if ( ! anioInput.value ) {
+        // Only require year if the visible year input is enabled
+        const visibleYearInput = document.getElementById('hrm-anio-search');
+        if ( visibleYearInput && ! visibleYearInput.disabled && ! anioInput.value ) {
             showUploadMessage('Por favor selecciona un año', 'error');
             return;
         }
@@ -261,13 +309,15 @@ function setupFormSubmit() {
         // Debug: log de envío (para inspección en consola)
         try {
             const fileNames = filesInput && filesInput.files ? Array.from(filesInput.files).map(f => f.name) : [];
-            console.log('[HRM-UPLOAD] submitting', { action: form.action, tipo: tipoInput && tipoInput.value, anio: anioInput && anioInput.value, files: fileNames });
+            // [HRM-UPLOAD] debug log removed
         } catch (err) {
-            console.log('[HRM-UPLOAD] submit debug failed', err);
+            // [HRM-UPLOAD] debug log removed
         }
         
         // If multiple files, upload them sequentially to reduce server load/timeouts
         const filesCount = filesInput.files ? filesInput.files.length : 0;
+
+
         if ( filesCount > 1 ) {
             (async function(){
                 const filesArr = Array.from(filesInput.files);
@@ -278,25 +328,26 @@ function setupFormSubmit() {
                     // Replace file inputs with a single file to send
                     try { singleFD.delete('archivos_subidos[]'); } catch(e) {}
                     singleFD.append('archivos_subidos[]', filesArr[i]);
+
                     try {
                         const resp = await fetch(form.action || '', { method: 'POST', body: singleFD });
                         const txt = await resp.text();
-                        console.log('[HRM-UPLOAD] raw response (file ' + (i+1) + '):', txt);
+                        // [HRM-UPLOAD] debug log removed
                         try {
                             const json = JSON.parse(txt);
-                            console.log('[HRM-UPLOAD] parsed json (file ' + (i+1) + '):', json);
+                            // [HRM-UPLOAD] debug log removed
                             if ( json && json.success ) {
                                 anySuccess = true;
                             } else {
-                                console.warn('[HRM-UPLOAD] upload returned error for file ' + (i+1), json);
+                                // [HRM-UPLOAD] debug warning removed
                             }
                         } catch (e) {
                             // non-json
-                            console.warn('[HRM-UPLOAD] non-JSON response for file ' + (i+1));
+                            // [HRM-UPLOAD] debug warning removed
                             anySuccess = true;
                         }
                     } catch (err) {
-                        console.error('[HRM-UPLOAD] fetch error for file ' + (i+1) + ':', err);
+                        // [HRM-UPLOAD] debug error removed
                         // stop on network error
                         showUploadMessage('Error al subir archivos (falló la conexión)', 'error');
                         break;
@@ -317,6 +368,8 @@ function setupFormSubmit() {
             return;
         }
 
+
+
         fetch(form.action || '', {
             method: 'POST',
             body: formData
@@ -324,15 +377,15 @@ function setupFormSubmit() {
         .then(response => response.text())
         .then(data => {
             // Log crudo de respuesta
-            console.log('[HRM-UPLOAD] raw response:', data);
+            // [HRM-UPLOAD] debug log removed
 
             // Si es JSON, procesarlo
             try {
                 const json = JSON.parse(data);
-                console.log('[HRM-UPLOAD] parsed json:', json);
+                // [HRM-UPLOAD] debug log removed
                 if ( json.success ) {
                     showUploadMessage('Documentos subidos correctamente', 'success');
-                    console.log('[HRM-UPLOAD] upload success, results:', json.data || json);
+                    // [HRM-UPLOAD] debug log removed
                     setTimeout(() => {
                         const modal = bootstrap.Modal.getInstance(document.getElementById('hrm-upload-modal'));
                         if ( modal ) modal.hide();
@@ -344,12 +397,12 @@ function setupFormSubmit() {
                         loadEmployeeDocuments();
                     }, 1500);
                 } else {
-                    console.warn('[HRM-UPLOAD] upload returned error', json);
+                    // [HRM-UPLOAD] debug warning removed
                     showUploadMessage('Error: ' + (json.data && json.data.message ? json.data.message : (json.message || 'Error desconocido')), 'error');
                 }
             } catch(e) {
                 // Si no es JSON, asumir que es una redirección exitosa (o HTML devuelto)
-                console.warn('[HRM-UPLOAD] non-JSON response, assuming success or redirect. Preview:', data && data.slice ? data.slice(0,500) : data);
+                // [HRM-UPLOAD] debug warning removed
                 showUploadMessage('Documentos subidos correctamente', 'success');
                 setTimeout(() => {
                     location.reload();
@@ -360,7 +413,7 @@ function setupFormSubmit() {
             submitButton.innerHTML = '<span class="dashicons dashicons-upload"></span> Subir Documentos';
         })
         .catch(error => {
-            console.error('[HRM-UPLOAD] fetch error:', error);
+            // [HRM-UPLOAD] debug error removed
             showUploadMessage('Error al subir documentos', 'error');
             submitButton.disabled = false;
             submitButton.innerHTML = '<span class="dashicons dashicons-upload"></span> Subir Documentos';
@@ -386,3 +439,74 @@ function showUploadMessage( message, type ) {
         messageContainer.innerHTML = '';
     }, 5000);
 }
+
+/* UPLOAD PANEL & employee binding (migrated from view inline script) */
+function setupUploadPanel() {
+    const uploadPanel = document.getElementById('hrm-upload-panel');
+    const btnNuevo = document.getElementById('btn-nuevo-documento');
+    const btnCerrar = document.getElementById('btn-cerrar-upload');
+    const btnCancelar = document.getElementById('btn-cancelar-upload');
+    const msgDiv = document.getElementById('hrm-documents-message');
+    const hiddenInput = document.getElementById('hrm_upload_employee_id');
+
+    function showSelectEmployeeAlert() {
+        const bigMsg = '<div class="alert alert-warning text-center" style="font-size:1.25rem; padding:2rem;"><span class="me-2">⚠️</span><strong>Atención:</strong> Por favor selecciona un usuario para continuar.</div>';
+        if (msgDiv) { msgDiv.innerHTML = bigMsg; msgDiv.scrollIntoView({behavior: 'smooth', block: 'center'}); }
+        const container = document.getElementById('hrm-documents-container');
+        if (container) container.innerHTML = bigMsg;
+    }
+
+    function clearAlert() {
+        if (msgDiv) msgDiv.innerHTML = '';
+        const container = document.getElementById('hrm-documents-container');
+        if (container) container.innerHTML = '';
+    }
+
+    if (btnNuevo) {
+        btnNuevo.addEventListener('click', function(e) {
+            const curHasEmployee = btnNuevo.dataset.hasEmployee === '1';
+            const curEmployeeId = btnNuevo.dataset.employeeId || '';
+            if (!curHasEmployee || !curEmployeeId) {
+                e.preventDefault();
+                showSelectEmployeeAlert();
+                return;
+            }
+            if (hiddenInput) hiddenInput.value = curEmployeeId;
+            if (uploadPanel) uploadPanel.style.display = 'block';
+        });
+    }
+
+    if (btnCerrar) btnCerrar.addEventListener('click', function(){ if (uploadPanel) uploadPanel.style.display = 'none'; });
+    if (btnCancelar) btnCancelar.addEventListener('click', function(){ if (uploadPanel) uploadPanel.style.display = 'none'; });
+
+    if (btnNuevo && btnNuevo.dataset.hasEmployee !== '1') showSelectEmployeeAlert();
+
+    window.hrmDocumentsSetEmployee = function(employeeId) {
+        if (!btnNuevo) return;
+        if (employeeId) {
+            btnNuevo.dataset.employeeId = employeeId;
+            btnNuevo.dataset.hasEmployee = '1';
+            btnNuevo.removeAttribute('disabled');
+            btnNuevo.removeAttribute('aria-disabled');
+            btnNuevo.title = 'Nuevo Documento';
+            if (hiddenInput) hiddenInput.value = employeeId;
+            clearAlert();
+            if ( typeof window.loadEmployeeDocuments === 'function' ) window.loadEmployeeDocuments();
+        } else {
+            btnNuevo.dataset.employeeId = '';
+            btnNuevo.dataset.hasEmployee = '0';
+            btnNuevo.setAttribute('disabled', 'disabled');
+            btnNuevo.setAttribute('aria-disabled', 'true');
+            if (hiddenInput) hiddenInput.value = '';
+            showSelectEmployeeAlert();
+        }
+    };
+
+    if (typeof hrmDocsListData !== 'undefined' && hrmDocsListData.employeeId) {
+        window.hrmDocumentsSetEmployee(hrmDocsListData.employeeId);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+    setupUploadPanel();
+});

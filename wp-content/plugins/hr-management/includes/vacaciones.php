@@ -366,7 +366,8 @@ function hrm_get_feriados_locales( $ano ) {
  * IMPORTANTE: Si el usuario actual es un gerente de departamento,
  * solo se mostrarán las solicitudes de empleados del departamento
  * que tiene a cargo. Los administradores verán todas las solicitudes.
-*/function hrm_get_all_vacaciones( $search = '', $estado = '' ) {
+*/
+function hrm_get_all_vacaciones( $search = '', $estado = '', $pagina = 1, $items_por_pagina = 20 ) {
     global $wpdb;
 
     // IMPORTANTE: Forzar actualización de capacidades del usuario actual
@@ -375,9 +376,9 @@ function hrm_get_feriados_locales( $ano ) {
         $current_user->get_role_caps();
     }
 
-    // Generar cache key incluyendo estado y usuario actual
+    // Generar cache key incluyendo estado, usuario actual y paginación
     $current_user_id = get_current_user_id();
-    $cache_key = 'hrm_all_vacaciones_' . md5( $search . $estado . $current_user_id );
+    $cache_key = 'hrm_all_vacaciones_' . md5( $search . $estado . $current_user_id . $pagina . $items_por_pagina );
     
     $cached = wp_cache_get( $cache_key );
     if ( false !== $cached ) {
@@ -492,7 +493,10 @@ function hrm_get_feriados_locales( $ano ) {
         $where = 'WHERE ' . implode( ' AND ', $where_conditions );
     }
 
-    // CONSULTA PRINCIPAL
+    // Calcular OFFSET para paginación
+    $offset = ( $pagina - 1 ) * $items_por_pagina;
+
+    // CONSULTA PRINCIPAL CON ORDENAMIENTO PRIORITARIO Y PAGINACIÓN
     $sql_base = "
         SELECT 
             s.id_solicitud,
@@ -510,14 +514,19 @@ function hrm_get_feriados_locales( $ano ) {
         JOIN {$table_empleados} e ON s.id_empleado = e.id_empleado
         JOIN {$table_tipos} t ON s.id_tipo = t.id_tipo
         {$where}
-        ORDER BY s.fecha_inicio DESC
+        ORDER BY 
+            CASE WHEN s.estado = 'PENDIENTE' THEN 0 ELSE 1 END,
+            s.fecha_inicio DESC
+        LIMIT %d OFFSET %d
     ";
 
     // PREPARAR CONSULTA
     if ( ! empty( $params ) ) {
+        $params[] = $items_por_pagina;
+        $params[] = $offset;
         $sql = $wpdb->prepare( $sql_base, $params );
     } else {
-        $sql = $sql_base;
+        $sql = $wpdb->prepare( $sql_base, $items_por_pagina, $offset );
     }
 
     $results = $wpdb->get_results( $sql, ARRAY_A );
@@ -534,7 +543,7 @@ function hrm_get_feriados_locales( $ano ) {
  * Retorna todas las solicitudes de medio día 
  * para el panel de administración.
  */
-function hrm_get_solicitudes_medio_dia( $search = '', $estado = '' ) {
+function hrm_get_solicitudes_medio_dia( $search = '', $estado = '', $pagina = 1, $items_por_pagina = 20 ) {
     global $wpdb;
 
     // Safe table names
@@ -561,6 +570,9 @@ function hrm_get_solicitudes_medio_dia( $search = '', $estado = '' ) {
 
     $where = ! empty( $where_conditions ) ? 'WHERE ' . implode( ' AND ', $where_conditions ) : '';
 
+    // Calcular OFFSET para paginación
+    $offset = ( $pagina - 1 ) * $items_por_pagina;
+
     $sql = "SELECT 
                 s.id_solicitud,
                 s.id_empleado,
@@ -577,14 +589,21 @@ function hrm_get_solicitudes_medio_dia( $search = '', $estado = '' ) {
             FROM {$table_solicitudes} s
             INNER JOIN {$table_empleados} e ON s.id_empleado = e.id_empleado
             {$where}
-            ORDER BY s.fecha_inicio DESC, s.id_solicitud DESC";
+            ORDER BY 
+                CASE WHEN s.estado = 'PENDIENTE' THEN 0 ELSE 1 END,
+                s.fecha_inicio DESC, 
+                s.id_solicitud DESC
+            LIMIT %d OFFSET %d";
 
     try {
         if ( ! empty( $params ) ) {
+            $params[] = $items_por_pagina;
+            $params[] = $offset;
             $prepared = $wpdb->prepare( $sql, $params );
             $results = $wpdb->get_results( $prepared, ARRAY_A );
         } else {
-            $results = $wpdb->get_results( $sql, ARRAY_A );
+            $prepared = $wpdb->prepare( $sql, $items_por_pagina, $offset );
+            $results = $wpdb->get_results( $prepared, ARRAY_A );
         }
     } catch ( Exception $e ) {
         error_log( 'HRM: Error fetching medio-dia solicitudes: ' . $e->getMessage() );
@@ -774,6 +793,149 @@ function hrm_count_medio_dia_visibles( $estado = null ) {
 
     $count = $wpdb->get_var( $sql );
     return intval( $count );
+}
+
+/* =====================================================
+ * SISTEMA DE NOTIFICACIONES (last_known_id)
+ * =====================================================
+ * Detecta solicitudes nuevas comparando MAX(id_solicitud)
+ * con el último ID conocido en user_meta.
+ */
+
+/**
+ * Detecta si hay solicitudes PENDIENTES nuevas desde la última visita.
+ * @return bool True si hay solicitudes pendientes con ID > last_known
+ */
+function hrm_hay_solicitudes_nuevas() {
+    global $wpdb;
+    
+    $user_id = get_current_user_id();
+    if ( ! $user_id ) {
+        return false;
+    }
+    
+    // Obtener último ID conocido
+    $last_known = get_user_meta( $user_id, 'hrm_last_known_max_id', true );
+    $last_known = $last_known ? intval( $last_known ) : 0;
+    
+    // Verificar si hay PENDIENTES con ID mayor al último conocido
+    $table_vac = $wpdb->prefix . 'rrhh_solicitudes_ausencia';
+    $table_md = $wpdb->prefix . 'rrhh_solicitudes_medio_dia';
+    
+    $count_nuevas = $wpdb->get_var( $wpdb->prepare(
+        "SELECT COUNT(*) FROM (
+            SELECT id_solicitud FROM {$table_vac} 
+            WHERE estado = 'PENDIENTE' AND id_solicitud > %d
+            UNION ALL
+            SELECT id_solicitud FROM {$table_md} 
+            WHERE estado = 'PENDIENTE' AND id_solicitud > %d
+        ) AS nuevas_pendientes",
+        $last_known,
+        $last_known
+    ) );
+    
+    return ( intval( $count_nuevas ) > 0 );
+}
+
+/**
+ * Cuenta TODAS las solicitudes pendientes (operativo, no filtrado por novedad).
+ * @return int Número total de solicitudes pendientes
+ */
+function hrm_contar_solicitudes_pendientes() {
+    global $wpdb;
+    
+    $user_id = get_current_user_id();
+    if ( ! $user_id ) {
+        return 0;
+    }
+    
+    // Contar TODAS las solicitudes PENDIENTES (sin filtrar por last_known_id)
+    $table_vac = $wpdb->prefix . 'rrhh_solicitudes_ausencia';
+    $table_md = $wpdb->prefix . 'rrhh_solicitudes_medio_dia';
+    
+    $count_vac = $wpdb->get_var(
+        "SELECT COUNT(*) FROM {$table_vac} WHERE estado = 'PENDIENTE'"
+    );
+    
+    $count_md = $wpdb->get_var(
+        "SELECT COUNT(*) FROM {$table_md} WHERE estado = 'PENDIENTE'"
+    );
+    
+    return intval( $count_vac ) + intval( $count_md );
+}
+
+/**
+ * Verifica si debe mostrar el dot de notificación en el sidebar.
+ * Lógica: MAX(id_solicitud) > hrm_last_known_id
+ * @return bool True si debe mostrar el dot
+ */
+function hrm_mostrar_dot_notificacion() {
+    global $wpdb;
+    
+    $user_id = get_current_user_id();
+    if ( ! $user_id ) {
+        return false;
+    }
+    
+    $table_vac = $wpdb->prefix . 'rrhh_solicitudes_ausencia';
+    $table_md = $wpdb->prefix . 'rrhh_solicitudes_medio_dia';
+    
+    // Obtener MAX(id_solicitud) de ambas tablas
+    $max_vac = $wpdb->get_var( "SELECT MAX(id_solicitud) FROM {$table_vac}" );
+    $max_md = $wpdb->get_var( "SELECT MAX(id_solicitud) FROM {$table_md}" );
+    
+    $max_actual = max( intval( $max_vac ), intval( $max_md ) );
+    
+    if ( $max_actual === 0 ) {
+        return false; // No hay solicitudes
+    }
+    
+    // Obtener último ID conocido por el usuario
+    $last_known = get_user_meta( $user_id, 'hrm_last_known_id', true );
+    $last_known = intval( $last_known );
+    
+    // Mostrar dot si hay IDs nuevos
+    return $max_actual > $last_known;
+}
+
+/**
+ * Marca solicitudes como vistas actualizando user_meta.
+ * @return bool True si se actualizó correctamente
+ */
+function hrm_marcar_solicitudes_vistas() {
+    global $wpdb;
+    
+    $user_id = get_current_user_id();
+    if ( ! $user_id ) {
+        return false;
+    }
+    
+    $table_vac = $wpdb->prefix . 'rrhh_solicitudes_ausencia';
+    $table_md = $wpdb->prefix . 'rrhh_solicitudes_medio_dia';
+    
+    // Obtener MAX(id_solicitud) actual
+    $max_vac = $wpdb->get_var( "SELECT MAX(id_solicitud) FROM {$table_vac}" );
+    $max_md = $wpdb->get_var( "SELECT MAX(id_solicitud) FROM {$table_md}" );
+    
+    $max_actual = max( intval( $max_vac ), intval( $max_md ) );
+    
+    // Actualizar hrm_last_known_id
+    update_user_meta( $user_id, 'hrm_last_known_id', $max_actual );
+    
+    return true;
+}
+
+/**
+ * Resetea el indicador "visto" para TODOS los usuarios con permisos.
+ * Se llama cuando hay nuevas solicitudes o cambios de estado.
+ * 
+ * NOTA: Con la estrategia MAX(id), no es necesario resetear.
+ * La comparación automática detectará nuevos IDs.
+ * Esta función se mantiene por compatibilidad pero no hace nada.
+ */
+function hrm_resetear_indicador_visto() {
+    // No se requiere acción: la estrategia MAX(id) detecta automáticamente nuevas solicitudes
+    return true;
 }
 
 /* =====================================================
@@ -984,6 +1146,9 @@ if ( $total_dias <= 0 ) {
     if ( ! $inserted ) {
         wp_die( 'Error al guardar la solicitud. Intenta de nuevo.' );
     }
+    
+    // Resetear indicador de visto (nueva solicitud)
+    hrm_resetear_indicador_visto();
 
     /* =====================================================
      * ENVÍO DE NOTIFICACIÓN AL GERENTE (ESPECÍFICO DEL DEPARTAMENTO)
@@ -1316,6 +1481,9 @@ function hrm_enviar_medio_dia_handler() {
     }
 
     $id_solicitud = $wpdb->insert_id;
+    
+    // Resetear indicador de visto (nueva solicitud)
+    hrm_resetear_indicador_visto();
 
     // Enviar correo de confirmación al empleado
     hrm_enviar_notificacion_confirmacion_medio_dia( $id_solicitud );
@@ -1598,33 +1766,31 @@ function hrm_cancelar_solicitud_medio_dia() {
     $id_solicitud = intval( $_POST['id_solicitud'] );
     $user_id = get_current_user_id();
     
-    $table_solicitudes = $wpdb->prefix . 'rrhh_solicitudes_ausencia';
+    $table_medio_dia = $wpdb->prefix . 'rrhh_solicitudes_medio_dia';
     $table_empleados = $wpdb->prefix . 'rrhh_empleados';
 
     // Verificar que la solicitud pertenece al usuario actual y está en estado PENDIENTE
-    // (Las solicitudes de medio día tienen fecha_inicio = fecha_fin)
+    // Las solicitudes de medio día están en la tabla rrhh_solicitudes_medio_dia
     $solicitud = $wpdb->get_row(
         $wpdb->prepare(
-            "SELECT s.*, e.rut, e.nombre, e.apellido, e.puesto, e.departamento, e.correo, ta.nombre as tipo_ausencia_nombre
-             FROM $table_solicitudes s
-             JOIN $table_empleados e ON s.id_empleado = e.id_empleado
-             LEFT JOIN {$wpdb->prefix}rrhh_tipo_ausencia ta ON s.id_tipo = ta.id_tipo
-             WHERE s.id_solicitud = %d
+            "SELECT m.*, e.rut, e.nombre, e.apellido, e.puesto, e.departamento, e.correo
+             FROM $table_medio_dia m
+             JOIN $table_empleados e ON m.id_empleado = e.id_empleado
+             WHERE m.id_solicitud = %d
              AND e.user_id = %d
-             AND s.estado = 'PENDIENTE'
-             AND s.fecha_inicio = s.fecha_fin",
+             AND m.estado = 'PENDIENTE'",
             $id_solicitud,
             $user_id
         )
     );
 
     if ( ! $solicitud ) {
-        wp_die( 'Solicitud no encontrada, no te pertenece, no está en estado pendiente, o no es una solicitud de medio día.' );
+        wp_die( 'Solicitud no encontrada, no te pertenece, o no está en estado pendiente.' );
     }
 
-    // Eliminar la solicitud
+    // Eliminar la solicitud de medio día
     $deleted = $wpdb->delete(
-        $table_solicitudes,
+        $table_medio_dia,
         [ 'id_solicitud' => $id_solicitud ],
         [ '%d' ]
     );
@@ -6539,3 +6705,25 @@ function hrm_get_detalles_medio_dia_ajax() {
     wp_send_json_success( $solicitud );
 }
 add_action( 'wp_ajax_hrm_get_detalles_medio_dia', 'hrm_get_detalles_medio_dia_ajax' );
+
+/**
+ * Endpoint AJAX: Marcar solicitudes como vistas
+ */
+function hrm_marcar_vistas_ajax() {
+    if ( ! is_user_logged_in() ) {
+        wp_send_json_error( [ 'message' => 'No autenticado' ] );
+    }
+    
+    $resultado = hrm_marcar_solicitudes_vistas();
+    
+    if ( $resultado ) {
+        wp_send_json_success( [ 
+            'message' => 'Marcado como visto',
+            'hay_nuevas' => false,
+            'count' => 0
+        ] );
+    } else {
+        wp_send_json_error( [ 'message' => 'Error al actualizar' ] );
+    }
+}
+add_action( 'wp_ajax_hrm_marcar_solicitudes_vistas', 'hrm_marcar_vistas_ajax' );

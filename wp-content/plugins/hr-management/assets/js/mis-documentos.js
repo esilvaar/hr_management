@@ -42,14 +42,15 @@
             function filterRowsByYear(){
                 const val = String(yearSelect.value);
                 const rows = container.querySelectorAll('table tbody tr[data-year]');
+                const totalRows = rows.length;
                 let visible = 0;
                 rows.forEach(r => {
                     if (!val || String(r.dataset.year) === val) { r.style.display = ''; visible++; } else { r.style.display = 'none'; }
                 });
 
-                // Mostrar mensaje si no hay resultados
+                // Mostrar mensaje si no hay resultados, pero SOLO si hay filas en la tabla (evitar duplicar mensaje)
                 let noEl = container.querySelector('.hrm-no-results');
-                if ( visible === 0 ) {
+                if ( visible === 0 && totalRows > 0 ) {
                     if (!noEl) {
                         noEl = document.createElement('div');
                         noEl.className = 'alert alert-info hrm-no-results text-center';
