@@ -1,0 +1,35 @@
+/* ====================================================================
+ * Admin Base (HRM)
+ * Variables and foundational tokens for plugin admin UI
+ * ==================================================================== */
+
+.hrm-admin-page #wpcontent {
+    --mp-text-primary: #1a1a1a;
+    --mp-text-muted: #6c757d;
+    --mp-surface: #ffffff;
+    --mp-surface-muted: #f5f5f5;
+    --mp-surface-soft: #f8f9fa;
+    --mp-border: #dddddd;
+    --mp-border-strong: #cccccc;
+    --mp-radius-sm: 6px;
+    --mp-radius: 8px;
+    --mp-radius-lg: 12px;
+    --mp-shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --mp-accent: #0d6efd;
+    --mp-info-border: #17a2b8;
+    --mp-warning-bg: #fff3cd;
+    --mp-warning-text: #856404;
+    --mp-form-surface: #ffffff;
+    --mp-form-surface-muted: #f5f5f5;
+    --mp-form-border: #cccccc;
+    --mp-form-label: #1a1a1a;
+    --mp-form-text: #333333;
+    --mp-form-title-bg: #1a1a1a;
+    --mp-form-title-text: #ffffff;
+    --mp-form-period-bg: #333333;
+    --mp-form-period-text: #ffffff;
+    --mp-warning-border: #f39c12;
+    --mp-danger-border: #dc3545;
+    --mp-pill-bg: rgba(255, 255, 255, 0.2);
+    --mp-pill-success-bg: rgba(39, 174, 96, 0.3);
+}

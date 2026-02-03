@@ -63,8 +63,8 @@ if ( $curr_id > 0 ) {
                             data-employee-search="<?= esc_attr( strtolower( $e->nombre . ' ' . $e->apellido . ' ' . $e->rut ) ) ?>">
                             <div class="d-flex align-items-center gap-2">
                                 <div>
-                                    <strong class="d-block"><?= esc_html( $e->nombre . ' ' . $e->apellido ) ?></strong>
-                                    <small class="text-muted"><?= esc_html( $e->rut ) ?></small>
+                                    <strong class="d-block hrm-table-text-main"><?= esc_html( $e->nombre . ' ' . $e->apellido ) ?></strong>
+                                    <small class="hrm-table-text-secondary"><?= esc_html( $e->rut ) ?></small>
                                 </div>
                             </div>
                         </a>

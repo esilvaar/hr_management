@@ -379,20 +379,12 @@ function hrm_ajax_get_employee_documents() {
         }
     }
 
-    // Si no hay documentos, enviar respuesta vacía con HTML más amigable
+    // Si no hay documentos, se maneja en el frontend
     if ( empty( $documents ) ) {
-        ob_start();
-        ?>
-        <div class="hrm-no-docs-container">
-            <div class="hrm-no-docs-inner">
-                <h3 class="hrm-no-docs-title">
-                    <strong>⚠️ Sin documentos:</strong> Este empleado no tiene documentos registrados.
-                </h3>
-            </div>
-        </div>
-        <?php
-        $html = ob_get_clean();
-        wp_send_json_success( $html );
+        wp_send_json_success( array(
+            'documents' => [],
+            'employee_id' => $employee->id
+        ) );
     }
 
     // Ordenar documentos por mes: diciembre primero, enero último
@@ -434,66 +426,24 @@ function hrm_ajax_get_employee_documents() {
         return $orden_a - $orden_b;
     });
 
-    ob_start();
-    ?>
-    <div class="hrm-documents-wrapper">
-        <!-- styles moved to assets/css/documents-table.css -->
-        <div class="table-responsive">
-            <table class="table table-striped table-bordered table-sm mb-0 hrm-documents-table">
-                <thead class="table-dark small">
-                    <tr>
-                        <th class="hrm-th-year">Año</th>
-                        <th class="hrm-th-type">Tipo</th>
-                        <th>Archivo</th>
-                        <th class="hrm-th-actions text-end">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody class="hrm-document-list">
-                    <?php foreach ( $documents as $doc ) : ?>
-                        <tr class="align-middle" data-type="<?= esc_attr( strtolower( $doc->tipo ) ) ?>" data-type-id="<?= esc_attr( $doc->tipo_id ) ?>" data-year="<?= esc_attr( $doc->anio ) ?>">
-                            <td class="align-middle"><?= esc_html( $doc->anio ) ?></td>
-                            <td class="align-middle"><small class="text-muted"><?= esc_html( ucfirst( $doc->tipo ) ?: '—' ) ?></small></td>
-                            <td>
-                                <div class="d-flex align-items-center gap-3">
-                                    <span class="dashicons dashicons-media-document text-secondary" aria-hidden="true"></span>
-                                    <div class="d-flex flex-column text-start">
-                                        <strong><?= esc_html( $doc->nombre ) ?></strong>
-                                        <small class="text-muted"><?= esc_html( date( 'd M Y', strtotime( $doc->fecha ) ) ) ?></small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="text-end">
-                                <div class="d-inline-flex align-items-center hrm-gap-6">
-                                    <div class="hrm-actions-dropdown">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary hrm-actions-toggle" aria-expanded="false" aria-controls="hrm-actions-menu-<?= esc_attr( $doc->id ) ?>" title="Acciones">
-                                            <span class="dashicons dashicons-menu" aria-hidden="true"></span>
-                                            <span class="visually-hidden">Acciones</span>
-                                        </button>
-                                        <div id="hrm-actions-menu-<?= esc_attr( $doc->id ) ?>" class="hrm-actions-menu">
-                                            <a class="d-block px-3 py-2 hrm-action-download" href="<?= esc_url( $doc->url ) ?>" target="_blank" rel="noopener noreferrer">Descargar</a>
-                                            <?php if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) ) : ?>
-                                                <div class="hrm-actions-sep"></div>
-                                                <form method="post" class="hrm-delete-form m-0 p-0">
-                                                    <?php wp_nonce_field( 'hrm_delete_file', 'hrm_delete_nonce' ); ?>
-                                                    <input type="hidden" name="hrm_action" value="delete_document">
-                                                    <input type="hidden" name="doc_id" value="<?= esc_attr( $doc->id ) ?>">
-                                                    <input type="hidden" name="employee_id" value="<?= esc_attr( $employee->id ) ?>">
-                                                    <button type="submit" class="d-block w-100 text-start px-3 py-2 text-danger hrm-delete-btn">Eliminar</button>
-                                                </form>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <?php
-    $html = ob_get_clean();
-    wp_send_json_success( $html );
+    // En lugar de generar el HTML aquí (que dificulta el mantenimiento), enviamos los datos raw
+    // El renderizado ocurre en assets/js/documents-list.js
+    wp_send_json_success( array(
+        'documents'   => array_map( function( $doc ) {
+            return array(
+                'id'      => $doc->id,
+                'nombre'  => $doc->nombre,
+                'fecha'   => date( 'd M Y', strtotime( $doc->fecha ) ),
+                'tipo'    => $doc->tipo,
+                'tipo_id' => $doc->tipo_id,
+                'anio'    => $doc->anio,
+                'url'     => $doc->url,
+            );
+        }, $documents ),
+        'can_delete'  => current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ),
+        'delete_nonce' => wp_create_nonce( 'hrm_delete_file' ),
+        'employee_id'  => $employee->id
+    ) );
 }
 
 /**

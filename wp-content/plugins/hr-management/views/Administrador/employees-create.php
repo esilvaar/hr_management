@@ -69,13 +69,13 @@ if ( ! current_user_can( 'manage_options' ) && $current_user && $current_user->I
                         <div class="col-md-6 mb-3">
                             <label for="hrm_rut" class="form-label">RUT <span class="text-danger">*</span></label>
                             <input id="hrm_rut" name="rut" type="text" placeholder="12345678-9" class="form-control" required>
-                            <div id="hrm_rut_feedback" class="mt-2" style="display: none;"></div>
+                            <div id="hrm_rut_feedback" class="mt-2" class="myplugin-hidden"></div>
                         </div>
                         
                         <div class="col-md-6 mb-3">
                             <label for="hrm_email" class="form-label">Email <span class="text-danger">*</span></label>
                             <input id="hrm_email" name="email" type="email" class="form-control" required title="Ingresa un correo electrónico válido">
-                            <div id="hrm_email_feedback" class="mt-2" style="display: none;"></div>
+                            <div id="hrm_email_feedback" class="mt-2" class="myplugin-hidden"></div>
                         </div>
                     </div>
                     <!-- area_gerencia moved next to departamento select -->
@@ -109,7 +109,7 @@ if ( ! current_user_can( 'manage_options' ) && $current_user && $current_user->I
                                     <option value="<?= esc_attr( $dept ) ?>"><?= esc_html( $dept ) ?></option>
                                 <?php endforeach; ?>
                             </select>
-                            <div id="area_gerencia_section" style="display:none; margin-top:0.75rem;">
+                            <div id="area_gerencia_section" class="myplugin-hidden myplugin-mt-12">
                                 <label for="hrm_area_gerencia" class="form-label">Área de Gerencia</label>
                                 <select id="hrm_area_gerencia" name="area_gerencia" class="form-select">
                                     <option value="">Selecciona...</option>
@@ -143,7 +143,7 @@ if ( ! current_user_can( 'manage_options' ) && $current_user && $current_user->I
                         </button>
                     </legend>
                     
-                    <div id="hrm_more_options" style="display:none;">
+                    <div id="hrm_more_options" class="myplugin-hidden">
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="hrm_telefono" class="form-label">Teléfono</label>
@@ -164,7 +164,7 @@ if ( ! current_user_can( 'manage_options' ) && $current_user && $current_user->I
                         </div>
 
                         <!-- Sección: Departamentos a cargo (solo para gerentes) -->
-                        <div id="hrm_deptos_a_cargo_container" style="display: none;">
+                        <div id="hrm_deptos_a_cargo_container" class="myplugin-hidden">
                             <div class="row">
                                 <div class="col-12 mb-3">
                                     <label class="form-label"><strong>Departamentos a Cargo</strong></label>
@@ -239,7 +239,7 @@ if ( ! current_user_can( 'manage_options' ) && $current_user && $current_user->I
                         </fieldset>
 
                         <!-- Fecha de Término (fuera del fieldset de antigüedad para poder mostrarse independientemente) -->
-                        <div id="hrm_fecha_termino_row" style="display:none; margin-top:1rem;">
+                        <div id="hrm_fecha_termino_row" class="myplugin-hidden myplugin-mt-16">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="hrm_fecha_termino" class="form-label">Fecha de Término</label>
@@ -277,7 +277,7 @@ if ( ! current_user_can( 'manage_options' ) && $current_user && $current_user->I
                     </div>
 
 
-                    <div id="hrm_rol_row" style="display: none;" class="mb-3">
+                    <div id="hrm_rol_row" class="myplugin-hidden" class="mb-3">
                         <label for="hrm_rol_usuario_wp" class="form-label">Rol en WordPress <span class="text-danger">*</span></label>
                         <?php
                         // Determinar roles disponibles en el select dependiendo del usuario que mira la página

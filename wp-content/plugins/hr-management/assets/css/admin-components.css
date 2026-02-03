@@ -1,0 +1,81 @@
+/* ====================================================================
+ * Admin Components (HRM)
+ * Reusable UI components for plugin admin screens
+ * ==================================================================== */
+
+.myplugin-card-clean {
+    border: none;
+    border-radius: var(--mp-radius-lg);
+    box-shadow: var(--mp-shadow-soft);
+}
+
+.myplugin-card-body-muted {
+    background: var(--mp-surface-muted);
+    border-radius: var(--mp-radius-lg);
+    color: var(--mp-text-primary);
+    padding: 1.5rem;
+}
+
+.myplugin-surface-box {
+    border: 2px solid var(--mp-border);
+    border-radius: var(--mp-radius);
+    padding: 1rem;
+    background: var(--mp-surface);
+    margin-bottom: 0.75rem;
+}
+
+.myplugin-surface-box-sm {
+    border: 1px solid var(--mp-border);
+    border-radius: var(--mp-radius-sm);
+    padding: 0.5rem;
+    background: var(--mp-surface);
+}
+
+.myplugin-mini-pill {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    background: var(--mp-pill-bg);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.myplugin-mini-pill-success {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    background: var(--mp-pill-success-bg);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.myplugin-alert-left-info {
+    border-left: 4px solid var(--mp-info-border);
+}
+
+.myplugin-alert-left-warning {
+    border-left: 4px solid var(--mp-warning-border);
+}
+
+.myplugin-alert-soft-danger {
+    background: var(--mp-warning-bg);
+    border-left: 4px solid var(--mp-danger-border);
+    border-radius: var(--mp-radius);
+    margin-bottom: 1rem;
+}
+
+.myplugin-alert-soft-warning {
+    background: var(--mp-warning-bg);
+    border-left: 4px solid var(--mp-warning-border);
+    border-radius: var(--mp-radius);
+    margin-bottom: 1rem;
+}
+
+.myplugin-alert-soft-neutral {
+    background: var(--mp-surface-soft);
+    border-radius: var(--mp-radius);
+}
+
+.myplugin-alert-left-danger {
+    border-left: 4px solid var(--mp-danger-border);
+}

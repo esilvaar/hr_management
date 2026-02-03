@@ -1,8 +1,13 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-// Cargar estilos CSS
-// Styles merged into plugin-common.css: assets/css/plugin-common.css (medio-dia-form rules moved there).
+// Cargar estilos CSS (reutiliza el mismo estilo del formulario de vacaciones)
+wp_enqueue_style(
+    'hrm-vacaciones-formulario',
+    plugins_url( 'hr-management/assets/css/vacaciones-formulario.css' ),
+    array(),
+    '1.0.0'
+);
 
 // Obtener datos del empleado logueado usando la función centralizada
 $empleado_data = hrm_obtener_datos_empleado();

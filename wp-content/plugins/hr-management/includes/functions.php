@@ -105,16 +105,96 @@ function hrm_enqueue_dark_mode_assets( $hook ) {
         HRM_PLUGIN_VERSION
     );
 
-    // JavaScript para manejar el toggle y localStorage
+    // JavaScript para manejar el toggle y persistencia por usuario
     wp_enqueue_script(
         'hrm-dark-mode-js',
         HRM_PLUGIN_URL . 'assets/js/dark-mode.js',
         array(),
         HRM_PLUGIN_VERSION,
-        true
+        false
+    );
+
+    wp_localize_script(
+        'hrm-dark-mode-js',
+        'mypluginDarkMode',
+        array(
+            'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+            'nonce' => wp_create_nonce( 'myplugin_dark_mode' ),
+        )
     );
 }
 add_action( 'admin_enqueue_scripts', 'hrm_enqueue_dark_mode_assets' );
+
+/**
+ * Detectar si estamos en una pantalla del admin del plugin.
+ */
+function hrm_is_plugin_admin_screen() {
+    if ( ! is_admin() ) {
+        return false;
+    }
+
+    $screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+    if ( $screen && isset( $screen->id ) && strpos( $screen->id, 'hrm' ) !== false ) {
+        return true;
+    }
+
+    $page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+    return ( $page && strpos( $page, 'hrm' ) === 0 );
+}
+
+/**
+ * Aplicar clase de modo oscuro antes del render (evita FOUC).
+ */
+function hrm_apply_dark_mode_class_early() {
+    if ( ! hrm_is_plugin_admin_screen() ) {
+        return;
+    }
+
+    $user_id = get_current_user_id();
+    if ( ! $user_id ) {
+        return;
+    }
+
+    $enabled = get_user_meta( $user_id, 'myplugin_dark_mode', true ) === '1';
+    $enabled_js = $enabled ? 'true' : 'false';
+
+    echo "<script>(function(){if(" . $enabled_js . "){document.documentElement.classList.add('myplugin_dark');}})();</script>\n";
+}
+add_action( 'admin_head', 'hrm_apply_dark_mode_class_early', 0 );
+
+/**
+ * Agregar clase de body para limitar estilos solo a pantallas del plugin.
+ */
+function hrm_add_admin_body_class( $classes ) {
+    if ( hrm_is_plugin_admin_screen() ) {
+        $classes .= ' hrm-admin-page';
+    }
+
+    return $classes;
+}
+add_filter( 'admin_body_class', 'hrm_add_admin_body_class' );
+
+/**
+ * Guardar preferencia de modo oscuro por usuario.
+ */
+function hrm_ajax_save_dark_mode_preference() {
+    if ( ! is_user_logged_in() ) {
+        wp_send_json_error( array( 'message' => 'not_logged_in' ), 401 );
+    }
+
+    check_ajax_referer( 'myplugin_dark_mode', 'nonce' );
+
+    $enabled = isset( $_POST['enabled'] ) ? sanitize_text_field( wp_unslash( $_POST['enabled'] ) ) : '0';
+    $enabled = $enabled === '1' ? '1' : '0';
+
+    $user_id = get_current_user_id();
+    update_user_meta( $user_id, 'myplugin_dark_mode', $enabled );
+
+    wp_send_json_success( array( 'enabled' => $enabled ) );
+}
+add_action( 'wp_ajax_myplugin_dark_mode_set', 'hrm_ajax_save_dark_mode_preference' );
+
+
 
 /**
  * Encolar estilos del módulo de vacaciones en admin

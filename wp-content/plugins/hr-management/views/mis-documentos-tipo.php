@@ -92,7 +92,7 @@ if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employe
                                     <tbody>
                                         <?php foreach ( $documents as $doc ) : ?>
                                             <tr data-type="<?= esc_attr( strtolower( $doc->tipo ) ) ?>" data-type-id="<?= esc_attr( $doc->tipo_id ) ?>" data-year="<?= esc_attr( $doc->anio ) ?>">
-                                                <td style="vertical-align: middle;"><?= esc_html( $doc->anio ) ?></td>
+                                                <td class="myplugin-align-middle"><?= esc_html( $doc->anio ) ?></td>
                                                 <td>
                                                     <div class="d-flex align-items-center gap-3">
                                                         <span class="dashicons dashicons-media-document text-secondary" aria-hidden="true"></span>
@@ -103,7 +103,7 @@ if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employe
                                                     </div>
                                                 </td>
                                                 <td class="text-end">
-                                                    <div class="d-inline-flex align-items-center" style="gap:6px;">
+                                                    <div class="d-inline-flex align-items-center myplugin-gap-6">
                                                         <a href="<?= esc_url( $doc->url ) ?>" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">Descargar</a>
                                                         <button type="button" class="btn btn-sm btn-secondary btn-preview-doc ms-2" data-url="<?= esc_url( $doc->url ) ?>">Previsualizar</button>
                                                     </div>
@@ -116,7 +116,7 @@ if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employe
                             <?php else: error_log('[HRM-DEBUG] Skipping duplicated documents table for type_id=' . intval( $type_id ) . ' employee_id=' . intval( $employee->id ) ); endif; ?>
                         <?php else : ?>
                             <div class="alert alert-info text-center py-4">
-                                <span class="dashicons dashicons-media-document" style="font-size:48px;opacity:.5;"></span>
+                                <span class="dashicons dashicons-media-document myplugin-icon-48 myplugin-opacity-50" aria-hidden="true"></span>
                                 <p class="mt-2 mb-0">No hay documentos disponibles.</p>
                             </div>
                         <?php endif; ?>

@@ -150,8 +150,99 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                     $saldo_chile = hrm_get_saldo_vacaciones_chile( $id_empleado );
                     
                     if ( ! isset( $saldo_chile['error'] ) || $saldo_chile['error'] === false ) {
-                        // Mostrar el panel completo con detalle
-                        echo hrm_render_saldo_vacaciones_chile( $saldo_chile, true );
+                        // RENDERIZADO DEL SALDO (Movido desde incluye/vacaciones.php para mejor mantenibilidad)
+                        $s = $saldo_chile;
+                        ?>
+                        <div class="hrm-saldo-vacaciones-chile">
+                            <?php if ( isset( $s['codigo'] ) && $s['codigo'] === 'FECHA_FUTURA' ) : 
+                                $fecha_inicio_f = date_create( $s['fecha_ingreso'] )->format( 'd/m/Y' ); ?>
+                                <div class="alert alert-info myplugin-alert-left-info">
+                                    <strong>📅 Próximo Ingreso:</strong><br>
+                                    El empleado comenzará a trabajar el <strong><?= esc_html( $fecha_inicio_f ) ?></strong>.<br>
+                                    Los días de vacaciones se calcularán a partir de esa fecha.
+                                </div>
+                            <?php elseif ( isset( $s['codigo'] ) && $s['codigo'] === 'SIN_DIAS_GENERADOS' ) : 
+                                $dias_trabajados_f = $s['dias_trabajados'] ?? 0; ?>
+                                <div class="alert alert-warning myplugin-alert-left-warning">
+                                    <strong>⏳ Período Inicial:</strong><br>
+                                    El empleado lleva <strong><?= esc_html( $dias_trabajados_f ) ?> días</strong> trabajados.<br>
+                                    Se requiere al menos 1 mes completo (o 15 días) para generar días de vacaciones.<br>
+                                    <small class="text-muted">Faltan <?= esc_html( 15 - $dias_trabajados_f ) ?> días para el primer cálculo.</small>
+                                </div>
+                            <?php else : ?>
+                                <!-- RESUMEN PRINCIPAL (CARDS) -->
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-4">
+                                        <div class="card h-100 text-center myplugin-card-clean">
+                                            <div class="card-body myplugin-card-body-muted">
+                                                <div class="myplugin-surface-box">
+                                                    <div class="myplugin-metric"><?= number_format( $s['dias_disponibles'], 1 ) ?></div>
+                                                </div>
+                                                <div class="myplugin-surface-box-sm">Días Disponibles</div>
+                                                <?php if ( $s['dias_en_deficit'] ) : ?>
+                                                    <div class="myplugin-mini-pill">⚠️ Déficit: <?= number_format( $s['deficit_dias'], 1 ) ?> días</div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card h-100 text-center myplugin-card-clean">
+                                            <div class="card-body myplugin-card-body-muted">
+                                                <div class="myplugin-surface-box">
+                                                    <div class="myplugin-metric"><?= number_format( $s['dias_usados'], 1 ) ?></div>
+                                                </div>
+                                                <div class="myplugin-surface-box-sm">Días Usados</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card h-100 text-center myplugin-card-clean">
+                                            <div class="card-body myplugin-card-body-muted">
+                                                <div class="myplugin-surface-box">
+                                                    <div class="myplugin-metric"><?= number_format( $s['dias_periodo_actual'], 0 ) ?></div>
+                                                </div>
+                                                <div class="myplugin-surface-box-sm">Días por Año</div>
+                                                <?php if ( $s['dias_progresivos_anuales'] > 0 ) : ?>
+                                                    <div class="myplugin-mini-pill-success">15 base + <?= $s['dias_progresivos_anuales'] ?> progresivos</div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ALERTAS DE CASOS LÍMITES -->
+                                <?php if ( $s['dias_en_deficit'] ) : ?>
+                                    <div class="alert myplugin-alert-soft-danger">
+                                        <strong>⚠️ Déficit de Días:</strong> Se han usado <strong><?= number_format( $s['deficit_dias'], 1 ) ?> días</strong> más de los generados. 
+                                        Contacte a RRHH para regularizar la situación.
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if ( $s['supera_limite'] ) : ?>
+                                    <div class="alert myplugin-alert-soft-warning">
+                                        <strong>📋 Exceso de Acumulación:</strong> Tienes <strong><?= number_format( $s['dias_excedidos'], 1 ) ?> días</strong> 
+                                        que exceden el límite legal de <?= $s['limite_acumulacion'] ?> días. 
+                                        <br><small class="text-muted">Según la ley chilena, el máximo acumulable es la suma de los últimos 2 períodos anuales.</small>
+                                    </div>
+                                <?php endif; ?>
+
+                                <!-- INFORMACIÓN ADICIONAL -->
+                                <div class="row g-3 mt-3">
+                                    <?php 
+                                    $dias_aniv_f = $s['dias_para_aniversario'];
+                                    $color_aniv_f = $dias_aniv_f <= 30 ? '#f39c12' : '#0a130e';
+                                    ?>
+                                    <div class="col-md-6">
+                                        <div class="alert mb-0 myplugin-alert-soft-neutral myplugin-alert-accent" style="--mp-accent-color: <?= $color_aniv_f ?>;">
+                                            <strong> Próxima Recarga:</strong><br>
+                                            <span class="myplugin-inline-date"><?= date_create( $s['proximo_aniversario'] )->format( 'd/m/Y' ) ?></span>
+                                            <br><small class="text-muted">Faltan <?= $dias_aniv_f ?> días</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        <?php
                     } else {
                         // Si hay error, mostrar tabla simplificada con datos del sistema antiguo
                         ?>
@@ -170,7 +261,7 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                                 <tbody>
                                     <tr>
                                         <td class="py-3">
-                                            <span class="fw-bold fs-5" style="color: #1a1a1a;">
+                                            <span class="fw-bold fs-5 text-dark">
                                                 <?= esc_html( $saldo->dias_vacaciones_anuales ?? 0 ) ?>
                                             </span>
                                         </td>
@@ -205,7 +296,7 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                             <tbody>
                                 <tr>
                                     <td class="py-3">
-                                        <span class="fw-bold fs-5" style="color: #1a1a1a;">
+                                        <span class="fw-bold fs-5 text-dark">
                                             <?= esc_html( $saldo->dias_vacaciones_anuales ?? 0 ) ?>
                                         </span>
                                     </td>
@@ -232,7 +323,7 @@ $form_admin_url = add_query_arg( 'show', 'form' );
             
             <!-- Mis Solicitudes -->
             <div class="mb-4">
-                <h3 class="h5 mb-3" style="color: #1a1a1a; font-weight: 600;">
+                <h3 class="h5 mb-3 text-dark myplugin-heading">
                     <span class="dashicons dashicons-list-view me-2"></span> Mis Solicitudes
                 </h3>
 
@@ -272,7 +363,7 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                 </div>
 
                 <!-- Panel Header con Indicador de Estado -->
-                <div class="hrm-panel-header bg-light border-bottom px-4 py-3 mb-3" style="border-radius: 4px 4px 0 0;">
+                <div class="hrm-panel-header bg-light border-bottom px-4 py-3 mb-3 myplugin-panel-header">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
                             <?php
@@ -280,7 +371,6 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                             $icono_estado = '🔵';
                             
                             if ( $estado_filtro === 'PENDIENTE' ) {
-                                $color_estado = '#0a0a0a';
                                 $icono_estado = '';
                                 $texto_estado = 'Solicitudes Pendientes';
                             } elseif ( $estado_filtro === 'APROBADA' ) {
@@ -295,7 +385,7 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                                 $texto_estado = 'Todas las Solicitudes';
                             }
                             ?>
-                            <span style="color: <?php echo $color_estado; ?>;"><?php echo $icono_estado; ?> <?php echo esc_html( $texto_estado ); ?></span>
+                            <span class="myplugin-status-text" style="--mp-accent-color: <?php echo $color_estado; ?>;"><?php echo $icono_estado; ?> <?php echo esc_html( $texto_estado ); ?></span>
                         </h5>
                         <span >  :    <strong><?php echo count( $solicitudes_filtradas ); ?></strong></span>
                     </div>

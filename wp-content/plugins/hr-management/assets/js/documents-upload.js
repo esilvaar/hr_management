@@ -19,6 +19,19 @@ function setupDocumentTypeSearch() {
     if ( ! searchInput || ! itemsContainer ) return;
     
     searchInput.addEventListener('focus', function() {
+        // Mark current selection as active
+        const currentVal = hiddenInput.value;
+        const currentText = searchInput.value.trim().toLowerCase();
+        itemsContainer.querySelectorAll('.hrm-tipo-item').forEach(item => {
+            const itemId = item.getAttribute('data-tipo-id') || item.getAttribute('data-tipo');
+            const itemText = item.textContent.trim().toLowerCase();
+            if ( (currentVal && itemId === currentVal) || (currentText && itemText === currentText) ) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+
         if ( typeof window.hrmShowDropdown === 'function' ) window.hrmShowDropdown(itemsContainer, searchInput);
         else { itemsContainer.style.display = 'block'; itemsContainer.classList.add('hrm-dropdown--visible'); }
     });
@@ -209,6 +222,17 @@ function setupYearSearch() {
     if ( ! searchInput || ! itemsContainer ) return;
     
     searchInput.addEventListener('focus', function() {
+        // Mark current selection as active
+        const currentVal = hiddenInput.value;
+        itemsContainer.querySelectorAll('.hrm-anio-item').forEach(item => {
+            const itemAnio = item.getAttribute('data-anio');
+            if ( currentVal && itemAnio === currentVal ) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+
         if ( typeof window.hrmShowDropdown === 'function' ) window.hrmShowDropdown(itemsContainer, searchInput);
         else itemsContainer.style.display = 'block';
     });
@@ -450,7 +474,7 @@ function setupUploadPanel() {
     const hiddenInput = document.getElementById('hrm_upload_employee_id');
 
     function showSelectEmployeeAlert() {
-        const bigMsg = '<div class="alert alert-warning text-center" style="font-size:1.25rem; padding:2rem;"><span class="me-2">⚠️</span><strong>Atención:</strong> Por favor selecciona un usuario para continuar.</div>';
+        const bigMsg = '<div class="alert alert-warning text-center myplugin-alert-big"><span class="me-2">⚠️</span><strong>Atención:</strong> Por favor selecciona un usuario para continuar.</div>';
         if (msgDiv) { msgDiv.innerHTML = bigMsg; msgDiv.scrollIntoView({behavior: 'smooth', block: 'center'}); }
         const container = document.getElementById('hrm-documents-container');
         if (container) container.innerHTML = bigMsg;

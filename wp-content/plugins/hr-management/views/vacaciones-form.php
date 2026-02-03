@@ -23,7 +23,7 @@ wp_localize_script( 'hrm-vacaciones-form', 'hrmVacacionesFormData', array(
 // Obtener datos del empleado logueado usando la función centralizada
 $empleado_data = hrm_obtener_datos_empleado();
 
-// Obtener nombre del usuario si no hay datos de empleado
+// Obtener nombre del usuario si no hay datos de empleado   
 $current_user = wp_get_current_user();
 $nombre_solicitante = $empleado_data 
     ? $empleado_data->nombre . ' ' . $empleado_data->apellido 
@@ -186,7 +186,7 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
         <!-- SECCIÓN RECURSOS HUMANOS (solo visible para admins) -->
         <?php if ( $is_admin ) : ?>
         <div class="seccion-rrhh">
-            <div class="titulo-seccion" style="margin-top: 0;">Recursos Humanos / Jefatura Directa</div>
+            <div class="titulo-seccion myplugin-mt-0">Recursos Humanos / Jefatura Directa</div>
             
             <div class="mb-3">
                 <div class="form-label fw-bold mb-2">Respuesta:</div>

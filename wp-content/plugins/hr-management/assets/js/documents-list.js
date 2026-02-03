@@ -63,7 +63,7 @@ function loadEmployeeDocuments() {
     // Si no hay employeeId válido, mostrar una alerta grande y no hacer la petición AJAX
     const employeeId = hrmDocsListData && hrmDocsListData.employeeId ? hrmDocsListData.employeeId : '';
     if ( ! employeeId ) {
-        container.innerHTML = '<div class="alert alert-warning text-center" style="font-size:1.25rem; padding:2rem;"><span class="me-2">⚠️</span><strong>Atención:</strong> Por favor selecciona un usuario para continuar.</div>';
+        container.innerHTML = '<div class="alert alert-warning text-center myplugin-alert-big"><span class="me-2">⚠️</span><strong>Atención:</strong> Por favor selecciona un usuario para continuar.</div>';
         return;
     }
 
@@ -84,7 +84,9 @@ function loadEmployeeDocuments() {
     .then( response => response.json() )
     .then( data => {
         if ( data.success ) {
-            container.innerHTML = data.data;
+            // Renderizado del HTML en el cliente para mejor mantenibilidad
+            container.innerHTML = renderDocumentsTable( data.data );
+            
             setupDeleteButtons();
             setupYearFilter(); // <-- Reconfigura el filtro de año después de cargar los documentos
             setupTypeFilter(); // reconfigurar filtro de tipo después de cargar
@@ -98,7 +100,7 @@ function loadEmployeeDocuments() {
 
             // Si el error está relacionado con ID de empleado o ausencia de empleado, mostrar alerta grande y mantener botón deshabilitado
             if ( /ID de empleado inválido|Empleado #|Empleado no encontrado/i.test( message ) ) {
-                const bigMsg = '<div class="alert alert-warning text-center" style="font-size:1.25rem; padding:2rem;"><span class="me-2">⚠️</span><strong>Atención:</strong> Por favor selecciona un usuario para continuar.</div>';
+                const bigMsg = '<div class="alert alert-warning text-center myplugin-alert-big"><span class="me-2">⚠️</span><strong>Atención:</strong> Por favor selecciona un usuario para continuar.</div>';
                 container.innerHTML = bigMsg;
                 // Además, intentar deshabilitar el botón si existe
                 const btnNuevo = document.getElementById('btn-nuevo-documento');
@@ -121,6 +123,89 @@ function loadEmployeeDocuments() {
         console.error( 'Error:', error );
         container.innerHTML = '<p class="text-danger">Error al cargar documentos</p>';
     });
+}
+
+/**
+ * Renderizado de la tabla de documentos (Frontend-side rendering)
+ * Movido desde ajax.php para facilitar el mantenimiento del HTML
+ */
+function renderDocumentsTable( data ) {
+    if ( ! data.documents || data.documents.length === 0 ) {
+        return `
+            <div class="hrm-no-docs-container">
+                <div class="hrm-no-docs-inner">
+                    <h3 class="hrm-no-docs-title">
+                        <strong>⚠️ Sin documentos:</strong> Este empleado no tiene documentos registrados.
+                    </h3>
+                </div>
+            </div>`;
+    }
+
+    let rows = '';
+    data.documents.forEach( doc => {
+        let actionsHtml = `<a class="d-block px-3 py-2 hrm-action-download" href="${doc.url}" target="_blank" rel="noopener noreferrer">Descargar</a>`;
+        
+        if ( data.can_delete ) {
+            actionsHtml += `
+                <div class="hrm-actions-sep"></div>
+                <form method="post" class="hrm-delete-form m-0 p-0">
+                    <input type="hidden" name="hrm_delete_nonce" value="${data.delete_nonce}">
+                    <input type="hidden" name="hrm_action" value="delete_document">
+                    <input type="hidden" name="doc_id" value="${doc.id}">
+                    <input type="hidden" name="employee_id" value="${data.employee_id}">
+                    <button type="submit" class="d-block w-100 text-start px-3 py-2 text-danger hrm-delete-btn">Eliminar</button>
+                </form>`;
+        }
+
+        const tipoDisplay = doc.tipo ? (doc.tipo.charAt(0).toUpperCase() + doc.tipo.slice(1)) : '—';
+
+        rows += `
+            <tr class="align-middle" data-type="${doc.tipo.toLowerCase()}" data-type-id="${doc.tipo_id}" data-year="${doc.anio}">
+                <td class="align-middle">${doc.anio}</td>
+                <td class="align-middle"><small class="text-muted">${tipoDisplay}</small></td>
+                <td>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="dashicons dashicons-media-document text-secondary" aria-hidden="true"></span>
+                        <div class="d-flex flex-column text-start">
+                            <strong>${doc.nombre}</strong>
+                            <small class="text-muted">${doc.fecha}</small>
+                        </div>
+                    </div>
+                </td>
+                <td class="text-end">
+                    <div class="d-inline-flex align-items-center hrm-gap-6">
+                        <div class="hrm-actions-dropdown">
+                            <button type="button" class="btn btn-sm btn-outline-secondary hrm-actions-toggle" aria-expanded="false" aria-controls="hrm-actions-menu-${doc.id}" title="Acciones">
+                                <span class="dashicons dashicons-menu" aria-hidden="true"></span>
+                                <span class="visually-hidden">Acciones</span>
+                            </button>
+                            <div id="hrm-actions-menu-${doc.id}" class="hrm-actions-menu">
+                                ${actionsHtml}
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>`;
+    });
+
+    return `
+        <div class="hrm-documents-wrapper">
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered table-sm mb-0 hrm-documents-table">
+                    <thead class="table-dark small">
+                        <tr>
+                            <th class="hrm-th-year">Año</th>
+                            <th class="hrm-th-type">Tipo</th>
+                            <th>Archivo</th>
+                            <th class="hrm-th-actions text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="hrm-document-list">
+                        ${rows}
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
 }
 
 /**
@@ -236,6 +321,15 @@ function setupTypeFilter() {
         todos.setAttribute('data-type-id', '');
         todos.setAttribute('data-type-name', '(Todos)');
         todos.textContent = '(Todos)';
+
+        // Mark active if no specific type selected
+        try {
+            const curH = document.getElementById('hrm-doc-filter-type-id');
+            const curV = document.getElementById('hrm-doc-type-filter-search');
+            const curVal = (curH && curH.value) ? curH.value : (curV ? curV.value : '');
+            if ( ! curVal || curVal === '(Todos)' ) todos.classList.add('active');
+        } catch(e){}
+
         todos.addEventListener('click', function(e) {
             e.preventDefault();
             searchInput.value = '(Todos)';
@@ -258,6 +352,16 @@ function setupTypeFilter() {
             link.setAttribute('data-type-id', t.id );
             link.setAttribute('data-type-name', t.name );
             link.textContent = t.name || t.id;
+
+            // Mark active if matches current filter
+            try {
+                const curH = document.getElementById('hrm-doc-filter-type-id');
+                const curV = document.getElementById('hrm-doc-type-filter-search');
+                if ( (curH && String(curH.value) === String(t.id)) || (curV && curV.value === t.name) ) {
+                    link.classList.add('active');
+                }
+            } catch(e){}
+
             link.addEventListener('click', function( e ) {
                 e.preventDefault();
                 // Set visible input and hidden id, then apply combined filters
@@ -299,6 +403,16 @@ function setupTypeFilter() {
             // restore if detached
             if ( typeof restoreDropdown === 'function' ) restoreDropdown(itemsContainer);
             itemsContainer.style.display = 'none';
+        }
+    });
+
+    // Cerrar con tecla Escape
+    searchInput.addEventListener('keydown', function(e) {
+        if ( e.key === 'Escape' || e.keyCode === 27 ) {
+            e.preventDefault();
+            if ( typeof restoreDropdown === 'function' ) restoreDropdown(itemsContainer);
+            itemsContainer.style.display = 'none';
+            searchInput.blur();
         }
     });
 }
@@ -423,6 +537,15 @@ function setupYearFilter() {
         const target = e.target;
         if ( target !== searchInput && !itemsContainer.contains( target ) && target !== itemsContainer ) {
             if ( typeof restoreDropdown === 'function' ) restoreDropdown(itemsContainer);
+        }
+    });
+
+    // Cerrar con tecla Escape
+    searchInput.addEventListener('keydown', function(e) {
+        if ( e.key === 'Escape' || e.keyCode === 27 ) {
+            e.preventDefault();
+            if ( typeof restoreDropdown === 'function' ) restoreDropdown(itemsContainer);
+            searchInput.blur();
         }
     });
 }
@@ -592,6 +715,19 @@ function updateFilterClearVisibility() {
 
     if ( typeClear ) typeClear.style.display = typeHas ? 'inline' : 'none';
     if ( yearClear ) yearClear.style.display = yearHas ? 'inline' : 'none';
+
+    // Add visual feedback to active filters
+    const tc = typeInput ? typeInput.closest('.hrm-filter-container') : null;
+    const yc = yearInput ? yearInput.closest('.hrm-filter-container') : null;
+    if ( tc ) {
+        if ( typeHas ) tc.classList.add('hrm-filter-active');
+        else tc.classList.remove('hrm-filter-active');
+    }
+    if ( yc ) {
+        // Year is considered "active" if it's NOT the (Todos) option
+        if ( yearHas && yearHidden.value !== '' ) yc.classList.add('hrm-filter-active');
+        else yc.classList.remove('hrm-filter-active');
+    }
 }
 
 /**

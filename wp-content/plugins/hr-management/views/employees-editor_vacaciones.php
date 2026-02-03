@@ -33,7 +33,7 @@ $solicitudes = function_exists('hrm_get_all_vacaciones') ? hrm_get_all_vacacione
                         <td><span class="badge <?php $st = strtoupper( $s['estado'] ?? '' ); echo $st === 'APROBADO' ? 'bg-success' : ( $st === 'RECHAZADO' ? 'bg-danger' : 'bg-warning text-dark' ); ?>"><?php echo esc_html( $s['estado'] ?? '' ); ?></span></td>
                         <td>
                             <?php if ( ($s['estado'] ?? '') !== 'APROBADO' ) : ?>
-                                <form method="post" style="display:inline">
+                                <form method="post" class="myplugin-inline-form">
                                     <?php wp_nonce_field( 'hrm_aprobar_solicitud', 'hrm_nonce' ); ?>
                                     <input type="hidden" name="accion" value="aprobar">
                                     <input type="hidden" name="solicitud_id" value="<?= esc_attr( $s['id_solicitud'] ?? '' ) ?>">
@@ -42,7 +42,7 @@ $solicitudes = function_exists('hrm_get_all_vacaciones') ? hrm_get_all_vacacione
                             <?php endif; ?>
 
                             <?php if ( ($s['estado'] ?? '') !== 'RECHAZAR' && ($s['estado'] ?? '') !== 'RECHAZADO' ) : ?>
-                                <form method="post" style="display:inline; margin-left:6px;">
+                                <form method="post" class="myplugin-inline-form myplugin-ml-6">
                                     <?php wp_nonce_field( 'hrm_rechazar_solicitud', 'hrm_nonce' ); ?>
                                     <input type="hidden" name="accion" value="rechazar">
                                     <input type="hidden" name="solicitud_id" value="<?= esc_attr( $s['id_solicitud'] ?? '' ) ?>">

@@ -148,7 +148,22 @@
 /* Admin document management styles (dropdowns, panels, filters) */
 .hrm-filter-clear-inline{ position:absolute; right:8px; top:50%; transform:translateY(-50%); border:none; background:transparent; color:#d9534f; font-size:18px; padding:0; line-height:1; cursor:pointer; display:none; }
 .hrm-filter-input{ padding-right:36px; }
-.hrm-doc-type-filter-items, #hrm-doc-type-filter-items, #hrm-tipo-items, #hrm-anio-items, #hrm-doc-year-filter-items { position:absolute; top:100%; left:0; right:0; background:#fff !important; border:1px solid #dee2e6; border-top:none; max-height:300px; overflow-y:auto; z-index:3000; display:none; box-shadow:0 6px 20px rgba(0,0,0,0.08); }
+
+/* Focus and active styles for filter inputs */
+.hrm-filter-container .form-control:focus,
+.hrm-filter-container .hrm-filter-input:focus {
+    border-color: #537345 !important;
+    box-shadow: 0 0 0 0.25rem rgba(83, 115, 69, 0.25) !important;
+}
+
+/* Active filter state - slight green background */
+.hrm-filter-container.hrm-filter-active .form-control,
+.hrm-filter-container.hrm-filter-active .hrm-filter-input {
+    background-color: #f8faf7 !important;
+    border-color: #537345 !important;
+}
+
+.hrm-doc-type-filter-items, #hrm-doc-type-filter-items, #hrm-tipo-items, #hrm-anio-items, #hrm-doc-year-filter-items { position:absolute; top:100%; left:0; right:0; background:#fff !important; border:1px solid #dee2e6; border-top:none; max-height:none; overflow-y:visible; overflow-x:hidden; box-sizing:border-box; white-space:normal; z-index:3000; display:none; box-shadow:0 6px 20px rgba(0,0,0,0.08); }
 
 /* Dropdown fade (used when detaching to body) */
 .hrm-dropdown { opacity: 0; transform: translateY(-6px); transition: opacity .18s ease, transform .18s ease; pointer-events: none; }
@@ -182,10 +197,15 @@
 .hrm-documents-table .d-flex.align-items-center { justify-content: center; }
 .hrm-documents-table .flex-column { text-align: center; }
 .hrm-documents-table td.text-end { text-align: center !important; }
-.hrm-documents-table .hrm-actions-menu a, .hrm-documents-table .hrm-actions-menu button { text-align:left; display:block; }
+/* Ensure action links inside the table do not show underline and inherit color */
+.hrm-documents-table .hrm-actions-menu a, .hrm-documents-table .hrm-actions-menu button { text-align:left; display:block; text-decoration:none !important; color:inherit !important; }
 /* Actions menu helpers */
 .hrm-actions-dropdown { position:relative; display:inline-block; }
 .hrm-actions-menu { position:absolute; right:0; top:calc(100% + 6px); background:#fff; border:1px solid #ddd; box-shadow:0 6px 18px rgba(0,0,0,0.08); display:none; min-width:160px; z-index:1100; }
+/* Remove underline and ensure good spacing for action links */
+.hrm-actions-menu a, .hrm-actions-menu button { text-decoration: none !important; color: inherit !important; padding: 0.35rem 0.75rem; display:block; }
+.hrm-action-download { text-decoration: none !important; }
+.hrm-action-download:hover { text-decoration: none !important; }
 .hrm-actions-sep { height:1px; background:#e9ecef; margin:4px 0; }
 .hrm-gap-6 { gap: 6px; }
 .hrm-documents-wrapper { }
@@ -341,10 +361,10 @@
  * ==================================================================== */
 /* Styles for medio-dia-form.php */
 
-.documento-formal { max-width: 900px; background: white; }
+.documento-formal { max-width: 900px; background: var(--mp-form-surface, #ffffff); }
 /* Layout utilities moved to Bootstrap classes: .opciones-respuesta uses .d-flex .gap-* and spacing utilities. */
 .seccion-rrhh .titulo-seccion { margin-top: 0; }
-.linea-firma { border-top:1px solid #ddd; height: 40px; margin-top: 8px; }
+.linea-firma { border-top: 1px solid var(--mp-form-border, #cccccc); height: 40px; margin-top: 8px; }
 
 /* ====================================================================
  * From: mis-documentos-contratos.css
@@ -567,6 +587,282 @@
     color: #fff;
 }
 
+
+
+/* ====================================================================
+ * DARK MODE FOR FILTER DROPDOWNS & ACTIONS MENU
+ * ==================================================================== */
+/* Dark mode styles for dropdowns when inside dark containers or system preference */
+
+/* Dropdown containers in dark mode */
+.bg-dark .hrm-doc-type-filter-items,
+.bg-dark #hrm-doc-type-filter-items,
+.bg-dark #hrm-tipo-items,
+.bg-dark #hrm-anio-items,
+.bg-dark #hrm-doc-year-filter-items,
+.dark-mode .hrm-doc-type-filter-items,
+.dark-mode #hrm-doc-type-filter-items,
+.dark-mode #hrm-tipo-items,
+.dark-mode #hrm-anio-items,
+.dark-mode #hrm-doc-year-filter-items {
+    background: #2d3238 !important;
+    border-color: #495057 !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+}
+
+/* Dropdown items in dark mode - mejorar visual con padding y transiciones */
+.bg-dark .dropdown-item,
+.dark-mode .dropdown-item,
+.bg-dark .hrm-tipo-item,
+.dark-mode .hrm-tipo-item,
+.bg-dark .hrm-anio-item,
+.dark-mode .hrm-anio-item,
+.bg-dark .hrm-doc-type-item,
+.dark-mode .hrm-doc-type-item {
+    color: rgba(255, 255, 255, .87) !important;
+    background-color: transparent !important;
+    border-radius: 4px;
+    margin: 1px 3px;
+    padding: 0.5rem 0.75rem !important;
+}
+
+.bg-dark .dropdown-item:hover,
+.dark-mode .dropdown-item:hover,
+.bg-dark .hrm-tipo-item:hover,
+.dark-mode .hrm-tipo-item:hover,
+.bg-dark .hrm-anio-item:hover,
+.dark-mode .hrm-anio-item:hover,
+.bg-dark .hrm-doc-type-item:hover,
+.dark-mode .hrm-doc-type-item:hover {
+    background-color: rgba(83, 115, 69, 0.3) !important;
+    color: #fff !important;
+}
+
+.bg-dark .dropdown-item.active,
+.bg-dark .dropdown-item:active,
+.dark-mode .dropdown-item.active,
+.dark-mode .dropdown-item:active {
+    background-color: #537345 !important;
+    color: #fff !important;
+}
+
+/* Border adjustments for dark mode */
+.bg-dark #hrm_departamento_items .dropdown-item,
+.bg-dark #hrm_area_gerencia_items .dropdown-item,
+.bg-dark #hrm_puesto_items .dropdown-item,
+.bg-dark #hrm_tipo_contrato_items .dropdown-item,
+.bg-dark #hrm_rol_usuario_wp_items .dropdown-item,
+.dark-mode #hrm_departamento_items .dropdown-item,
+.dark-mode #hrm_area_gerencia_items .dropdown-item,
+.dark-mode #hrm_puesto_items .dropdown-item,
+.dark-mode #hrm_tipo_contrato_items .dropdown-item,
+.dark-mode #hrm_rol_usuario_wp_items .dropdown-item {
+    border-bottom: 1px solid rgba(255, 255, 255, .08) !important;
+}
+
+/* Actions Menu Dark Mode */
+.bg-dark .hrm-actions-menu,
+.dark-mode .hrm-actions-menu {
+    background: #2d3238 !important;
+    border-color: #495057 !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+.bg-dark .hrm-actions-menu a,
+.dark-mode .hrm-actions-menu a,
+.bg-dark .hrm-actions-menu button,
+.dark-mode .hrm-actions-menu button {
+    margin: 0.2rem 0 !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.bg-dark .hrm-actions-menu a,
+.bg-dark .hrm-actions-menu button,
+.dark-mode .hrm-actions-menu a,
+.dark-mode .hrm-actions-menu button {
+    color: rgba(255, 255, 255, .87) !important;
+    background-color: transparent !important;
+    border-radius: 4px;
+    margin: 2px 0;
+    transition: all 0.15s ease;
+}
+
+.bg-dark .hrm-actions-menu a:hover,
+.bg-dark .hrm-actions-menu button:hover,
+.dark-mode .hrm-actions-menu a:hover,
+.dark-mode .hrm-actions-menu button:hover {
+    background-color: rgba(83, 115, 69, 0.3) !important;
+    color: #fff !important;
+}
+
+.bg-dark .hrm-actions-sep,
+.dark-mode .hrm-actions-sep {
+    background: rgba(255, 255, 255, .15) !important;
+}
+
+/* Actions toggle button dark mode */
+.bg-dark .hrm-actions-toggle,
+.dark-mode .hrm-actions-toggle {
+    background-color: rgba(255, 255, 255, .1) !important;
+    border-color: rgba(255, 255, 255, .2) !important;
+    color: rgba(255, 255, 255, .87) !important;
+}
+
+.bg-dark .hrm-actions-toggle:hover,
+.dark-mode .hrm-actions-toggle:hover {
+    background-color: rgba(255, 255, 255, .2) !important;
+    border-color: rgba(255, 255, 255, .3) !important;
+    color: #fff !important;
+}
+
+/* Documents table dark mode */
+.bg-dark .hrm-documents-table,
+.dark-mode .hrm-documents-table {
+    color: rgba(255, 255, 255, .87);
+}
+
+.bg-dark .hrm-documents-table thead,
+.dark-mode .hrm-documents-table thead {
+    background-color: #1a1d21 !important;
+    color: #fff !important;
+}
+
+.bg-dark .hrm-documents-table tbody tr,
+.dark-mode .hrm-documents-table tbody tr {
+    background-color: #2d3238;
+    border-color: rgba(255, 255, 255, .1) !important;
+}
+
+.bg-dark .hrm-documents-table tbody tr:hover,
+.dark-mode .hrm-documents-table tbody tr:hover {
+    background-color: #343a40 !important;
+}
+
+.bg-dark .hrm-documents-table .text-muted,
+.dark-mode .hrm-documents-table .text-muted {
+    color: rgba(255, 255, 255, .6) !important;
+}
+
+.bg-dark .hrm-documents-table .text-secondary,
+.dark-mode .hrm-documents-table .text-secondary {
+    color: rgba(255, 255, 255, .5) !important;
+}
+
+/* System preference for dark mode (automatic detection) */
+@media (prefers-color-scheme: dark) {
+    .hrm-doc-type-filter-items,
+    #hrm-doc-type-filter-items,
+    #hrm-tipo-items,
+    #hrm-anio-items,
+    #hrm-doc-year-filter-items {
+        background: #2d3238 !important;
+        border-color: #495057 !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    }
+
+    .dropdown-item,
+    .hrm-tipo-item,
+    .hrm-anio-item,
+    .hrm-doc-type-item {
+        color: rgba(255, 255, 255, .87) !important;
+        background-color: transparent !important;
+        border-radius: 4px;
+        margin: 1px 3px;
+        padding: 0.5rem 0.75rem !important;
+    }
+
+    .dropdown-item:hover,
+    .hrm-tipo-item:hover,
+    .hrm-anio-item:hover,
+    .hrm-doc-type-item:hover {
+        background-color: rgba(83, 115, 69, 0.3) !important;
+        color: #fff !important;
+    }
+
+    .dropdown-item.active,
+    .dropdown-item:active {
+        background-color: #537345 !important;
+        color: #fff !important;
+    }
+
+    #hrm_departamento_items .dropdown-item,
+    #hrm_area_gerencia_items .dropdown-item,
+    #hrm_puesto_items .dropdown-item,
+    #hrm_tipo_contrato_items .dropdown-item,
+    #hrm_rol_usuario_wp_items .dropdown-item {
+        border-bottom: 1px solid rgba(255, 255, 255, .08) !important;
+    }
+
+    /* Actions Menu */
+    .hrm-actions-menu {
+        background: #2d3238 !important;
+        border-color: #495057 !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    }
+
+    .hrm-actions-menu a,
+    .hrm-actions-menu button {
+        color: rgba(255, 255, 255, .87) !important;
+        background-color: transparent !important;
+        border-radius: 4px;
+        margin: 2px 0;
+    }
+
+    .hrm-actions-menu a:hover,
+    .hrm-actions-menu button:hover {
+        background-color: rgba(83, 115, 69, 0.3) !important;
+        color: #fff !important;
+    }
+
+    .hrm-actions-sep {
+        background: rgba(255, 255, 255, .15) !important;
+    }
+
+    .hrm-actions-toggle {
+        background-color: rgba(255, 255, 255, .1) !important;
+        border-color: rgba(255, 255, 255, .2) !important;
+        color: rgba(255, 255, 255, .87) !important;
+    }
+
+    .hrm-actions-toggle:hover {
+        background-color: rgba(255, 255, 255, .2) !important;
+        border-color: rgba(255, 255, 255, .3) !important;
+        color: #fff !important;
+    }
+
+    /* Documents table */
+    .hrm-documents-table {
+        color: rgba(255, 255, 255, .87);
+    }
+
+    .hrm-documents-table thead {
+        background-color: #1a1d21 !important;
+        color: #fff !important;
+    }
+
+    .hrm-documents-table tbody tr {
+        background-color: #2d3238;
+        border-color: rgba(255, 255, 255, .1) !important;
+    }
+
+    .hrm-documents-table tbody tr:hover {
+        background-color: #343a40 !important;
+    }
+
+    .hrm-documents-table .text-muted {
+        color: rgba(255, 255, 255, .6) !important;
+    }
+
+    .hrm-documents-table .text-secondary {
+        color: rgba(255, 255, 255, .5) !important;
+    }
+}
+
 /* ====================================================================
  * From: sidebar.css
  * ==================================================================== */
@@ -786,4 +1082,80 @@
 
 .tab-pane.fade.active {
     opacity: 1;
+}
+
+/* ====================================================================
+ * HRM utility surfaces (vacaciones empleado)
+ * ==================================================================== */
+
+.hrm-card-clean {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.hrm-card-body-muted {
+    background: #f5f5f5;
+    border-radius: 12px;
+    color: #333;
+    padding: 1.5rem;
+}
+
+.hrm-surface-box {
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    padding: 1rem;
+    background: #ffffff;
+    margin-bottom: 0.75rem;
+}
+
+.hrm-surface-box-sm {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 0.5rem;
+    background: #ffffff;
+}
+
+.hrm-mini-pill {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.hrm-mini-pill-success {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    background: rgba(39, 174, 96, 0.3);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.hrm-alert-left-info {
+    border-left: 4px solid #17a2b8;
+}
+
+.hrm-alert-left-warning {
+    border-left: 4px solid #ffc107;
+}
+
+.hrm-alert-soft-danger {
+    background: #fff3cd;
+    border-left: 4px solid #dc3545;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.hrm-alert-soft-warning {
+    background: #fff3cd;
+    border-left: 4px solid #f39c12;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.hrm-alert-soft-neutral {
+    background: #f8f9fa;
 }

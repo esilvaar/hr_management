@@ -14,8 +14,8 @@ wp_localize_script( 'hrm-employees-detail', 'hrmEmployeeData', array(
 
 // Validar empleado
 if ( ! isset( $employee ) || ! is_object( $employee ) || empty( $employee->id ) ) {
-    echo '<div class="d-flex align-items-center justify-content-center" style="min-height: 400px;">';
-    echo '<h2 style="font-size: 24px; color: #856404; text-align: center; max-width: 500px;"><strong>⚠️ Atención:</strong> Por favor selecciona un usuario para ver su perfil.</h2>';
+    echo '<div class="d-flex align-items-center justify-content-center myplugin-min-h-400">';
+    echo '<h2 class="myplugin-warning-title text-center"><strong>⚠️ Atención:</strong> Por favor selecciona un usuario para ver su perfil.</h2>';
     echo '</div>';
     return;
 }
@@ -147,7 +147,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                                 <?php wp_nonce_field( 'hrm_upload_avatar', 'hrm_upload_avatar_nonce' ); ?>
                                 <input type="hidden" name="hrm_action" value="upload_avatar">
                                 <input type="hidden" name="employee_id" value="<?= absint( $employee->id ) ?>">
-                                <label class="btn btn-sm btn-light" style="cursor: pointer;">
+                                <label class="btn btn-sm btn-light myplugin-cursor-pointer">
                                     <span class="dashicons dashicons-camera"></span>
                                     <input type="file" name="avatar" accept="image/*" class="d-none hrm-avatar-input">
                                 </label>
@@ -470,14 +470,14 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
     </div>
 </div>
 
-<div id="hrm-pass-panel" class="border rounded shadow p-4 mb-4 bg-white" style="max-width: 520px; margin: 0 auto; display: none; position: fixed; top: 15%; left: 50%; transform: translateX(-50%); z-index: 10000;">
+<div id="hrm-pass-panel" class="border rounded shadow p-4 mb-4 bg-white myplugin-fixed-panel myplugin-panel-520 myplugin-hidden">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0"><span class="dashicons dashicons-lock"></span> Cambiar Contraseña</h5>
         <button type="button" class="btn btn-outline-secondary btn-sm" id="hrm-close-pass-panel">Cerrar</button>
     </div>
     <div id="hrm-pass-panel-body">
         <div class="alert alert-warning py-2 small">
-            <span class="dashicons dashicons-warning" style="font-size:16px;"></span> Esto cambiará el acceso a WordPress para el usuario.
+            <span class="dashicons dashicons-warning" class="myplugin-icon-16"></span> Esto cambiará el acceso a WordPress para el usuario.
         </div>
         <div class="mb-2">
             <input type="password" id="hrm_panel_new_password" class="form-control" placeholder="Nueva contraseña (mín 8 caracteres)">
@@ -493,7 +493,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
         </div>
         <?php endif; ?>
 
-        <div id="hrm_panel_pass_feedback" class="text-danger mt-1 small" style="display:none;"></div>
+        <div id="hrm_panel_pass_feedback" class="text-danger mt-1 small myplugin-hidden"></div>
 
         <div class="d-flex justify-content-end gap-2 mt-3">
             <button type="button" class="btn btn-secondary" id="hrm_panel_cancel">Cancelar</button>
@@ -502,7 +502,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
     </div>
 </div>
 
-<div id="hrm-toggle-panel" class="border rounded shadow p-4 mb-4 bg-white" style="max-width: 400px; display: none; position: fixed; top: 20%; left: 50%; transform: translateX(-50%); z-index: 9999;">
+<div id="hrm-toggle-panel" class="border rounded shadow p-4 mb-4 bg-white myplugin-fixed-panel myplugin-panel-400 myplugin-hidden">
     <h5 id="hrm-toggle-title" class="mb-3"></h5>
     <div id="hrm-toggle-msg" class="mb-3"></div>
     <div class="d-flex justify-content-end gap-2">

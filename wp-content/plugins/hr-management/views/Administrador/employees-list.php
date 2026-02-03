@@ -67,13 +67,13 @@ if ( ! empty( $lista_empleados ) ) {
             <table class="rounded table table-hover table-striped mb-0 align-middle">
                 <thead class="table-dark">
                     <tr>
-                        <th scope="col" class="text-center" style="width: 80px;">Avatar</th>
+                        <th scope="col" class="text-center myplugin-col-80">Avatar</th>
                         <th scope="col">Empleado</th>
                         <th scope="col">RUT</th>
                         <th scope="col">Departamento</th>
                         <th scope="col">Cargo</th>
                         <th scope="col">Contacto</th>
-                        <th scope="col" class="text-center" style="width: 200px;">Acciones</th>
+                        <th scope="col" class="text-center myplugin-col-200">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -107,10 +107,10 @@ if ( ! empty( $lista_empleados ) ) {
                                         <img src="<?= esc_url( $avatar_url ) ?>" 
                                              alt="<?= esc_attr( $empleado->nombre ) ?>" 
                                              class="rounded-circle" 
-                                             style="width: 50px; height: 50px; object-fit: cover;">
+                                             class="myplugin-avatar-50">
                                     <?php else : ?>
                                         <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center" 
-                                             style="width: 50px; height: 50px;">
+                                             class="myplugin-avatar-50">
                                             <span class="text-muted fw-bold">
                                                 <?= esc_html( strtoupper( substr( $empleado->nombre, 0, 1 ) . substr( $empleado->apellido, 0, 1 ) ) ) ?>
                                             </span>
@@ -120,12 +120,12 @@ if ( ! empty( $lista_empleados ) ) {
 
                                 <td class="px-3 py-3">
                                     <div class="d-flex align-items-center gap-2">
-                                        <span class="fw-bold text-dark">
+                                        <span class="fw-bold hrm-table-text-main">
                                             <?= esc_html( $empleado->nombre . ' ' . $empleado->apellido ) ?>
                                         </span>
                                         <?php if ( isset( $empleado->estado ) && intval( $empleado->estado ) === 0 ) : ?>
                                             <span class="badge bg-danger" title="Empleado inactivo - Acceso bloqueado">
-                                                <span class="dashicons dashicons-lock" style="font-size: 12px; width: 12px; height: 12px;"></span>
+                                                <span class="dashicons dashicons-lock" class="myplugin-icon-12"></span>
                                                 Inactivo
                                             </span>
                                         <?php endif; ?>
@@ -133,7 +133,7 @@ if ( ! empty( $lista_empleados ) ) {
                                 </td>
 
                                 <td class="px-3 py-3">
-                                    <span class="font-monospace text-secondary"><?= esc_html( $empleado->rut ) ?></span>
+                                    <span class="font-monospace hrm-table-text-secondary"><?= esc_html( $empleado->rut ) ?></span>
                                 </td>
 
                                 <td class="px-3 py-3">
@@ -176,7 +176,7 @@ if ( ! empty( $lista_empleados ) ) {
                                             ?>
                                             <?php if ( $show_inactive ) : ?>
                                                 <?php if ( $puede_ver_botones ) : ?>
-                                                    <form method="post" action="<?= esc_url( admin_url( 'admin.php?page=hrm-empleados&tab=list' ) ) ?>" style="display:inline-block; margin:0;">
+                                                    <form method="post" action="<?= esc_url( admin_url( 'admin.php?page=hrm-empleados&tab=list' ) ) ?>" class="myplugin-inline-block myplugin-m-0">
                                                         <?php wp_nonce_field( 'hrm_toggle_employee_status', 'hrm_toggle_status_nonce' ); ?>
                                                         <input type="hidden" name="hrm_action" value="toggle_employee_status" />
                                                         <input type="hidden" name="employee_id" value="<?= esc_attr( $emp_id ) ?>" />
@@ -186,7 +186,7 @@ if ( ! empty( $lista_empleados ) ) {
                                                         </button>
                                                     </form>
 
-                                                    <form method="post" action="<?= esc_url( admin_url( 'admin.php?page=hrm-empleados&tab=list' ) ) ?>" style="display:inline-block; margin:0;">
+                                                    <form method="post" action="<?= esc_url( admin_url( 'admin.php?page=hrm-empleados&tab=list' ) ) ?>" class="myplugin-inline-block myplugin-m-0">
                                                         <?php wp_nonce_field( 'hrm_delete_employee', 'hrm_delete_employee_nonce' ); ?>
                                                         <input type="hidden" name="hrm_action" value="delete_employee" />
                                                         <input type="hidden" name="employee_id" value="<?= esc_attr( $emp_id ) ?>" />
@@ -220,7 +220,7 @@ if ( ! empty( $lista_empleados ) ) {
                                 <div class="text-muted">
                                     <?php if ( $show_inactive ) : ?>
                                         <div class="mb-3">
-                                            <span class="dashicons dashicons-lock" style="font-size: 64px; opacity: 0.5;"></span>
+                                            <span class="dashicons dashicons-lock" class="myplugin-icon-64 myplugin-opacity-50"></span>
                                         </div>
                                         <p class="fs-5 fw-semibold m-2">No hay empleados inactivos.</p>
                                         <a href="?page=hrm-empleados&tab=list" class="btn btn-secondary mt-2">
@@ -228,7 +228,7 @@ if ( ! empty( $lista_empleados ) ) {
                                         </a>
                                     <?php else : ?>
                                         <div class="mb-3">
-                                            <span class="dashicons dashicons-admin-users mb-3" style="font-size: 64px; opacity: 0.5;"></span>
+                                            <span class="dashicons dashicons-admin-users mb-3" class="myplugin-icon-64 myplugin-opacity-50"></span>
                                         </div>
                                         <p class="fs-5 fw-semibold m-2">No hay empleados activos registrados.</p>
                                         <a href="?page=hrm-empleados&tab=new" class="btn btn-primary mt-2">
@@ -243,7 +243,7 @@ if ( ! empty( $lista_empleados ) ) {
             </table>
 
         <!-- Panel fijo para desactivar empleado -->
-        <div id="hrm-desactivar-panel" class="border rounded shadow p-4 mb-4 bg-white" style="max-width: 400px; margin: 0 auto; display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); z-index: 9999;">
+        <div id="hrm-desactivar-panel" class="border rounded shadow p-4 mb-4 bg-white myplugin-fixed-panel myplugin-panel-400 myplugin-panel-top-10 myplugin-hidden">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="mb-0 text-danger"><span class="dashicons dashicons-no"></span> Desactivar Empleado</h5>
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-cerrar-desactivar">Cerrar</button>

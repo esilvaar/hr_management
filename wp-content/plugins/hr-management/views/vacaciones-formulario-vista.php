@@ -334,8 +334,8 @@ wp_enqueue_style( 'hrm-vacaciones-formulario', plugins_url( 'hr-management/asset
                         </div>
                     </div>
                     
-                    <div style="margin-bottom: 20px;">
-                        <div style="text-align: center; font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 10px;">
+                    <div class="myplugin-section">
+                        <div class="myplugin-section-title">
                             Firma Gerente / Editor de Vacaciones
                         </div>
                         <div class="linea-firma"></div>

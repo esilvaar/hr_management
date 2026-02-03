@@ -1,4 +1,84 @@
 /* ====================================================================
+ * Forzar opciones de dropdown (tipo/año) en dark mode
+ * ==================================================================== */
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-item,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-item strong,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-menu .dropdown-item,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-menu .dropdown-item strong {
+    background-color: #232323 !important;
+    color: #ffffff !important;
+    border: none !important;
+}
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-item:hover,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-item:focus {
+    background-color: #333333 !important;
+    color: #6eb5ff !important;
+}
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container option {
+    background-color: #232323 !important;
+    color: #ffffff !important;
+}
+/* ====================================================================
+ * Dropdowns de documentos (tipo y año) - Forzar fondo y texto en modo oscuro
+ * ==================================================================== */
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-menu,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-menu .dropdown-item,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-menu .dropdown-item strong,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-menu .dropdown-item:active,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-menu .dropdown-item:focus,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-menu .dropdown-item:hover {
+    background-color: #232323 !important;
+    color: #ffffff !important;
+    border: none !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-menu .dropdown-item.active,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-menu .dropdown-item.selected {
+    background-color: #446944 !important;
+    color: #ffffff !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .form-control,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .form-control:focus,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .form-control::placeholder {
+    color: #ffffff !important;
+    background-color: #232323 !important;
+    border-color: #444444 !important;
+}
+/* ====================================================================
+ * Dropdowns de documentos (tipo y año) en modo oscuro
+ * ==================================================================== */
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .form-control,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .form-control:focus,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .form-control::placeholder {
+    color: #ffffff !important;
+    background-color: #2d2d2d !important;
+    border-color: #444444 !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-item,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-item strong {
+    color: #ffffff !important;
+    background-color: #2d2d2d !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-item:hover,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-item:focus {
+    background-color: #3a3a3a !important;
+    color: #ffffff !important;
+}
+/* ====================================================================
+ * Utilidades para tablas de empleados (nombre y rut)
+ * ==================================================================== */
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-table-text-main {
+    color: #ffffff !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-table-text-secondary {
+    color: #f0f0f0 !important;
+}
+/* ====================================================================
  * Dark Mode Theme
  * Variables CSS para modo oscuro del plugin HRM
  * ==================================================================== */
@@ -24,7 +104,7 @@
 }
 
 /* Dark Mode */
-body.hrm-dark-mode {
+html.myplugin_dark body.hrm-admin-page #wpcontent {
     --hrm-bg-primary: #1a1a1a;
     --hrm-bg-secondary: #2d2d2d;
     --hrm-bg-tertiary: #3a3a3a;
@@ -46,138 +126,120 @@ body.hrm-dark-mode {
 }
 
 /* ====================================================================
- * WordPress Admin Background Dark Mode
+ * Plugin Background Dark Mode (solo HRM)
  * ==================================================================== */
 
-body.hrm-dark-mode {
-    background-color: #1a1a1a !important;
-}
-
-body.hrm-dark-mode #wpcontent {
-    background-color: #1a1a1a !important;
-    color: #ffffff;
-}
-
-body.hrm-dark-mode #wpwrap {
-    background-color: #1a1a1a !important;
-}
-
-body.hrm-dark-mode .wrap {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-admin-layout,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-content,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-admin-panel,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-panel {
     background-color: #1a1a1a !important;
     color: #ffffff !important;
-}
-
-body.hrm-dark-mode #wpbody {
-    background-color: #1a1a1a !important;
-}
-
-body.hrm-dark-mode #wpbody-content {
-    background-color: #1a1a1a !important;
 }
 
 /* ====================================================================
  * Sidebar Dark Mode
  * ==================================================================== */
 
-body.hrm-dark-mode .hrm-sidebar {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-sidebar {
     background-color: #242424 !important;
     color: #ffffff;
 }
 
-body.hrm-dark-mode .hrm-sidebar * {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-sidebar * {
     background-color: inherit;
     color: inherit;
 }
 
-body.hrm-dark-mode .hrm-sidebar-header {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-sidebar-header {
     border-bottom-color: #444444;
     background-color: #2d2d2d !important;
 }
 
-body.hrm-dark-mode .hrm-dark-mode-toggle-container {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-dark-mode-toggle-container {
     background-color: #242424 !important;
     border-color: #444444 !important;
 }
 
-body.hrm-dark-mode .hrm-nav {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-nav {
     background-color: #242424 !important;
 }
 
-body.hrm-dark-mode .hrm-nav * {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-nav * {
     background-color: transparent !important;
 }
 
-body.hrm-dark-mode .hrm-nav details > summary {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-nav details > summary {
     color: #ffffff !important;
     background-color: transparent !important;
 }
 
-body.hrm-dark-mode .hrm-nav details > summary:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-nav details > summary:hover {
     background-color: #333333 !important;
 }
 
-body.hrm-dark-mode .hrm-nav details {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-nav details {
     background-color: transparent !important;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .nav-link {
+html.myplugin_dark body.hrm-admin-page #wpcontent .nav-link {
     color: #f0f0f0 !important;
     background-color: transparent !important;
 }
 
-body.hrm-dark-mode .nav-link:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent .nav-link:hover {
     background-color: #333333 !important;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .nav-link.active {
+html.myplugin_dark body.hrm-admin-page #wpcontent .nav-link.active {
     background-color: #333333 !important;
     color: #6eb5ff !important;
     font-weight: 500;
 }
 
-body.hrm-dark-mode .hrm-sidebar ul {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-sidebar ul {
     background-color: transparent !important;
 }
 
-body.hrm-dark-mode .hrm-sidebar li {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-sidebar li {
     background-color: transparent !important;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .hrm-profile-mid {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-profile-mid {
     background-color: transparent !important;
 }
 
-body.hrm-dark-mode .hrm-profile-mid details {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-profile-mid details {
     background-color: transparent !important;
 }
 
-body.hrm-dark-mode .hrm-profile-mid details > summary {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-profile-mid details > summary {
     color: #ffffff !important;
     background-color: transparent !important;
 }
 
-body.hrm-dark-mode .hrm-sidebar .border-end {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-sidebar .border-end {
     border-right-color: #444444 !important;
     background-color: #242424 !important;
 }
 
-body.hrm-dark-mode .hrm-sidebar .border-top {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-sidebar .border-top {
     border-top-color: #444444 !important;
 }
 
-body.hrm-dark-mode .hrm-sidebar .border-bottom {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-sidebar .border-bottom {
     border-bottom-color: #444444 !important;
 }
 
-body.hrm-dark-mode .hrm-sidebar .bg-light {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-sidebar .bg-light {
     background-color: #242424 !important;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .hrm-sidebar p {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-sidebar p {
     color: #ffffff !important;
     background-color: transparent !important;
 }
@@ -186,49 +248,49 @@ body.hrm-dark-mode .hrm-sidebar p {
  * Main Content Dark Mode
  * ==================================================================== */
 
-body.hrm-dark-mode h1,
-body.hrm-dark-mode h2,
-body.hrm-dark-mode h3,
-body.hrm-dark-mode h4,
-body.hrm-dark-mode h5,
-body.hrm-dark-mode h6 {
+html.myplugin_dark body.hrm-admin-page #wpcontent h1,
+html.myplugin_dark body.hrm-admin-page #wpcontent h2,
+html.myplugin_dark body.hrm-admin-page #wpcontent h3,
+html.myplugin_dark body.hrm-admin-page #wpcontent h4,
+html.myplugin_dark body.hrm-admin-page #wpcontent h5,
+html.myplugin_dark body.hrm-admin-page #wpcontent h6 {
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .card {
+html.myplugin_dark body.hrm-admin-page #wpcontent .card {
     background-color: #2d2d2d !important;
     border-color: #444444;
     color: #ffffff;
 }
 
-body.hrm-dark-mode .card-header {
+html.myplugin_dark body.hrm-admin-page #wpcontent .card-header {
     background-color: #3a3a3a !important;
     border-bottom-color: #444444;
     color: #ffffff;
 }
 
-body.hrm-dark-mode .card-body {
+html.myplugin_dark body.hrm-admin-page #wpcontent .card-body {
     background-color: #2d2d2d !important;
 }
 
-body.hrm-dark-mode .card-title {
+html.myplugin_dark body.hrm-admin-page #wpcontent .card-title {
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode [class*="panel"] {
+html.myplugin_dark body.hrm-admin-page #wpcontent [class*="panel"] {
     background-color: #2d2d2d !important;
     border-color: #444444 !important;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .panel-heading {
+html.myplugin_dark body.hrm-admin-page #wpcontent .panel-heading {
     background-color: #3a3a3a !important;
     border-bottom-color: #444444 !important;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode [role="region"],
-body.hrm-dark-mode .content-section {
+html.myplugin_dark body.hrm-admin-page #wpcontent [role="region"],
+html.myplugin_dark body.hrm-admin-page #wpcontent .content-section {
     background-color: #2d2d2d !important;
 }
 
@@ -236,32 +298,32 @@ body.hrm-dark-mode .content-section {
  * Forms Dark Mode
  * ==================================================================== */
 
-body.hrm-dark-mode .form-control,
-body.hrm-dark-mode .form-select,
-body.hrm-dark-mode input[type="text"],
-body.hrm-dark-mode input[type="email"],
-body.hrm-dark-mode input[type="password"],
-body.hrm-dark-mode input[type="number"],
-body.hrm-dark-mode input[type="date"],
-body.hrm-dark-mode textarea,
-body.hrm-dark-mode select {
+html.myplugin_dark body.hrm-admin-page #wpcontent .form-control,
+html.myplugin_dark body.hrm-admin-page #wpcontent .form-select,
+html.myplugin_dark body.hrm-admin-page #wpcontent input[type="text"],
+html.myplugin_dark body.hrm-admin-page #wpcontent input[type="email"],
+html.myplugin_dark body.hrm-admin-page #wpcontent input[type="password"],
+html.myplugin_dark body.hrm-admin-page #wpcontent input[type="number"],
+html.myplugin_dark body.hrm-admin-page #wpcontent input[type="date"],
+html.myplugin_dark body.hrm-admin-page #wpcontent textarea,
+html.myplugin_dark body.hrm-admin-page #wpcontent select {
     background-color: #2d2d2d !important;
     border-color: #444444 !important;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .form-control:focus,
-body.hrm-dark-mode .form-select:focus {
+html.myplugin_dark body.hrm-admin-page #wpcontent .form-control:focus,
+html.myplugin_dark body.hrm-admin-page #wpcontent .form-select:focus {
     background-color: #2d2d2d !important;
     border-color: #6eb5ff !important;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .form-control::placeholder {
+html.myplugin_dark body.hrm-admin-page #wpcontent .form-control::placeholder {
     color: #e8e8e8;
 }
 
-body.hrm-dark-mode label {
+html.myplugin_dark body.hrm-admin-page #wpcontent label {
     color: #ffffff;
 }
 
@@ -269,32 +331,32 @@ body.hrm-dark-mode label {
  * Tables Dark Mode
  * ==================================================================== */
 
-body.hrm-dark-mode table {
+html.myplugin_dark body.hrm-admin-page #wpcontent table {
     color: #ffffff;
     border-color: #3a3a3a;
 }
 
-body.hrm-dark-mode thead {
+html.myplugin_dark body.hrm-admin-page #wpcontent thead {
     background-color: #3a3a3a;
     color: #ffffff;
 }
 
-body.hrm-dark-mode thead th {
+html.myplugin_dark body.hrm-admin-page #wpcontent thead th {
     border-color: #3a3a3a;
     background-color: #3a3a3a;
     color: #ffffff;
 }
 
-body.hrm-dark-mode tbody tr {
+html.myplugin_dark body.hrm-admin-page #wpcontent tbody tr {
     border-color: #3a3a3a;
     background-color: #2d2d2d;
 }
 
-body.hrm-dark-mode tbody tr:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent tbody tr:hover {
     background-color: #3a3a3a;
 }
 
-body.hrm-dark-mode td {
+html.myplugin_dark body.hrm-admin-page #wpcontent td {
     border-color: #3a3a3a;
     color: #ffffff;
 }
@@ -303,46 +365,46 @@ body.hrm-dark-mode td {
  * Modals & Alerts Dark Mode
  * ==================================================================== */
 
-body.hrm-dark-mode .modal-content {
+html.myplugin_dark body.hrm-admin-page #wpcontent .modal-content {
     background-color: #2d2d2d;
     border-color: #444444;
     color: #ffffff;
 }
 
-body.hrm-dark-mode .modal-header {
+html.myplugin_dark body.hrm-admin-page #wpcontent .modal-header {
     background-color: #3a3a3a;
     border-bottom-color: #444444;
 }
 
-body.hrm-dark-mode .modal-body {
+html.myplugin_dark body.hrm-admin-page #wpcontent .modal-body {
     background-color: #2d2d2d;
     color: #ffffff;
 }
 
-body.hrm-dark-mode .modal-footer {
+html.myplugin_dark body.hrm-admin-page #wpcontent .modal-footer {
     background-color: #3a3a3a;
     border-top-color: #444444;
 }
 
-body.hrm-dark-mode .alert {
+html.myplugin_dark body.hrm-admin-page #wpcontent .alert {
     background-color: #3a3a3a;
     border-color: #444444;
     color: #ffffff;
 }
 
-body.hrm-dark-mode .alert-info {
+html.myplugin_dark body.hrm-admin-page #wpcontent .alert-info {
     background-color: rgba(13, 110, 253, 0.15);
     border-color: rgba(13, 110, 253, 0.3);
     color: #6eb5ff;
 }
 
-body.hrm-dark-mode .alert-warning {
+html.myplugin_dark body.hrm-admin-page #wpcontent .alert-warning {
     background-color: rgba(255, 193, 7, 0.15);
     border-color: rgba(255, 193, 7, 0.3);
     color: #ffc107;
 }
 
-body.hrm-dark-mode .alert-danger {
+html.myplugin_dark body.hrm-admin-page #wpcontent .alert-danger {
     background-color: rgba(220, 53, 69, 0.15);
     border-color: rgba(220, 53, 69, 0.3);
     color: #ff6b6b;
@@ -352,28 +414,28 @@ body.hrm-dark-mode .alert-danger {
  * Buttons Dark Mode
  * ==================================================================== */
 
-body.hrm-dark-mode .btn-light {
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-light {
     background-color: #2d2d2d !important;
     border-color: #555555 !important;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .btn-light:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-light:hover {
     background-color: #3a3a3a !important;
     border-color: #666666 !important;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .btn {
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn {
     color: #ffffff;
 }
 
-body.hrm-dark-mode .btn-outline-danger {
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-outline-danger {
     color: #ff6b6b;
     border-color: #ff6b6b;
 }
 
-body.hrm-dark-mode .btn-outline-danger:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-outline-danger:hover {
     background-color: #ff6b6b;
     border-color: #ff6b6b;
     color: #1a1a1a;
@@ -383,16 +445,16 @@ body.hrm-dark-mode .btn-outline-danger:hover {
  * Dropdown Dark Mode
  * ==================================================================== */
 
-body.hrm-dark-mode .dropdown-menu {
+html.myplugin_dark body.hrm-admin-page #wpcontent .dropdown-menu {
     background-color: #2d2d2d;
     border-color: #444444;
 }
 
-body.hrm-dark-mode .dropdown-item {
+html.myplugin_dark body.hrm-admin-page #wpcontent .dropdown-item {
     color: #f0f0f0;
 }
 
-body.hrm-dark-mode .dropdown-item:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent .dropdown-item:hover {
     background-color: #333333;
     color: #ffffff;
 }
@@ -401,12 +463,12 @@ body.hrm-dark-mode .dropdown-item:hover {
  * Badge Dark Mode
  * ==================================================================== */
 
-body.hrm-dark-mode .badge {
+html.myplugin_dark body.hrm-admin-page #wpcontent .badge {
     background-color: #3a3a3a;
     color: #ffffff;
 }
 
-body.hrm-dark-mode .badge.bg-danger {
+html.myplugin_dark body.hrm-admin-page #wpcontent .badge.bg-danger {
     background-color: #dc3545 !important;
     color: #ffffff;
 }
@@ -415,15 +477,15 @@ body.hrm-dark-mode .badge.bg-danger {
  * Text & Links
  * ==================================================================== */
 
-body.hrm-dark-mode p {
+html.myplugin_dark body.hrm-admin-page #wpcontent p {
     color: #ffffff;
 }
 
-body.hrm-dark-mode a {
+html.myplugin_dark body.hrm-admin-page #wpcontent a {
     color: #6eb5ff;
 }
 
-body.hrm-dark-mode a:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent a:hover {
     color: #8fd3ff;
 }
 
@@ -446,34 +508,34 @@ body,
  * Detalles adicionales Sidebar Dark Mode
  * ==================================================================== */
 
-body.hrm-dark-mode .hrm-nav details {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-nav details {
     color: #ffffff;
 }
 
-body.hrm-dark-mode .hrm-nav ul {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-nav ul {
     background-color: transparent;
 }
 
-body.hrm-dark-mode .hrm-nav li {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-nav li {
     color: #f0f0f0;
 }
 
-body.hrm-dark-mode .hrm-profile-mid {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-profile-mid {
     background-color: transparent;
 }
 
-body.hrm-dark-mode .hrm-sidebar .btn {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-sidebar .btn {
     color: #ffffff !important;
     background-color: transparent !important;
 }
 
-body.hrm-dark-mode .hrm-sidebar .btn-outline-danger {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-sidebar .btn-outline-danger {
     color: #ff6b6b !important;
     border-color: #ff6b6b !important;
     background-color: transparent !important;
 }
 
-body.hrm-dark-mode .hrm-sidebar .btn-outline-danger:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-sidebar .btn-outline-danger:hover {
     background-color: #ff6b6b !important;
     border-color: #ff6b6b !important;
     color: #1a1a1a !important;
@@ -483,65 +545,65 @@ body.hrm-dark-mode .hrm-sidebar .btn-outline-danger:hover {
  * Detalles de Botones Dark Mode
  * ==================================================================== */
 
-body.hrm-dark-mode .btn-primary {
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-primary {
     background-color: #0d6efd;
     border-color: #0d6efd;
 }
 
-body.hrm-dark-mode .btn-primary:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-primary:hover {
     background-color: #0b5ed7;
     border-color: #0a58ca;
 }
 
-body.hrm-dark-mode .btn-secondary {
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-secondary {
     background-color: #6c757d;
     border-color: #6c757d;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .btn-secondary:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-secondary:hover {
     background-color: #5c636a;
     border-color: #565e64;
 }
 
-body.hrm-dark-mode .btn-success {
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-success {
     background-color: #198754;
     border-color: #198754;
 }
 
-body.hrm-dark-mode .btn-success:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-success:hover {
     background-color: #157347;
     border-color: #146c43;
 }
 
-body.hrm-dark-mode .btn-danger {
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-danger {
     background-color: #dc3545;
     border-color: #dc3545;
 }
 
-body.hrm-dark-mode .btn-danger:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-danger:hover {
     background-color: #bb2d3b;
     border-color: #b02a37;
 }
 
-body.hrm-dark-mode .btn-warning {
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-warning {
     background-color: #ffc107;
     border-color: #ffc107;
     color: #000000 !important;
 }
 
-body.hrm-dark-mode .btn-warning:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-warning:hover {
     background-color: #ffbb06;
     border-color: #ffb606;
 }
 
-body.hrm-dark-mode .btn-info {
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-info {
     background-color: #0dcaf0;
     border-color: #0dcaf0;
     color: #000000 !important;
 }
 
-body.hrm-dark-mode .btn-info:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-info:hover {
     background-color: #31d5f8;
     border-color: #25cff2;
 }
@@ -550,17 +612,17 @@ body.hrm-dark-mode .btn-info:hover {
  * Estilos para iconos en Sidebar Dark Mode
  * ==================================================================== */
 
-body.hrm-dark-mode .dashicons {
+html.myplugin_dark body.hrm-admin-page #wpcontent .dashicons {
     color: #ffffff;
     opacity: 0.85;
 }
 
-body.hrm-dark-mode .hrm-nav .dashicons {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-nav .dashicons {
     color: #f0f0f0;
 }
 
-body.hrm-dark-mode .nav-link:hover .dashicons,
-body.hrm-dark-mode .nav-link.active .dashicons {
+html.myplugin_dark body.hrm-admin-page #wpcontent .nav-link:hover .dashicons,
+html.myplugin_dark body.hrm-admin-page #wpcontent .nav-link.active .dashicons {
     color: #ffffff;
     opacity: 1;
 }
@@ -569,25 +631,25 @@ body.hrm-dark-mode .nav-link.active .dashicons {
  * Mejoras en elementos específicos del sidebar
  * ==================================================================== */
 
-body.hrm-dark-mode .hrm-notification-dot {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-notification-dot {
     background-color: #dc3545;
 }
 
-body.hrm-dark-mode .hrm-notification-badge {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-notification-badge {
     background-color: #dc3545 !important;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .form-check-label {
+html.myplugin_dark body.hrm-admin-page #wpcontent .form-check-label {
     color: #ffffff;
 }
 
-body.hrm-dark-mode .form-switch .form-check-input {
+html.myplugin_dark body.hrm-admin-page #wpcontent .form-switch .form-check-input {
     background-color: #444444;
     border-color: #555555;
 }
 
-body.hrm-dark-mode .form-switch .form-check-input:checked {
+html.myplugin_dark body.hrm-admin-page #wpcontent .form-switch .form-check-input:checked {
     background-color: #0d6efd;
     border-color: #0d6efd;
 }
@@ -596,19 +658,19 @@ body.hrm-dark-mode .form-switch .form-check-input:checked {
  * Forzar gris oscuro SOLO en elementos blancos (cards específicas)
  * ==================================================================== */
 
-body.hrm-dark-mode .bg-white {
+html.myplugin_dark body.hrm-admin-page #wpcontent .bg-white {
     background-color: #2d2d2d !important;
     color: #ffffff !important;
     border-color: #444444 !important;
 }
 
-body.hrm-dark-mode .bg-light {
+html.myplugin_dark body.hrm-admin-page #wpcontent .bg-light {
     background-color: #2d2d2d !important;
     color: #ffffff !important;
     border-color: #444444 !important;
 }
 
-body.hrm-dark-mode .bg-secondary {
+html.myplugin_dark body.hrm-admin-page #wpcontent .bg-secondary {
     background-color: #2d2d2d !important;
     color: #ffffff !important;
     border-color: #444444 !important;
@@ -618,24 +680,24 @@ body.hrm-dark-mode .bg-secondary {
  * Botones de Documentos Dark Mode
  * ==================================================================== */
 
-body.hrm-dark-mode [role="button"],
-body.hrm-dark-mode .document-button,
-body.hrm-dark-mode .nav-item a {
+html.myplugin_dark body.hrm-admin-page #wpcontent [role="button"],
+html.myplugin_dark body.hrm-admin-page #wpcontent .document-button,
+html.myplugin_dark body.hrm-admin-page #wpcontent .nav-item a {
     background-color: #3f3f3f !important;
     color: #ffffff !important;
     border-color: #555555 !important;
 }
 
-body.hrm-dark-mode [role="button"]:hover,
-body.hrm-dark-mode .document-button:hover,
-body.hrm-dark-mode .nav-item a:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent [role="button"]:hover,
+html.myplugin_dark body.hrm-admin-page #wpcontent .document-button:hover,
+html.myplugin_dark body.hrm-admin-page #wpcontent .nav-item a:hover {
     background-color: #4a4a4a !important;
     color: #ffffff !important;
     border-color: #666666 !important;
 }
 
 /* Estilos para elementos de lista de documentos */
-body.hrm-dark-mode li a {
+html.myplugin_dark body.hrm-admin-page #wpcontent li a {
     background-color: #2d2d2d !important;
     color: #ffffff !important;
     border: 1px solid #444444 !important;
@@ -646,41 +708,41 @@ body.hrm-dark-mode li a {
     transition: all 0.3s ease;
 }
 
-body.hrm-dark-mode li a:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent li a:hover {
     background-color: #3a3a3a !important;
     color: #ffffff !important;
     border-color: #555555 !important;
 }
 
-body.hrm-dark-mode li a span {
+html.myplugin_dark body.hrm-admin-page #wpcontent li a span {
     color: #f0f0f0 !important;
 }
 
-body.hrm-dark-mode li a:hover span {
+html.myplugin_dark body.hrm-admin-page #wpcontent li a:hover span {
     color: #ffffff !important;
 }
 
 /* Forzar documentos específicamente */
-body.hrm-dark-mode ul li a,
-body.hrm-dark-mode a[href*="document"],
-body.hrm-dark-mode a[href*="documento"],
-body.hrm-dark-mode .list-group-item {
+html.myplugin_dark body.hrm-admin-page #wpcontent ul li a,
+html.myplugin_dark body.hrm-admin-page #wpcontent a[href*="document"],
+html.myplugin_dark body.hrm-admin-page #wpcontent a[href*="documento"],
+html.myplugin_dark body.hrm-admin-page #wpcontent .list-group-item {
     background-color: #2d2d2d !important;
     color: #ffffff !important;
     border-color: #444444 !important;
 }
 
-body.hrm-dark-mode ul li a:hover,
-body.hrm-dark-mode a[href*="document"]:hover,
-body.hrm-dark-mode a[href*="documento"]:hover,
-body.hrm-dark-mode .list-group-item:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent ul li a:hover,
+html.myplugin_dark body.hrm-admin-page #wpcontent a[href*="document"]:hover,
+html.myplugin_dark body.hrm-admin-page #wpcontent a[href*="documento"]:hover,
+html.myplugin_dark body.hrm-admin-page #wpcontent .list-group-item:hover {
     background-color: #3a3a3a !important;
     color: #ffffff !important;
     border-color: #555555 !important;
 }
 
 /* Selector universal para elementos dentro de listas */
-body.hrm-dark-mode li > * {
+html.myplugin_dark body.hrm-admin-page #wpcontent li > * {
     background-color: inherit !important;
     color: inherit !important;
 }
@@ -689,43 +751,43 @@ body.hrm-dark-mode li > * {
  * Paneles HRM Dark Mode
  * ==================================================================== */
 
-body.hrm-dark-mode .hrm-panel {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-panel {
     background-color: #2d2d2d !important;
     color: #ffffff !important;
     border-color: #444444 !important;
 }
 
-body.hrm-dark-mode .hrm-panel-header {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-panel-header {
     background-color: #2d2d2d !important;
     color: #ffffff !important;
     border-color: #444444 !important;
     border-bottom: 1px solid #444444 !important;
 }
 
-body.hrm-dark-mode .hrm-panel-header h5 {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-panel-header h5 {
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .hrm-panel-body {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-panel-body {
     background-color: #2d2d2d !important;
     color: #ffffff !important;
     border-color: #444444 !important;
 }
 
-body.hrm-dark-mode .hrm-panel-body:has(.avatar-hover-container) {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-panel-body:has(.avatar-hover-container) {
     background-color: #1a1a1a !important;
 }
 
-body.hrm-dark-mode .hrm-doc-panel-body {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-doc-panel-body {
     background-color: #2d2d2d !important;
 }
 
-body.hrm-dark-mode .hrm-panel-action {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-panel-action {
     background-color: #2d2d2d !important;
     border-color: #444444 !important;
 }
 
-body.hrm-dark-mode .hrm-panel-action .hrm-panel-header {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-panel-action .hrm-panel-header {
     background-color: #2d2d2d !important;
 }
 
@@ -733,7 +795,7 @@ body.hrm-dark-mode .hrm-panel-action .hrm-panel-header {
  * Botones de Documentos (.hrm-doc-btn)
  * ==================================================================== */
 
-body.hrm-dark-mode .hrm-doc-btn {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-doc-btn {
     background-color: #3a3a3a !important;
     color: #ffffff !important;
     border: 1px solid #444444 !important;
@@ -747,36 +809,100 @@ body.hrm-dark-mode .hrm-doc-btn {
     transition: all 0.3s ease !important;
 }
 
-body.hrm-dark-mode .hrm-doc-btn:hover {
+/* ====================================================================
+ * Forzar dark mode en filtros de tipo/año y botón de acciones AJAX
+ * ==================================================================== */
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container-type,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container-year {
+    background-color: #232323 !important;
+}
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .form-control,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container input[type="text"],
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .hrm-filter-input {
+    background-color: #232323 !important;
+    color: #ffffff !important;
+    border-color: #444444 !important;
+}
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .form-control:focus,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container input[type="text"]:focus,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .hrm-filter-input:focus {
+    background-color: #232323 !important;
+    color: #ffffff !important;
+    border-color: #6eb5ff !important;
+}
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-clear,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-clear-inline {
+    background: transparent !important;
+    color: #ffffff !important;
+    border: none !important;
+}
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-clear:hover,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-clear-inline:hover {
+    background: #333333 !important;
+    color: #6eb5ff !important;
+}
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-menu,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-item {
+    background-color: #232323 !important;
+    color: #ffffff !important;
+}
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-item:hover,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-item:focus {
+    background-color: #333333 !important;
+    color: #ffffff !important;
+}
+
+/* Botón de acciones AJAX y variantes Bootstrap */
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-outline-secondary,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-actions-toggle {
+    background-color: #232323 !important;
+    color: #ffffff !important;
+    border-color: #444444 !important;
+}
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-outline-secondary:hover,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-actions-toggle:hover,
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-outline-secondary:focus,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-actions-toggle:focus {
+    background-color: #333333 !important;
+    color: #6eb5ff !important;
+    border-color: #6eb5ff !important;
+}
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-outline-secondary .dashicons,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-actions-toggle .dashicons {
+    color: #ffffff !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-doc-btn:hover {
     background-color: #4a4a4a !important;
     color: #ffffff !important;
     border-color: #555555 !important;
 }
 
-body.hrm-dark-mode .hrm-doc-btn-icon {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-doc-btn-icon {
     color: #f0f0f0 !important;
 }
 
-body.hrm-dark-mode .hrm-doc-btn:hover .hrm-doc-btn-icon {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-doc-btn:hover .hrm-doc-btn-icon {
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .hrm-doc-btn-title {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-doc-btn-title {
     color: #ffffff !important;
     font-weight: 600;
 }
 
-body.hrm-dark-mode .hrm-doc-btn-desc {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-doc-btn-desc {
     color: #f0f0f0 !important;
     font-size: 0.9em;
 }
 
-body.hrm-dark-mode .hrm-doc-btn-arrow {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-doc-btn-arrow {
     color: #f0f0f0 !important;
     margin-left: auto;
 }
 
-body.hrm-dark-mode .hrm-doc-btn:hover .hrm-doc-btn-arrow {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-doc-btn:hover .hrm-doc-btn-arrow {
     color: #ffffff !important;
 }
 
@@ -784,29 +910,29 @@ body.hrm-dark-mode .hrm-doc-btn:hover .hrm-doc-btn-arrow {
  * Modales Dark Mode
  * ==================================================================== */
 
-body.hrm-dark-mode #hrm-pass-panel {
+html.myplugin_dark body.hrm-admin-page #wpcontent #hrm-pass-panel {
     background-color: #2d2d2d !important;
     border: 1px solid #444444 !important;
     color: #ffffff !important;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.8) !important;
 }
 
-body.hrm-dark-mode #hrm-pass-panel h5 {
+html.myplugin_dark body.hrm-admin-page #wpcontent #hrm-pass-panel h5 {
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode #hrm-toggle-panel {
+html.myplugin_dark body.hrm-admin-page #wpcontent #hrm-toggle-panel {
     background-color: #2d2d2d !important;
     border: 1px solid #444444 !important;
     color: #ffffff !important;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.8) !important;
 }
 
-body.hrm-dark-mode #hrm-toggle-panel h5 {
+html.myplugin_dark body.hrm-admin-page #wpcontent #hrm-toggle-panel h5 {
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode #hrm-pass-panel-body {
+html.myplugin_dark body.hrm-admin-page #wpcontent #hrm-pass-panel-body {
     color: #ffffff !important;
 }
 
@@ -814,27 +940,27 @@ body.hrm-dark-mode #hrm-pass-panel-body {
  * Labels y Descripciones
  * ==================================================================== */
 
-body.hrm-dark-mode .form-label {
+html.myplugin_dark body.hrm-admin-page #wpcontent .form-label {
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode label {
+html.myplugin_dark body.hrm-admin-page #wpcontent label {
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .form-text {
+html.myplugin_dark body.hrm-admin-page #wpcontent .form-text {
     color: #f0f0f0 !important;
 }
 
-body.hrm-dark-mode .small {
+html.myplugin_dark body.hrm-admin-page #wpcontent .small {
     color: #f0f0f0 !important;
 }
 
-body.hrm-dark-mode .text-muted {
+html.myplugin_dark body.hrm-admin-page #wpcontent .text-muted {
     color: #e8e8e8 !important;
 }
 
-body.hrm-dark-mode .text-danger {
+html.myplugin_dark body.hrm-admin-page #wpcontent .text-danger {
     color: #ff6b6b !important;
 }
 
@@ -842,89 +968,89 @@ body.hrm-dark-mode .text-danger {
  * Tablas Dark Mode
  * ==================================================================== */
 
-body.hrm-dark-mode .table {
+html.myplugin_dark body.hrm-admin-page #wpcontent .table {
     color: #ffffff;
     border-color: #444444;
 }
 
-body.hrm-dark-mode .table > :not(caption) > * > * {
+html.myplugin_dark body.hrm-admin-page #wpcontent .table > :not(caption) > * > * {
     background-color: #2d2d2d;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .table-dark {
+html.myplugin_dark body.hrm-admin-page #wpcontent .table-dark {
     background-color: #1a1a1a;
     color: #ffffff;
     border-color: #444444;
 }
 
-body.hrm-dark-mode .table-dark > :not(caption) > * > * {
+html.myplugin_dark body.hrm-admin-page #wpcontent .table-dark > :not(caption) > * > * {
     background-color: #1a1a1a;
     color: #ffffff !important;
     border-color: #444444;
 }
 
-body.hrm-dark-mode thead {
+html.myplugin_dark body.hrm-admin-page #wpcontent thead {
     background-color: #1a1a1a;
     color: #ffffff;
     border-color: #444444;
 }
 
-body.hrm-dark-mode thead th {
+html.myplugin_dark body.hrm-admin-page #wpcontent thead th {
     background-color: #1a1a1a;
     color: #ffffff !important;
     border-color: #444444;
     font-weight: 600;
 }
 
-body.hrm-dark-mode tbody {
+html.myplugin_dark body.hrm-admin-page #wpcontent tbody {
     background-color: #2d2d2d;
     color: #ffffff;
 }
 
-body.hrm-dark-mode tbody tr {
+html.myplugin_dark body.hrm-admin-page #wpcontent tbody tr {
     background-color: #2d2d2d;
     color: #ffffff;
     border-color: #444444;
 }
 
-body.hrm-dark-mode tbody tr:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent tbody tr:hover {
     background-color: #3a3a3a;
     color: #ffffff;
 }
 
-body.hrm-dark-mode tbody td {
+html.myplugin_dark body.hrm-admin-page #wpcontent tbody td {
     background-color: transparent;
     color: #ffffff !important;
     border-color: #444444;
 }
 
-body.hrm-dark-mode .table-striped > tbody > tr:nth-of-type(odd) {
+html.myplugin_dark body.hrm-admin-page #wpcontent .table-striped > tbody > tr:nth-of-type(odd) {
     background-color: #2d2d2d;
     color: #ffffff;
 }
 
-body.hrm-dark-mode .table-striped > tbody > tr:nth-of-type(even) {
+html.myplugin_dark body.hrm-admin-page #wpcontent .table-striped > tbody > tr:nth-of-type(even) {
     background-color: #242424;
     color: #ffffff;
 }
 
-body.hrm-dark-mode .table-hover > tbody > tr:hover {
+html.myplugin_dark body.hrm-admin-page #wpcontent .table-hover > tbody > tr:hover {
     background-color: #3a3a3a;
     color: #ffffff;
 }
 
-body.hrm-dark-mode .table-hover > tbody > tr:hover > td {
+html.myplugin_dark body.hrm-admin-page #wpcontent .table-hover > tbody > tr:hover > td {
     background-color: transparent;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .rounded.shadow-sm {
+html.myplugin_dark body.hrm-admin-page #wpcontent .rounded.shadow-sm {
     background-color: #1a1a1a;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.5) !important;
 }
 
-body.hrm-dark-mode .rounded-top {
+html.myplugin_dark body.hrm-admin-page #wpcontent .rounded-top {
     background-color: #1a1a1a;
     border-color: #444444;
 }
@@ -933,13 +1059,13 @@ body.hrm-dark-mode .rounded-top {
  * Avatar en tabla
  * ==================================================================== */
 
-body.hrm-dark-mode .table .bg-light {
+html.myplugin_dark body.hrm-admin-page #wpcontent .table .bg-light {
     background-color: #2d2d2d !important;
     color: #ffffff !important;
     border-color: #444444 !important;
 }
 
-body.hrm-dark-mode table .rounded-circle {
+html.myplugin_dark body.hrm-admin-page #wpcontent table .rounded-circle {
     background-color: #2d2d2d !important;
 }
 
@@ -947,23 +1073,23 @@ body.hrm-dark-mode table .rounded-circle {
  * Badges en tabla
  * ==================================================================== */
 
-body.hrm-dark-mode .badge {
+html.myplugin_dark body.hrm-admin-page #wpcontent .badge {
     background-color: #3a3a3a !important;
     color: #ffffff !important;
     border: 1px solid #444444;
 }
 
-body.hrm-dark-mode .badge.bg-success {
+html.myplugin_dark body.hrm-admin-page #wpcontent .badge.bg-success {
     background-color: #198754 !important;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .badge.bg-secondary {
+html.myplugin_dark body.hrm-admin-page #wpcontent .badge.bg-secondary {
     background-color: #6c757d !important;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .badge.bg-danger {
+html.myplugin_dark body.hrm-admin-page #wpcontent .badge.bg-danger {
     background-color: #dc3545 !important;
     color: #ffffff !important;
 }
@@ -972,91 +1098,91 @@ body.hrm-dark-mode .badge.bg-danger {
  * Panel de desactivar empleado
  * ==================================================================== */
 
-body.hrm-dark-mode #hrm-desactivar-panel {
+html.myplugin_dark body.hrm-admin-page #wpcontent #hrm-desactivar-panel {
     background-color: #2d2d2d !important;
     border: 1px solid #444444 !important;
     color: #ffffff !important;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.8) !important;
 }
 
-body.hrm-dark-mode #hrm-desactivar-panel h5 {
+html.myplugin_dark body.hrm-admin-page #wpcontent #hrm-desactivar-panel h5 {
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode #hrm-desactivar-msg {
+html.myplugin_dark body.hrm-admin-page #wpcontent #hrm-desactivar-msg {
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .form-control {
+html.myplugin_dark body.hrm-admin-page #wpcontent .form-control {
     background-color: #3a3a3a !important;
     color: #ffffff !important;
     border-color: #444444 !important;
 }
 
-body.hrm-dark-mode .form-control:focus {
+html.myplugin_dark body.hrm-admin-page #wpcontent .form-control:focus {
     background-color: #3a3a3a !important;
     color: #ffffff !important;
     border-color: #0d6efd !important;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
 }
 
-body.hrm-dark-mode .form-control::placeholder {
+html.myplugin_dark body.hrm-admin-page #wpcontent .form-control::placeholder {
     color: #e8e8e8 !important;
 }
 
-body.hrm-dark-mode .form-select {
+html.myplugin_dark body.hrm-admin-page #wpcontent .form-select {
     background-color: #3a3a3a !important;
     color: #ffffff !important;
     border-color: #444444 !important;
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23e4e4e4' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
 }
 
-body.hrm-dark-mode .form-select:focus {
+html.myplugin_dark body.hrm-admin-page #wpcontent .form-select:focus {
     background-color: #3a3a3a !important;
     color: #ffffff !important;
     border-color: #0d6efd !important;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
 }
 
-body.hrm-dark-mode textarea.form-control {
+html.myplugin_dark body.hrm-admin-page #wpcontent textarea.form-control {
     background-color: #3a3a3a !important;
     color: #ffffff !important;
     border-color: #444444 !important;
 }
 
-body.hrm-dark-mode input[type="text"],
-body.hrm-dark-mode input[type="email"],
-body.hrm-dark-mode input[type="password"],
-body.hrm-dark-mode input[type="number"],
-body.hrm-dark-mode input[type="date"],
-body.hrm-dark-mode input[type="time"] {
+html.myplugin_dark body.hrm-admin-page #wpcontent input[type="text"],
+html.myplugin_dark body.hrm-admin-page #wpcontent input[type="email"],
+html.myplugin_dark body.hrm-admin-page #wpcontent input[type="password"],
+html.myplugin_dark body.hrm-admin-page #wpcontent input[type="number"],
+html.myplugin_dark body.hrm-admin-page #wpcontent input[type="date"],
+html.myplugin_dark body.hrm-admin-page #wpcontent input[type="time"] {
     background-color: #3a3a3a !important;
     color: #ffffff !important;
     border-color: #444444 !important;
 }
 
-body.hrm-dark-mode input[type="text"]:focus,
-body.hrm-dark-mode input[type="email"]:focus,
-body.hrm-dark-mode input[type="password"]:focus,
-body.hrm-dark-mode input[type="number"]:focus,
-body.hrm-dark-mode input[type="date"]:focus,
-body.hrm-dark-mode input[type="time"]:focus {
+html.myplugin_dark body.hrm-admin-page #wpcontent input[type="text"]:focus,
+html.myplugin_dark body.hrm-admin-page #wpcontent input[type="email"]:focus,
+html.myplugin_dark body.hrm-admin-page #wpcontent input[type="password"]:focus,
+html.myplugin_dark body.hrm-admin-page #wpcontent input[type="number"]:focus,
+html.myplugin_dark body.hrm-admin-page #wpcontent input[type="date"]:focus,
+html.myplugin_dark body.hrm-admin-page #wpcontent input[type="time"]:focus {
     background-color: #3a3a3a !important;
     color: #ffffff !important;
     border-color: #0d6efd !important;
 }
 
-body.hrm-dark-mode input[readonly] {
+html.myplugin_dark body.hrm-admin-page #wpcontent input[readonly] {
     background-color: #2d2d2d !important;
     color: #e8e8e8 !important;
     border-color: #444444 !important;
 }
 
-body.hrm-dark-mode .form-control-plaintext {
+html.myplugin_dark body.hrm-admin-page #wpcontent .form-control-plaintext {
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .hrm-readonly {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-readonly {
     color: #f0f0f0 !important;
 }
 
@@ -1064,23 +1190,23 @@ body.hrm-dark-mode .hrm-readonly {
  * Avatar y Elementos Específicos
  * ==================================================================== */
 
-body.hrm-dark-mode .avatar-hover-container {
+html.myplugin_dark body.hrm-admin-page #wpcontent .avatar-hover-container {
     background-color: #1a1a1a !important;
     border: none !important;
 }
 
-body.hrm-dark-mode .hrm-avatar-size {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-avatar-size {
     background-color: #1a1a1a !important;
     border: none !important;
     box-shadow: none !important;
 }
 
-body.hrm-dark-mode .hrm-avatar-size img {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-avatar-size img {
     border: none !important;
     box-shadow: none !important;
 }
 
-body.hrm-dark-mode .hrm-avatar-overlay {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-avatar-overlay {
     background-color: rgba(0, 0, 0, 0.7) !important;
 }
 
@@ -1088,20 +1214,20 @@ body.hrm-dark-mode .hrm-avatar-overlay {
  * Dashicons en Botones
  * ==================================================================== */
 
-body.hrm-dark-mode .btn .dashicons,
-body.hrm-dark-mode .btn-light .dashicons,
-body.hrm-dark-mode .btn-primary .dashicons,
-body.hrm-dark-mode .btn-success .dashicons,
-body.hrm-dark-mode .btn-danger .dashicons,
-body.hrm-dark-mode .btn-secondary .dashicons {
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn .dashicons,
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-light .dashicons,
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-primary .dashicons,
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-success .dashicons,
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-danger .dashicons,
+html.myplugin_dark body.hrm-admin-page #wpcontent .btn-secondary .dashicons {
     color: inherit !important;
 }
 
-body.hrm-dark-mode .hrm-doc-btn .dashicons {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-doc-btn .dashicons {
     color: #f0f0f0 !important;
 }
 
-body.hrm-dark-mode .hrm-doc-btn:hover .dashicons {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-doc-btn:hover .dashicons {
     color: #ffffff !important;
 }
 
@@ -1109,25 +1235,25 @@ body.hrm-dark-mode .hrm-doc-btn:hover .dashicons {
  * Notice Boxes
  * ==================================================================== */
 
-body.hrm-dark-mode .notice {
+html.myplugin_dark body.hrm-admin-page #wpcontent .notice {
     background-color: #3a3a3a !important;
     border-color: #444444 !important;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .notice-success {
+html.myplugin_dark body.hrm-admin-page #wpcontent .notice-success {
     background-color: rgba(25, 135, 84, 0.15) !important;
     border-color: rgba(25, 135, 84, 0.3) !important;
     color: #66bb6a !important;
 }
 
-body.hrm-dark-mode .notice-warning {
+html.myplugin_dark body.hrm-admin-page #wpcontent .notice-warning {
     background-color: rgba(255, 193, 7, 0.15) !important;
     border-color: rgba(255, 193, 7, 0.3) !important;
     color: #ffc107 !important;
 }
 
-body.hrm-dark-mode .notice-error {
+html.myplugin_dark body.hrm-admin-page #wpcontent .notice-error {
     background-color: rgba(220, 53, 69, 0.15) !important;
     border-color: rgba(220, 53, 69, 0.3) !important;
     color: #ff6b6b !important;
@@ -1137,38 +1263,275 @@ body.hrm-dark-mode .notice-error {
  * Contenedores principales Dark Mode
  * ==================================================================== */
 
-body.hrm-dark-mode .hrm-admin-panel {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-admin-panel {
     background-color: #1a1a1a !important;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .hrm-content {
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-content {
     background-color: #1a1a1a !important;
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .container-fluid {
+html.myplugin_dark body.hrm-admin-page #wpcontent .container-fluid {
     color: #ffffff !important;
     background-color: transparent !important;
 }
 
-body.hrm-dark-mode h1,
-body.hrm-dark-mode h2,
-body.hrm-dark-mode h3,
-body.hrm-dark-mode h4,
-body.hrm-dark-mode h5,
-body.hrm-dark-mode h6 {
+html.myplugin_dark body.hrm-admin-page #wpcontent h1,
+html.myplugin_dark body.hrm-admin-page #wpcontent h2,
+html.myplugin_dark body.hrm-admin-page #wpcontent h3,
+html.myplugin_dark body.hrm-admin-page #wpcontent h4,
+html.myplugin_dark body.hrm-admin-page #wpcontent h5,
+html.myplugin_dark body.hrm-admin-page #wpcontent h6 {
     color: #ffffff !important;
 }
 
-body.hrm-dark-mode .row {
+html.myplugin_dark body.hrm-admin-page #wpcontent .row {
     color: #ffffff !important;
     background-color: transparent !important;
 }
 
-body.hrm-dark-mode .col-md-6,
-body.hrm-dark-mode .col-lg-4,
-body.hrm-dark-mode .col-lg-8 {
+html.myplugin_dark body.hrm-admin-page #wpcontent .col-md-6,
+html.myplugin_dark body.hrm-admin-page #wpcontent .col-lg-4,
+html.myplugin_dark body.hrm-admin-page #wpcontent .col-lg-8 {
     color: #ffffff !important;
     background-color: transparent !important;
+}
+
+/* ====================================================================
+ * Vacaciones Admin - ajustes de texto y tablas (modo oscuro)
+ * ==================================================================== */
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-panel-header.bg-light,
+html.myplugin_dark body.hrm-admin-page #wpcontent .bg-light,
+html.myplugin_dark body.hrm-admin-page #wpcontent .bg-white {
+    background-color: #2d2d2d !important;
+    border-color: #444444 !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .text-dark,
+html.myplugin_dark body.hrm-admin-page #wpcontent .text-muted,
+html.myplugin_dark body.hrm-admin-page #wpcontent .text-secondary,
+html.myplugin_dark body.hrm-admin-page #wpcontent .text-black {
+    color: #ffffff !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .table-light,
+html.myplugin_dark body.hrm-admin-page #wpcontent .table-light > th,
+html.myplugin_dark body.hrm-admin-page #wpcontent .table-light > td {
+    background-color: #2d2d2d !important;
+    color: #ffffff !important;
+    border-color: #444444 !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .table > :not(caption) > * > * {
+    border-color: #444444 !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .table-striped > tbody > tr:nth-of-type(odd) > * {
+    background-color: #232323 !important;
+}
+
+/* ====================================================================
+ * Vacaciones Admin - modales
+ * ==================================================================== */
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .modal-contenido {
+    background-color: #1f1f1f !important;
+    color: #ffffff !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .modal-contenido .bg-light {
+    background-color: #2b2b2b !important;
+    border-color: #444444 !important;
+}
+
+/* ====================================================================
+ * Anaconda Documents - modal de creación/edición
+ * ==================================================================== */
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .anaconda-modal-dialog {
+    background-color: #1f1f1f;
+    color: #ffffff;
+    border: 1px solid #2b2b2b;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .anaconda-modal-header {
+    background-color: #262626;
+    border-bottom-color: #3a3a3a;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .anaconda-modal-header h3,
+html.myplugin_dark body.hrm-admin-page #wpcontent .anaconda-modal-close {
+    color: #ffffff;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .anaconda-form label,
+html.myplugin_dark body.hrm-admin-page #wpcontent .anaconda-filename {
+    color: #ffffff;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .anaconda-form input[type="text"] {
+    background-color: #2a2a2a;
+    color: #ffffff;
+    border-color: #444444;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .drop-area {
+    background-color: #2a2a2a;
+    color: #ffffff;
+    border-color: #555555;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .drop-area:hover,
+html.myplugin_dark body.hrm-admin-page #wpcontent .drop-area.dragover {
+    background-color: #303030;
+    border-color: #6eb5ff;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .anaconda-cancel {
+    background-color: #2a2a2a;
+    color: #ffffff;
+    border-color: #444444;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .anaconda-cancel:hover {
+    background-color: #333333;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .dropdown-toggle-btn,
+html.myplugin_dark body.hrm-admin-page #wpcontent .dropdown-menu,
+html.myplugin_dark body.hrm-admin-page #wpcontent .dropdown-item {
+    background-color: #2a2a2a;
+    color: #ffffff;
+    border-color: #444444;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .dropdown-item:hover {
+    background-color: #333333;
+}
+
+/* ====================================================================
+ * Vacaciones Admin - tabs de navegación
+ * ==================================================================== */
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .nav-tabs {
+    border-color: #444444 !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .nav-tabs .nav-link {
+    color: #ffffff !important;
+    background-color: #2a2a2a !important;
+    border-color: #444444 !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .nav-tabs .nav-link:hover {
+    background-color: #333333 !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .nav-tabs .nav-link.active {
+    color: #ffffff !important;
+    background-color: #333333 !important;
+    border-color: #444444 !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-tab-icon,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-tab-icon .dashicons {
+    color: #ffffff !important;
+}
+
+/* ====================================================================
+ * Overrides para estilos inline claros en vistas de vacaciones
+ * ==================================================================== */
+
+html.myplugin_dark body.hrm-admin-page #wpcontent [style*="background: white"],
+html.myplugin_dark body.hrm-admin-page #wpcontent [style*="background: #fff"],
+html.myplugin_dark body.hrm-admin-page #wpcontent [style*="background:#fff"] {
+    background-color: #2d2d2d !important;
+    color: #ffffff !important;
+    border-color: #444444 !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent [style*="background: #fff3cd"],
+html.myplugin_dark body.hrm-admin-page #wpcontent [style*="background:#fff3cd"] {
+    background-color: #3a2f12 !important;
+    color: #ffffff !important;
+    border-color: #6b5522 !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent [style*="color: #1a1a1a"],
+html.myplugin_dark body.hrm-admin-page #wpcontent [style*="color:#1a1a1a"],
+html.myplugin_dark body.hrm-admin-page #wpcontent [style*="color: #0b0b0b"],
+html.myplugin_dark body.hrm-admin-page #wpcontent [style*="color: #0f100f"],
+html.myplugin_dark body.hrm-admin-page #wpcontent [style*="color: #0f0e0e"],
+html.myplugin_dark body.hrm-admin-page #wpcontent [style*="color: #121212"],
+html.myplugin_dark body.hrm-admin-page #wpcontent [style*="color: #070707"],
+html.myplugin_dark body.hrm-admin-page #wpcontent [style*="color: #080808"],
+html.myplugin_dark body.hrm-admin-page #wpcontent [style*="color: #060606"] {
+    color: #ffffff !important;
+}
+
+/* ====================================================================
+ * HRM utility surfaces (vacaciones empleado) - dark overrides
+ * ==================================================================== */
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .myplugin-card-body-muted {
+    background: #2a2a2a;
+    color: #ffffff;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .myplugin-surface-box,
+html.myplugin_dark body.hrm-admin-page #wpcontent .myplugin-surface-box-sm {
+    background: #2d2d2d;
+    color: #ffffff;
+    border-color: #444444;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .myplugin-mini-pill {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .myplugin-mini-pill-success {
+    background: rgba(39, 174, 96, 0.2);
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .myplugin-alert-soft-danger,
+html.myplugin_dark body.hrm-admin-page #wpcontent .myplugin-alert-soft-warning {
+    background: #3a2f12;
+    color: #ffffff;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .myplugin-alert-soft-neutral {
+    background: #2d2d2d;
+    color: #ffffff;
+}
+
+/* ====================================================================
+ * Admin Base variables (dark)
+ * ==================================================================== */
+
+html.myplugin_dark body.hrm-admin-page #wpcontent {
+    --mp-text-primary: #ffffff;
+    --mp-text-muted: #d0d0d0;
+    --mp-surface: #2d2d2d;
+    --mp-surface-muted: #2a2a2a;
+    --mp-surface-soft: #2d2d2d;
+    --mp-border: #444444;
+    --mp-border-strong: #555555;
+    --mp-shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.35);
+    --mp-accent: #6eb5ff;
+    --mp-warning-bg: #3a2f12;
+    --mp-warning-text: #f1d48a;
+    --mp-form-surface: #1f1f1f;
+    --mp-form-surface-muted: #262626;
+    --mp-form-border: #3a3a3a;
+    --mp-form-label: #ffffff;
+    --mp-form-text: #e6e6e6;
+    --mp-form-title-bg: #2b2b2b;
+    --mp-form-title-text: #ffffff;
+    --mp-form-period-bg: #333333;
+    --mp-form-period-text: #ffffff;
+    --mp-pill-bg: rgba(255, 255, 255, 0.1);
+    --mp-pill-success-bg: rgba(39, 174, 96, 0.2);
 }

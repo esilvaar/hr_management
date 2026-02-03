@@ -80,7 +80,7 @@ wp_localize_script( 'hrm-anaconda-documents-create', 'anacondaDocsData', array(
                             <tr>
                                 <th scope="col">Título</th>
                                 <th scope="col">Archivo</th>
-                                <th scope="col" class="text-center" style="width: 200px;">Acciones</th>
+                                <th scope="col" class="text-center myplugin-col-200">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="anaconda-documents-table-body">
@@ -109,7 +109,7 @@ wp_localize_script( 'hrm-anaconda-documents-create', 'anacondaDocsData', array(
                                     echo '<td class="px-3 py-3 text-center">';
                                     echo '<div class="dropdown-wrapper">';
                                     echo '<button class="btn btn-sm btn-outline-secondary dropdown-toggle-btn" data-doc-id="' . esc_attr( $doc_id ) . '" data-file-url="' . esc_attr( $file_url ) . '" data-title="' . esc_attr( $doc->titulo ) . '" data-ruta="' . esc_attr( $ruta ) . '">⋮</button>';
-                                    echo '<div class="dropdown-menu" style="display:none;">';
+                                    echo '<div class="dropdown-menu myplugin-hidden">';
                                     echo '<a href="' . esc_url( $file_url ) . '" class="dropdown-item" target="_blank"><span class="dashicons dashicons-download"></span> Descargar</a>';
                                     echo '<button class="dropdown-item edit-doc-btn" data-doc-id="' . esc_attr( $doc_id ) . '" data-title="' . esc_attr( $doc->titulo ) . '" data-ruta="' . esc_attr( $ruta ) . '"><span class="dashicons dashicons-edit"></span> Editar</button>';
                                     if ( current_user_can( 'manage_options' ) ) {

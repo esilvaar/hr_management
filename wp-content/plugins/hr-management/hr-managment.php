@@ -225,6 +225,28 @@ function hrm_enqueue_admin_assets()
                 HRM_PLUGIN_VERSION
             );
 
+            // Admin UI tokens and components (scoped to plugin pages)
+            wp_enqueue_style(
+                'myplugin-admin-base',
+                HRM_PLUGIN_URL . 'assets/css/admin-base.css',
+                array('hrm-style'),
+                HRM_PLUGIN_VERSION
+            );
+
+            wp_enqueue_style(
+                'myplugin-admin-components',
+                HRM_PLUGIN_URL . 'assets/css/admin-components.css',
+                array('myplugin-admin-base'),
+                HRM_PLUGIN_VERSION
+            );
+
+            wp_enqueue_style(
+                'myplugin-admin-utilities',
+                HRM_PLUGIN_URL . 'assets/css/admin-utilities.css',
+                array('myplugin-admin-base'),
+                HRM_PLUGIN_VERSION
+            );
+
             // CSS del sidebar - Responsive (kept separate because it's larger / specialized)
             // NOTE: Enqueue below (unchanged)
 

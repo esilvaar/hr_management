@@ -2491,16 +2491,16 @@ function hrm_enviar_notificacion_vacaciones( $id_solicitud, $estado ) {
             $max = 10;
             $slice = array_slice( $notes, 0, $max );
 
-            echo '<div class="notice notice-info is-dismissible hrm-notifications-panel" style="padding:12px;">
-                    <h3 style="margin-top:0;">Notificaciones de Vacaciones</h3>
-                    <ul style="margin:6px 0 0 18px;">';
+            echo '<div class="notice notice-info is-dismissible hrm-notifications-panel myplugin-notice-panel">
+                    <h3 class="myplugin-mt-0">Notificaciones de Vacaciones</h3>
+                    <ul class="myplugin-notice-list">';
             foreach ( $slice as $n ) {
                 $label = strtoupper( $n['estado'] );
                 $text = esc_html( $n['nombre'] . ' ' . $n['apellido'] ) . ' — ' . esc_html( $label );
                 $uid = rawurlencode( $n['uid'] );
                 $redirect = rawurlencode( $n['url'] );
                 $link = admin_url( 'admin-post.php?action=hrm_mark_notification_read&uid=' . $uid . '&redirect=' . $redirect );
-                echo '<li style="margin:6px 0;"><a href="' . esc_url( $link ) . '">' . $text . '</a> <small style="color:#666;">(' . esc_html( date_i18n( 'd/m/Y H:i', strtotime( $n['created'] ) ) ) . ')</small></li>';
+                echo '<li class="myplugin-notice-item"><a href="' . esc_url( $link ) . '">' . $text . '</a> <small class="myplugin-text-muted">(' . esc_html( date_i18n( 'd/m/Y H:i', strtotime( $n['created'] ) ) ) . ')</small></li>';
             }
             echo '</ul></div>';
         }
@@ -5751,11 +5751,16 @@ function hrm_get_saldo_vacaciones_chile( $id_empleado ) {
  * @param bool  $mostrar_detalle Mostrar detalle expandido (default: true)
  * @return string HTML formateado
  */
+/* 
 function hrm_render_saldo_vacaciones_chile( $saldo, $mostrar_detalle = true ) {
+    return "";
+}
+*/
+function hrm_render_saldo_vacaciones_chile_deprecated( $saldo, $mostrar_detalle = true ) {
     
     // Caso de error
     if ( isset( $saldo['error'] ) && $saldo['error'] === true ) {
-        return '<div class="alert alert-danger" style="border-left: 4px solid #dc3545;">
+        return '<div class="alert alert-danger myplugin-alert-left-danger">
             <strong>❌ Error:</strong> ' . esc_html( $saldo['mensaje'] ?? 'Error desconocido' ) . '
         </div>';
     }
@@ -5767,7 +5772,7 @@ function hrm_render_saldo_vacaciones_chile( $saldo, $mostrar_detalle = true ) {
     // Caso: Fecha futura
     if ( isset( $saldo['codigo'] ) && $saldo['codigo'] === 'FECHA_FUTURA' ) {
         $fecha_inicio = date_create( $saldo['fecha_ingreso'] )->format( 'd/m/Y' );
-        return '<div class="alert alert-info" style="border-left: 4px solid #17a2b8;">
+        return '<div class="alert alert-info myplugin-alert-left-info">
             <strong>📅 Próximo Ingreso:</strong><br>
             El empleado comenzará a trabajar el <strong>' . esc_html( $fecha_inicio ) . '</strong>.<br>
             Los días de vacaciones se calcularán a partir de esa fecha.
@@ -5777,7 +5782,7 @@ function hrm_render_saldo_vacaciones_chile( $saldo, $mostrar_detalle = true ) {
     // Caso: Menos de 1 mes trabajado
     if ( isset( $saldo['codigo'] ) && $saldo['codigo'] === 'SIN_DIAS_GENERADOS' ) {
         $dias_trabajados = $saldo['dias_trabajados'] ?? 0;
-        return '<div class="alert alert-warning" style="border-left: 4px solid #ffc107;">
+        return '<div class="alert alert-warning myplugin-alert-left-warning">
             <strong>⏳ Período Inicial:</strong><br>
             El empleado lleva <strong>' . esc_html( $dias_trabajados ) . ' días</strong> trabajados.<br>
             Se requiere al menos 1 mes completo (o 15 días) para generar días de vacaciones.<br>
@@ -5799,37 +5804,37 @@ function hrm_render_saldo_vacaciones_chile( $saldo, $mostrar_detalle = true ) {
     
     // Card: Días Disponibles (de la BD)
     $html .= '<div class="col-md-4">';
-    $html .= '<div class="card h-100 text-center" style="border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">';
-    $html .= '<div class="card-body" style="background: #f5f5f5; border-radius: 12px; color: #333; padding: 1.5rem;">';
-    $html .= '<div style="border: 2px solid #ddd; border-radius: 8px; padding: 1rem; background: white; margin-bottom: 0.75rem;">';
-    $html .= '<div style="font-size: 2.5rem; font-weight: 700; line-height: 1;">' . number_format( $saldo['dias_disponibles'], 1 ) . '</div>';
+    $html .= '<div class="card h-100 text-center myplugin-card-clean">';
+    $html .= '<div class="card-body myplugin-card-body-muted">';
+    $html .= '<div class="myplugin-surface-box">';
+    $html .= '<div class="myplugin-metric">' . number_format( $saldo['dias_disponibles'], 1 ) . '</div>';
     $html .= '</div>';
-    $html .= '<div style="border: 1px solid #ddd; border-radius: 6px; padding: 0.5rem; background: white;">Días Disponibles</div>';
+    $html .= '<div class="myplugin-surface-box-sm">Días Disponibles</div>';
     if ( $saldo['dias_en_deficit'] ) {
-        $html .= '<div style="font-size: 0.75rem; margin-top: 0.25rem; background: rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 4px;">⚠️ Déficit: ' . number_format( $saldo['deficit_dias'], 1 ) . ' días</div>';
+        $html .= '<div class="myplugin-mini-pill">⚠️ Déficit: ' . number_format( $saldo['deficit_dias'], 1 ) . ' días</div>';
     }
     $html .= '</div></div></div>';
     
     // Card: Días Usados (de la BD)
     $html .= '<div class="col-md-4">';
-    $html .= '<div class="card h-100 text-center" style="border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">';
-    $html .= '<div class="card-body" style="background: #f5f5f5; border-radius: 12px; color: #333; padding: 1.5rem;">';
-    $html .= '<div style="border: 2px solid #ddd; border-radius: 8px; padding: 1rem; background: white; margin-bottom: 0.75rem;">';
-    $html .= '<div style="font-size: 2.5rem; font-weight: 700; line-height: 1;">' . number_format( $saldo['dias_usados'], 1 ) . '</div>';
+    $html .= '<div class="card h-100 text-center myplugin-card-clean">';
+    $html .= '<div class="card-body myplugin-card-body-muted">';
+    $html .= '<div class="myplugin-surface-box">';
+    $html .= '<div class="myplugin-metric">' . number_format( $saldo['dias_usados'], 1 ) . '</div>';
     $html .= '</div>';
-    $html .= '<div style="border: 1px solid #ddd; border-radius: 6px; padding: 0.5rem; background: white;">Días Usados</div>';
+    $html .= '<div class="myplugin-surface-box-sm">Días Usados</div>';
     $html .= '</div></div></div>';
     
     // Card: Días del Período Actual (calculado)
     $html .= '<div class="col-md-4">';
-    $html .= '<div class="card h-100 text-center" style="border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">';
-    $html .= '<div class="card-body" style="background: #f5f5f5; border-radius: 12px; color: #333; padding: 1.5rem;">';
-    $html .= '<div style="border: 2px solid #ddd; border-radius: 8px; padding: 1rem; background: white; margin-bottom: 0.75rem;">';
-    $html .= '<div style="font-size: 2.5rem; font-weight: 700; line-height: 1;">' . number_format( $saldo['dias_periodo_actual'], 0 ) . '</div>';
+    $html .= '<div class="card h-100 text-center myplugin-card-clean">';
+    $html .= '<div class="card-body myplugin-card-body-muted">';
+    $html .= '<div class="myplugin-surface-box">';
+    $html .= '<div class="myplugin-metric">' . number_format( $saldo['dias_periodo_actual'], 0 ) . '</div>';
     $html .= '</div>';
-    $html .= '<div style="border: 1px solid #ddd; border-radius: 6px; padding: 0.5rem; background: white;">Días por Año</div>';
+    $html .= '<div class="myplugin-surface-box-sm">Días por Año</div>';
     if ( $saldo['dias_progresivos_anuales'] > 0 ) {
-        $html .= '<div style="font-size: 0.75rem; margin-top: 0.25rem; background: rgba(39,174,96,0.3); padding: 0.25rem 0.5rem; border-radius: 4px;">15 base + ' . $saldo['dias_progresivos_anuales'] . ' progresivos</div>';
+        $html .= '<div class="myplugin-mini-pill-success">15 base + ' . $saldo['dias_progresivos_anuales'] . ' progresivos</div>';
     }
     $html .= '</div></div></div>';
     
@@ -5841,7 +5846,7 @@ function hrm_render_saldo_vacaciones_chile( $saldo, $mostrar_detalle = true ) {
     
     // Alerta de déficit
     if ( $saldo['dias_en_deficit'] ) {
-        $html .= '<div class="alert" style="background: #fff3cd; border-left: 4px solid #dc3545; border-radius: 8px; margin-bottom: 1rem;">';
+        $html .= '<div class="alert myplugin-alert-soft-danger">';
         $html .= '<strong>⚠️ Déficit de Días:</strong> Se han usado <strong>' . number_format( $saldo['deficit_dias'], 1 ) . ' días</strong> más de los generados. ';
         $html .= 'Contacte a RRHH para regularizar la situación.';
         $html .= '</div>';
@@ -5849,7 +5854,7 @@ function hrm_render_saldo_vacaciones_chile( $saldo, $mostrar_detalle = true ) {
     
     // Alerta de exceso de acumulación
     if ( $saldo['supera_limite'] ) {
-        $html .= '<div class="alert" style="background: #fff3cd; border-left: 4px solid #f39c12; border-radius: 8px; margin-bottom: 1rem;">';
+        $html .= '<div class="alert myplugin-alert-soft-warning">';
         $html .= '<strong>📋 Exceso de Acumulación:</strong> Tienes <strong>' . number_format( $saldo['dias_excedidos'], 1 ) . ' días</strong> ';
         $html .= 'que exceden el límite legal de ' . $saldo['limite_acumulacion'] . ' días. ';
         $html .= '<br><small class="text-muted">Según la ley chilena, el máximo acumulable es la suma de los últimos 2 períodos anuales.</small>';
@@ -5866,9 +5871,9 @@ function hrm_render_saldo_vacaciones_chile( $saldo, $mostrar_detalle = true ) {
     $dias_aniv = $saldo['dias_para_aniversario'];
     $color_aniv = $dias_aniv <= 30 ? '#f39c12' : '#0a130e';
     $html .= '<div class="col-md-6">';
-    $html .= '<div class="alert mb-0" style="background: #f8f9fa; border-left: 4px solid ' . $color_aniv . '; border-radius: 8px;">';
+    $html .= '<div class="alert mb-0 myplugin-alert-soft-neutral myplugin-alert-accent" style="--mp-accent-color: ' . $color_aniv . ';">';
     $html .= '<strong> Próxima Recarga:</strong><br>';
-    $html .= '<span style="font-size: 1.1rem; color: ' . $color_aniv . ';">' . date_create( $saldo['proximo_aniversario'] )->format( 'd/m/Y' ) . '</span>';
+    $html .= '<span class="myplugin-inline-date" style="--mp-accent-color: ' . $color_aniv . ';">' . date_create( $saldo['proximo_aniversario'] )->format( 'd/m/Y' ) . '</span>';
     $html .= '<br><small class="text-muted">Faltan ' . $dias_aniv . ' días</small>';
     $html .= '</div></div>';
     
@@ -5878,6 +5883,15 @@ function hrm_render_saldo_vacaciones_chile( $saldo, $mostrar_detalle = true ) {
     
     return $html;
 }
+
+// No-op placeholder to ensure file ends with valid PHP syntax.
+if ( ! function_exists( 'hrm_placeholder_fix' ) ) {
+    function hrm_placeholder_fix() {
+        // Intentionally empty — sirve para evitar errores de sintaxis
+        return true;
+    }
+}
+
 /* =====================================================
  * APROBAR SOLICITUD DE MEDIO DÍA (AJAX)
  * ===================================================== */

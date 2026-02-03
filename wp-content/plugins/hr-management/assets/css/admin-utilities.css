@@ -1,0 +1,267 @@
+/* ====================================================================
+ * Admin Utilities (HRM)
+ * Small helpers to replace inline styles
+ * ==================================================================== */
+
+.myplugin-section {
+    margin-bottom: 20px;
+}
+
+.myplugin-section-title {
+    text-align: center;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.myplugin-metric {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.myplugin-inline-date {
+    font-size: 1.1rem;
+    color: var(--mp-accent-color, var(--mp-text-primary));
+}
+
+.myplugin-heading {
+    font-weight: 600;
+}
+
+.myplugin-panel-header {
+    border-radius: 4px 4px 0 0;
+}
+
+.myplugin-status-text {
+    color: var(--mp-accent-color, var(--mp-text-primary));
+}
+
+.myplugin-alert-accent {
+    border-left: 4px solid var(--mp-accent-color, var(--mp-accent));
+    border-radius: var(--mp-radius);
+}
+
+.myplugin-mt-0 {
+    margin-top: 0;
+}
+
+.myplugin-inline-form {
+    display: inline;
+}
+
+.myplugin-inline-block {
+    display: inline-block;
+}
+
+.myplugin-hidden {
+    display: none;
+}
+
+.myplugin-m-0 {
+    margin: 0;
+}
+
+.myplugin-ml-6 {
+    margin-left: 6px;
+}
+
+.myplugin-mt-12 {
+    margin-top: 0.75rem;
+}
+
+.myplugin-mt-16 {
+    margin-top: 1rem;
+}
+
+.myplugin-gap-6 {
+    gap: 6px;
+}
+
+.myplugin-align-middle {
+    vertical-align: middle;
+}
+
+.myplugin-min-h-400 {
+    min-height: 400px;
+}
+
+.myplugin-warning-title {
+    font-size: 24px;
+    color: var(--mp-warning-text);
+    max-width: 500px;
+}
+
+.myplugin-col-80 {
+    width: 80px;
+}
+
+.myplugin-col-200 {
+    width: 200px;
+}
+
+.myplugin-avatar-50 {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+}
+
+.myplugin-icon-12 {
+    font-size: 12px;
+    width: 12px;
+    height: 12px;
+}
+
+.myplugin-icon-16 {
+    font-size: 16px;
+}
+
+.myplugin-icon-48 {
+    font-size: 48px;
+}
+
+.myplugin-icon-64 {
+    font-size: 64px;
+}
+
+.myplugin-icon-2rem {
+    font-size: 2rem;
+}
+
+.myplugin-opacity-50 {
+    opacity: 0.5;
+}
+
+.myplugin-cursor-pointer {
+    cursor: pointer;
+}
+
+.myplugin-fixed-panel {
+    margin: 0 auto;
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+}
+
+.myplugin-panel-520 {
+    max-width: 520px;
+    top: 15%;
+}
+
+.myplugin-panel-400 {
+    max-width: 400px;
+    top: 20%;
+}
+
+.myplugin-btn-square-40 {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    padding: 0;
+}
+
+.myplugin-badge-110 {
+    font-size: 0.8rem;
+    min-width: 110px;
+}
+
+.myplugin-badge-90 {
+    font-size: 0.8rem;
+    min-width: 90px;
+}
+
+.myplugin-alert-narrow {
+    max-width: 300px;
+    margin: 8px auto 0;
+}
+
+.myplugin-text-1100 {
+    font-size: 1.1rem;
+}
+
+.myplugin-text-1200 {
+    font-size: 1.2rem;
+    font-weight: 800;
+}
+
+.myplugin-link-btn {
+    color: var(--mp-accent);
+    text-decoration: none;
+    font-size: 1.1rem;
+    cursor: pointer;
+    border: none;
+    background: none;
+}
+
+.myplugin-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+}
+
+.myplugin-modal-content-lg {
+    max-width: 650px;
+    width: 90%;
+}
+
+.myplugin-modal-content-md {
+    max-width: 600px;
+    width: 90%;
+}
+
+.myplugin-modal-scroll {
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.myplugin-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.myplugin-alert-big {
+    font-size: 1.25rem;
+    padding: 2rem;
+}
+
+.myplugin-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    min-width: 400px;
+}
+
+.myplugin-toast-icon {
+    font-size: 1.5rem;
+}
+
+.myplugin-panel-top-10 {
+    top: 10%;
+}
+
+.myplugin-notice-panel {
+    padding: 12px;
+}
+
+.myplugin-notice-list {
+    margin: 6px 0 0 18px;
+}
+
+.myplugin-notice-item {
+    margin: 6px 0;
+}
+
+.myplugin-text-muted {
+    color: var(--mp-text-muted);
+}
