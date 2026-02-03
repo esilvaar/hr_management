@@ -406,6 +406,7 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                                 <tr>
                                     <th class="py-3 ps-4">Desde</th>
                                     <th class="py-3">Hasta</th>
+                                    <th class="py-3 text-center">Días</th>
                                     <th class="py-3">Estado</th>
                                     <th class="py-3 pe-4">Acciones</th>
                                 </tr>
@@ -433,6 +434,15 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                                         </td>
                                         <td class="fw-bold">
                                             <?= esc_html( $s['fecha_fin'] ?? '' ) ?>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-primary rounded-pill">
+                                                <?php 
+                                                $total_dias = isset($s['total_dias']) ? floatval($s['total_dias']) : 0;
+                                                echo esc_html( $total_dias );
+                                                echo $total_dias == 1 ? ' día' : ' días';
+                                                ?>
+                                            </span>
                                         </td>
                                         <td>
                                             <span class="badge <?= esc_attr( $badge_class ) ?> rounded-pill px-3">
