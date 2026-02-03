@@ -28,6 +28,15 @@
     --mp-form-title-text: #ffffff;
     --mp-form-period-bg: #333333;
     --mp-form-period-text: #ffffff;
+    --mp-modal-surface: #ffffff;
+    --mp-modal-text: #ffffff;
+    --mp-modal-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    --mp-backdrop: rgba(0, 0, 0, 0.5);
+    --mp-success: #4caf50;
+    --mp-text-muted-2: #999999;
+    --mp-form-accent: #009929;
+    --mp-form-accent-strong: #003400;
+    --mp-form-accent-contrast: #98ff96;
     --mp-warning-border: #f39c12;
     --mp-danger-border: #dc3545;
     --mp-pill-bg: rgba(255, 255, 255, 0.2);

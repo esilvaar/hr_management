@@ -81,12 +81,13 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
         ?>
         <a href="<?= esc_url($logo_href); ?>"
             class="d-flex align-items-center justify-content-center">
-            <img src="<?= $logo_url; ?>" class="img-fluid hrm-logo" alt="Logo">
+            <img src="<?= $logo_url; ?>" class="img-fluid hrm-logo hrm-logo-light" alt="Logo">
+            <img src="<?= esc_url(plugins_url('assets/images/logo-blanco.png', dirname(__FILE__, 2))); ?>" class="img-fluid hrm-logo hrm-logo-dark" alt="Logo">
         </a>
     </div>
 
     <!-- Navegación -->
-    <nav class="hrm-nav flex-grow-1 py-2 pb-5 d-flex flex-column">
+    <nav class="hrm-nav myplugin-nav flex-grow-1 py-2 d-flex flex-column">
 
         <?php
         // --- SECCIONES DISPONIBLES SEGÚN CAPABILITIES ---
@@ -176,6 +177,7 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
         $is_upload_active = $current_page === 'hrm-empleados' && $tab === 'upload' ? 'active' : '';
         $is_new_active = $current_page === 'hrm-empleados' && $tab === 'new' ? 'active' : '';
         ?>
+
         <?php if ($can_admin_views || $can_supervisor): ?>
             <details <?= $section === 'empleados' ? 'open' : ''; ?>>
                 <summary class="d-flex align-items-center gap-2 px-3 py-2 fw-semibold">
@@ -310,6 +312,17 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
                 </ul>
             </details>
         </div>
+
+        <!-- Ajustes -->
+        <details class="myplugin-settings">
+            <summary class="d-flex align-items-center gap-2 px-3 py-2 fw-semibold">
+                <span class="dashicons dashicons-admin-generic"></span>
+                <span class="flex-grow-1">Ajustes</span>
+            </summary>
+            <div class="px-3 py-2">
+                <div class="myplugin-settings-panel" id="myplugin-dark-toggle-slot"></div>
+            </div>
+        </details>
 
     </nav>
 

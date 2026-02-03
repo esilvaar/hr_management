@@ -29,7 +29,14 @@
                 return;
             }
 
+            var slot = document.getElementById('myplugin-dark-toggle-slot');
             var toggleContainer = this.createToggleButton();
+
+            if (slot) {
+                slot.appendChild(toggleContainer);
+                return;
+            }
+
             var header = sidebar.querySelector('.hrm-sidebar-header');
             if (header) {
                 header.insertAdjacentElement('afterend', toggleContainer);
@@ -38,36 +45,42 @@
 
         createToggleButton: function () {
             var container = document.createElement('div');
-            container.className = 'hrm-dark-mode-toggle-container p-2 border-bottom d-flex align-items-center justify-content-between';
-            container.style.cssText = 'gap: 8px; background-color: var(--hrm-sidebar-bg); border-color: var(--hrm-border-color) !important;';
+            container.className = 'myplugin-settings-panel';
 
-            var label = document.createElement('label');
-            label.className = 'form-check-label';
-            label.style.cssText = 'margin: 0; cursor: pointer; user-select: none; color: var(--hrm-text-primary); font-size: 0.9rem; font-weight: 500;';
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.id = this.toggleId;
+            button.className = 'myplugin-toggle-btn';
+            button.setAttribute('aria-pressed', this.isDarkModeEnabled() ? 'true' : 'false');
+
+            var label = document.createElement('span');
+            label.className = 'myplugin-toggle-label';
             label.textContent = 'Modo oscuro';
 
-            var switchContainer = document.createElement('div');
-            switchContainer.className = 'form-check form-switch';
-            switchContainer.style.cssText = 'margin: 0;';
+            var switchWrap = document.createElement('span');
+            switchWrap.className = 'myplugin-toggle-switch';
+            switchWrap.setAttribute('aria-hidden', 'true');
 
-            var checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.className = 'form-check-input';
-            checkbox.id = this.toggleId;
-            checkbox.style.cssText = 'cursor: pointer;';
-            checkbox.checked = this.isDarkModeEnabled();
+            var switchText = document.createElement('span');
+            switchText.className = 'myplugin-toggle-text';
+            switchText.textContent = this.isDarkModeEnabled() ? 'ON' : 'OFF';
 
-            checkbox.addEventListener('change', function (event) {
-                if (event.target.checked) {
-                    DarkModeManager.enableDarkMode();
-                } else {
-                    DarkModeManager.disableDarkMode();
-                }
+            var thumb = document.createElement('span');
+            thumb.className = 'myplugin-toggle-thumb';
+
+            switchWrap.appendChild(switchText);
+            switchWrap.appendChild(thumb);
+
+            button.appendChild(label);
+            button.appendChild(switchWrap);
+
+            button.addEventListener('click', function () {
+                var enabled = DarkModeManager.toggleDarkMode();
+                button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+                switchText.textContent = enabled ? 'ON' : 'OFF';
             });
 
-            switchContainer.appendChild(checkbox);
-            container.appendChild(label);
-            container.appendChild(switchContainer);
+            container.appendChild(button);
 
             return container;
         },
@@ -78,20 +91,35 @@
 
         enableDarkMode: function () {
             document.documentElement.classList.add(this.darkModeClass);
-            this.updateToggleState(true);
             this.persistPreference(true);
         },
 
         disableDarkMode: function () {
             document.documentElement.classList.remove(this.darkModeClass);
-            this.updateToggleState(false);
             this.persistPreference(false);
         },
 
+        toggleDarkMode: function () {
+            var isDarkMode = this.isDarkModeEnabled();
+            if (isDarkMode) {
+                this.disableDarkMode();
+                return false;
+            }
+
+            this.enableDarkMode();
+            return true;
+        },
+
         updateToggleState: function (enabled) {
-            var checkbox = document.getElementById(this.toggleId);
-            if (checkbox) {
-                checkbox.checked = enabled;
+            var button = document.getElementById(this.toggleId);
+            if (!button) {
+                return;
+            }
+
+            button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+            var text = button.querySelector('.myplugin-toggle-text');
+            if (text) {
+                text.textContent = enabled ? 'ON' : 'OFF';
             }
         },
 

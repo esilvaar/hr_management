@@ -405,6 +405,11 @@
     flex-direction: column;
 }
 
+/* Sidebar logo swap (light by default) */
+.hrm-logo-dark {
+    display: none;
+}
+
 /* Details / Summary - Elementos de expansión */
 .hrm-sidebar details > summary {
     list-style: none;

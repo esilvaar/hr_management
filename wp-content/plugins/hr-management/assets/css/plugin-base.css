@@ -215,10 +215,10 @@
 .hrm-preview-iframe { width: 100%; min-height: 600px; border: 1px solid #ccc; background: #fff; }
 
 /* Success modal used in various views */
-.hrm-success-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); padding: 40px; max-width: 500px; width: 90%; z-index: 10000; text-align: center; }
+.hrm-success-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--mp-modal-surface, #ffffff); border-radius: 12px; box-shadow: var(--mp-modal-shadow, 0 10px 40px rgba(0,0,0,0.3)); padding: 40px; max-width: 500px; width: 90%; z-index: 10000; text-align: center; }
 .hrm-success-modal .hrm-success-icon { font-size: 60px; margin-bottom: 20px; }
-.hrm-success-modal .hrm-success-title { color: #4caf50; margin: 0 0 15px 0; font-size: 28px; }
-.hrm-success-modal .hrm-success-text { color: #666; margin: 0 0 20px 0; line-height: 1.6; }
-.hrm-success-modal .hrm-success-small { color: #999; margin: 0 0 20px 0; font-size: 14px; }
-.hrm-success-modal .hrm-success-button, .hrm-success-button { background: #4caf50; color: white; border: none; padding: 12px 30px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; }
-.hrm-success-backdrop { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; cursor: pointer; }
+.hrm-success-modal .hrm-success-title { color: var(--mp-success, #4caf50); margin: 0 0 15px 0; font-size: 28px; }
+.hrm-success-modal .hrm-success-text { color: var(--mp-text-muted, #666666); margin: 0 0 20px 0; line-height: 1.6; }
+.hrm-success-modal .hrm-success-small { color: var(--mp-text-muted-2, #999999); margin: 0 0 20px 0; font-size: 14px; }
+.hrm-success-modal .hrm-success-button, .hrm-success-button { background: var(--mp-success, #4caf50); color: var(--mp-modal-text, #ffffff); border: none; padding: 12px 30px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; }
+.hrm-success-backdrop { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--mp-backdrop, rgba(0,0,0,0.5)); z-index: 9999; cursor: pointer; }

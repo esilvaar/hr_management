@@ -183,6 +183,14 @@ html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-nav details {
     color: #ffffff !important;
 }
 
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-logo-light {
+    display: none;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-logo-dark {
+    display: block;
+}
+
 html.myplugin_dark body.hrm-admin-page #wpcontent .nav-link {
     color: #f0f0f0 !important;
     background-color: transparent !important;
@@ -1532,6 +1540,15 @@ html.myplugin_dark body.hrm-admin-page #wpcontent {
     --mp-form-title-text: #ffffff;
     --mp-form-period-bg: #333333;
     --mp-form-period-text: #ffffff;
+    --mp-modal-surface: #1f1f1f;
+    --mp-modal-text: #ffffff;
+    --mp-modal-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    --mp-backdrop: rgba(0, 0, 0, 0.6);
+    --mp-success: #6ad46a;
+    --mp-text-muted-2: #b0b0b0;
+    --mp-form-accent: #1f8f49;
+    --mp-form-accent-strong: #0b2b16;
+    --mp-form-accent-contrast: #1b5d2f;
     --mp-pill-bg: rgba(255, 255, 255, 0.1);
     --mp-pill-success-bg: rgba(39, 174, 96, 0.2);
 }
