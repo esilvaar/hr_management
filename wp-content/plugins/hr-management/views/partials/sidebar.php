@@ -91,6 +91,9 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
         if (current_user_can('manage_options') || current_user_can('edit_hrm_employees')) {
             // Admin o Supervisor: ir a lista de empleados
             $logo_href = admin_url('admin.php?page=hrm-empleados&tab=list');
+        } elseif (in_array('editor_vacaciones', (array) wp_get_current_user()->roles, true)) {
+            // Editor de vacaciones: ir a gestión de vacaciones
+            $logo_href = admin_url('admin.php?page=hrm-vacaciones');
         } elseif (current_user_can('manage_hrm_vacaciones')) {
             // Gestor de vacaciones: ir a vacaciones
             $logo_href = admin_url('admin.php?page=hrm-vacaciones');
@@ -116,6 +119,8 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
         $is_anaconda = in_array('administrador_anaconda', (array) wp_get_current_user()->roles, true);
         // Rol específico: empleado (para reordenar sidebar)
         $is_employee_role = in_array('empleado', (array) wp_get_current_user()->roles, true);
+        // Rol específico: editor_vacaciones
+        $is_editor_role = in_array('editor_vacaciones', (array) wp_get_current_user()->roles, true);
         $profile_first = (bool) ($is_employee_role && !$is_anaconda);
 
         // Preparar HTML del bloque "Mi Perfil" para decidir dónde renderizarlo
@@ -195,25 +200,27 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
         $is_new_active = $current_page === 'hrm-empleados' && $tab === 'new' ? 'active' : '';
         ?>
 
-        <?php if ($can_admin_views || $can_supervisor): ?>
+        <?php if ($can_admin_views || $can_supervisor || $is_editor_role): ?>
             <details <?= $section === 'empleados' ? 'open' : ''; ?>>
                 <summary class="d-flex align-items-center gap-2 px-3 py-2 fw-semibold">
                     <span class="dashicons dashicons-businessman"></span>
                     <span class="flex-grow-1">Gestión de Empleados</span>
                 </summary>
                 <ul class="list-unstyled px-2 mb-2">
-                    <li>
-                        <a class="nav-link px-3 py-2 <?= $is_list_active ?>"
-                            href="<?= esc_url(admin_url('admin.php?page=hrm-empleados&tab=list')); ?>">
-                            Lista de empleados
-                        </a>
-                    </li>
-                    <li>
-                        <a class="nav-link px-3 py-2 <?= $is_profile_active ?>"
-                            href="<?= esc_url($profile_url); ?>">
-                            Perfil del Empleado
-                        </a>
-                    </li>
+                    <?php if (!$is_editor_role): ?>
+                        <li>
+                            <a class="nav-link px-3 py-2 <?= $is_list_active ?>"
+                                href="<?= esc_url(admin_url('admin.php?page=hrm-empleados&tab=list')); ?>">
+                                Lista de empleados
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link px-3 py-2 <?= $is_profile_active ?>"
+                                href="<?= esc_url($profile_url); ?>">
+                                Perfil del Empleado
+                            </a>
+                        </li>
+                    <?php endif; ?>
                     <li>
                         <a class="nav-link px-3 py-2 <?= $is_upload_active ?>"
                             href="<?= esc_url($upload_url); ?>">

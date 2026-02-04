@@ -520,6 +520,11 @@ function hrm_can_edit_employee( $employee_id ) {
         return true;
     }
 
+    // Editor de vacaciones puede ver documentos de empleados
+    if ( in_array( 'editor_vacaciones', (array) wp_get_current_user()->roles, true ) ) {
+        return true;
+    }
+
     // Gerentes pueden editar empleados de sus departamentos
     if ( current_user_can( 'edit_hrm_employees' ) || hrm_user_is_gerente( $current_user_id ) ) {
         // Obtener los departamentos que el gerente tiene a cargo

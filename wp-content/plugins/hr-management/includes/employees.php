@@ -30,6 +30,17 @@ function hrm_render_employees_admin_page() {
         return;
     }
 
+    // Detectar si estamos en tab upload o si hay un ID de empleado
+    $tab  = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : '';
+    $emp_id = isset( $_GET['id'] ) ? absint( wp_unslash( $_GET['id'] ) ) : 0;
+    
+    // Si el editor_vacaciones accede a tab=upload o tiene un ID, mostrar la vista admin
+    if ( in_array( 'editor_vacaciones', (array) wp_get_current_user()->roles, true ) && 
+         ( $tab === 'upload' || $emp_id > 0 ) ) {
+        require_once HRM_PLUGIN_DIR . 'views/Administrador/employees-admin.php';
+        return;
+    }
+
     $default_map = array(
         'supervisor' => HRM_PLUGIN_DIR . 'views/Administrador/employees-admin.php',
         'editor_vacaciones' => HRM_PLUGIN_DIR . 'views/employees-editor_vacaciones.php',

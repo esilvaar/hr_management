@@ -515,6 +515,7 @@ function hrm_render_vacaciones_admin_page()
         error_log('HRM: Capacidades del usuario ' . $current_user->ID . ' recargadas. Tiene manage_hrm_vacaciones: ' . ($current_user->has_cap('manage_hrm_vacaciones') ? 'YES' : 'NO'));
     }
 
+    // Permitir acceso a: admin, usuarios con manage_hrm_vacaciones, y usuarios con view_hrm_admin_views
     if (!current_user_can('manage_options') && !current_user_can('view_hrm_admin_views') && !current_user_can('manage_hrm_vacaciones')) {
         wp_die(__('No tienes permisos para ver esta página.', 'hr-management'), __('Acceso denegado', 'hr-management'), array('response' => 403));
     }
