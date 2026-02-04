@@ -168,40 +168,6 @@
 /* Dropdown fade (used when detaching to body) */
 .hrm-dropdown { opacity: 0; transform: translateY(-6px); transition: opacity .18s ease, transform .18s ease; pointer-events: none; }
 .hrm-dropdown.hrm-dropdown--visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
-
-/* Documents section container - ensures proper layout */
-.hrm-documents-section { 
-    width: 100%; 
-    max-width: 1400px; 
-    box-sizing: border-box; 
-}
-
-/* Employee selector styling */
-.hrm-employee-selector { 
-    max-width: 400px; 
-    margin: 0 auto; 
-}
-.hrm-employee-selector .dropdown-toggle {
-    width: 100%;
-    text-align: left;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem 1rem;
-}
-.hrm-employee-dropdown {
-    width: 100%;
-    max-width: 400px;
-    max-height: 400px;
-    overflow-y: auto;
-}
-.hrm-employee-items {
-    max-height: 300px;
-    overflow-y: auto;
-}
-.hrm-employee-item:hover {
-    background-color: #f8f9fa;
-}
 .hrm-upload-panel { max-width:600px; margin:0 auto; display:none; position:fixed; top:10%; left:50%; transform:translateX(-50%); z-index:9999; }
 .hrm-create-type-panel { max-width:520px; margin:0 auto; display:none; position:fixed; top:10%; left:50%; transform:translateX(-50%); z-index:9999; }
 /* Inside upload panel we want labels on top and inputs full width */
@@ -216,7 +182,7 @@
 .hrm-doc-btn { display:flex; gap:12px; align-items:center; padding:8px; border-radius:6px; margin-bottom:8px; background:#fff; }
 .hrm-doc-btn .hrm-doc-btn-icon { width:40px; height:40px; border-radius:8px; display:flex; align-items:center; justify-content:center; }
 .hrm-create-type-list { max-height:260px; overflow-y:auto; border:1px solid #e9ecef; padding:8px; }
-.hrm-big-alert { font-size:1.25rem; padding:2rem; margin: 2rem 0; }
+.hrm-big-alert { font-size:1.25rem; padding:2rem; }
 .hrm-inline-confirm { margin-left: 8px; }
 .hrm-no-docs-container { max-width: 900px; margin: 0 auto; }
 .hrm-no-docs-inner { min-height: 240px; display:flex; align-items:center; justify-content:center; }
@@ -264,16 +230,6 @@
 .hrm-notice-text { color:#ffffff; margin:0; padding:6px 8px; }
 .hrm-empty-placeholder { min-height: 400px; display:flex; align-items:center; justify-content:center; }
 .hrm-empty-placeholder h2 { font-size: 24px; color: #856404; text-align:center; max-width:500px; }
-.hrm-empty-placeholder--docs {
-    display: block;
-    min-height: 0;
-    padding: 24px 0 0;
-}
-
-.hrm-empty-placeholder--docs h2 {
-    text-align: left;
-    max-width: none;
-}
 
 /* ====================================================================
  * From: layout-sidebar-admin.css
@@ -804,20 +760,20 @@
 
 /* System preference for dark mode (automatic detection) */
 @media (prefers-color-scheme: dark) {
-    html.myplugin_dark .hrm-doc-type-filter-items,
-    html.myplugin_dark #hrm-doc-type-filter-items,
-    html.myplugin_dark #hrm-tipo-items,
-    html.myplugin_dark #hrm-anio-items,
-    html.myplugin_dark #hrm-doc-year-filter-items {
+    .hrm-doc-type-filter-items,
+    #hrm-doc-type-filter-items,
+    #hrm-tipo-items,
+    #hrm-anio-items,
+    #hrm-doc-year-filter-items {
         background: #2d3238 !important;
         border-color: #495057 !important;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
     }
 
-    html.myplugin_dark .dropdown-item,
-    html.myplugin_dark .hrm-tipo-item,
-    html.myplugin_dark .hrm-anio-item,
-    html.myplugin_dark .hrm-doc-type-item {
+    .dropdown-item,
+    .hrm-tipo-item,
+    .hrm-anio-item,
+    .hrm-doc-type-item {
         color: rgba(255, 255, 255, .87) !important;
         background-color: transparent !important;
         border-radius: 4px;
@@ -825,89 +781,89 @@
         padding: 0.5rem 0.75rem !important;
     }
 
-    html.myplugin_dark .dropdown-item:hover,
-    html.myplugin_dark .hrm-tipo-item:hover,
-    html.myplugin_dark .hrm-anio-item:hover,
-    html.myplugin_dark .hrm-doc-type-item:hover {
+    .dropdown-item:hover,
+    .hrm-tipo-item:hover,
+    .hrm-anio-item:hover,
+    .hrm-doc-type-item:hover {
         background-color: rgba(83, 115, 69, 0.3) !important;
         color: #fff !important;
     }
 
-    html.myplugin_dark .dropdown-item.active,
-    html.myplugin_dark .dropdown-item:active {
+    .dropdown-item.active,
+    .dropdown-item:active {
         background-color: #537345 !important;
         color: #fff !important;
     }
 
-    html.myplugin_dark #hrm_departamento_items .dropdown-item,
-    html.myplugin_dark #hrm_area_gerencia_items .dropdown-item,
-    html.myplugin_dark #hrm_puesto_items .dropdown-item,
-    html.myplugin_dark #hrm_tipo_contrato_items .dropdown-item,
-    html.myplugin_dark #hrm_rol_usuario_wp_items .dropdown-item {
+    #hrm_departamento_items .dropdown-item,
+    #hrm_area_gerencia_items .dropdown-item,
+    #hrm_puesto_items .dropdown-item,
+    #hrm_tipo_contrato_items .dropdown-item,
+    #hrm_rol_usuario_wp_items .dropdown-item {
         border-bottom: 1px solid rgba(255, 255, 255, .08) !important;
     }
 
     /* Actions Menu */
-    html.myplugin_dark .hrm-actions-menu {
+    .hrm-actions-menu {
         background: #2d3238 !important;
         border-color: #495057 !important;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
     }
 
-    html.myplugin_dark .hrm-actions-menu a,
-    html.myplugin_dark .hrm-actions-menu button {
+    .hrm-actions-menu a,
+    .hrm-actions-menu button {
         color: rgba(255, 255, 255, .87) !important;
         background-color: transparent !important;
         border-radius: 4px;
         margin: 2px 0;
     }
 
-    html.myplugin_dark .hrm-actions-menu a:hover,
-    html.myplugin_dark .hrm-actions-menu button:hover {
+    .hrm-actions-menu a:hover,
+    .hrm-actions-menu button:hover {
         background-color: rgba(83, 115, 69, 0.3) !important;
         color: #fff !important;
     }
 
-    html.myplugin_dark .hrm-actions-sep {
+    .hrm-actions-sep {
         background: rgba(255, 255, 255, .15) !important;
     }
 
-    html.myplugin_dark .hrm-actions-toggle {
+    .hrm-actions-toggle {
         background-color: rgba(255, 255, 255, .1) !important;
         border-color: rgba(255, 255, 255, .2) !important;
         color: rgba(255, 255, 255, .87) !important;
     }
 
-    html.myplugin_dark .hrm-actions-toggle:hover {
+    .hrm-actions-toggle:hover {
         background-color: rgba(255, 255, 255, .2) !important;
         border-color: rgba(255, 255, 255, .3) !important;
         color: #fff !important;
     }
 
     /* Documents table */
-    html.myplugin_dark .hrm-documents-table {
+    .hrm-documents-table {
         color: rgba(255, 255, 255, .87);
     }
 
-    html.myplugin_dark .hrm-documents-table thead {
+    .hrm-documents-table thead {
         background-color: #1a1d21 !important;
         color: #fff !important;
     }
 
-    html.myplugin_dark .hrm-documents-table tbody tr {
+    .hrm-documents-table tbody tr {
         background-color: #2d3238;
         border-color: rgba(255, 255, 255, .1) !important;
     }
 
-    html.myplugin_dark .hrm-documents-table tbody tr:hover {
+    .hrm-documents-table tbody tr:hover {
         background-color: #343a40 !important;
     }
 
-    html.myplugin_dark .hrm-documents-table .text-muted {
+    .hrm-documents-table .text-muted {
         color: rgba(255, 255, 255, .6) !important;
     }
 
-    html.myplugin_dark .hrm-documents-table .text-secondary {
+    .hrm-documents-table .text-secondary {
         color: rgba(255, 255, 255, .5) !important;
     }
 }

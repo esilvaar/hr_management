@@ -122,14 +122,8 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
     // --- ACCIÓN C: Subir Documentos (solo propios) ---
     elseif ( $action === 'upload_document' && check_admin_referer( 'hrm_upload_file', 'hrm_upload_nonce' ) ) {
         $post_emp_id = absint( $_POST['employee_id'] ?? 0 );
-        
-        // Permitir si es su propio documento O si es supervisor global
-        $is_own_document = ( intval( $post_emp_id ) === $emp_id );
-        $can_upload = $is_own_document || hrm_es_supervisor_global();
-        
-        if ( ! $can_upload ) {
+        if ( intval( $post_emp_id ) !== $emp_id ) {
             $message_error = 'No puedes subir documentos de otro empleado.';
-            error_log( 'HRM: Intento de upload no autorizado - User Empleado ID: ' . $emp_id . ', Target Empleado ID: ' . $post_emp_id );
         } else {
             $tipo   = wp_kses_post( trim( $_POST['tipo_documento'] ?? 'Generico' ) );
             $anio_raw = isset($_POST['anio_documento']) ? trim($_POST['anio_documento']) : '';
@@ -194,6 +188,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                         $count_err++;
                         error_log( "HRM: Error moviendo archivo - {$files['name'][$i]} a $file_path" );
                     }
+                    }
                 }
                 if ( $count_ok > 0 ) $message_success = "Se subieron $count_ok archivo(s) en la carpeta del año $folder_year.";
                 if ( $count_err > 0 ) $message_error = "Fallaron $count_err archivo(s).";
@@ -218,7 +213,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
             $message_error = 'No tienes permiso para eliminar este documento.';
         }
     }
-}
 
 
 // 3. OBTENCIÓN DE DATOS
@@ -233,16 +227,11 @@ if ( $tab === 'upload' ) {
 }
 ?>
 
-<?php 
-$is_editor_vac = in_array('editor_vacaciones', (array) wp_get_current_user()->roles, true);
-?>
 <div class="wrap hrm-empleado-wrap">
     <div class="hrm-admin-layout">
         <?php hrm_get_template_part( 'partials/sidebar-loader' ); ?>
         <main class="hrm-content">
-            <?php if ( ! $is_editor_vac ) : ?>
-                <h1 class="wp-heading-inline">Mi Perfil</h1>
-            <?php endif; ?>
+            <h1 class="wp-heading-inline">Mi Perfil</h1>
             
             <?php if ( ! empty( $message_success ) ) : ?>
                 <div class="notice notice-success is-dismissible"><p><?= esc_html( $message_success ) ?></p></div>
@@ -252,13 +241,11 @@ $is_editor_vac = in_array('editor_vacaciones', (array) wp_get_current_user()->ro
                 <div class="notice notice-error is-dismissible"><p><?= esc_html( $message_error ) ?></p></div>
             <?php endif; ?>
 
-            <!-- Tabs de Navegación (ocultar para editor_vacaciones) -->
-            <?php if ( ! $is_editor_vac ) : ?>
+            <!-- Tabs de Navegación -->
             <h2 class="nav-tab-wrapper">
                 <a href="?page=hrm-mi-perfil&tab=profile" class="nav-tab <?= $tab === 'profile' ? 'nav-tab-active' : '' ?>">Perfil</a>
                 <a href="?page=hrm-mi-perfil&tab=upload" class="nav-tab <?= $tab === 'upload' ? 'nav-tab-active' : '' ?>">Documentos</a>
             </h2>
-            <?php endif; ?>
 
             <div class="hrm-admin-panel">
 

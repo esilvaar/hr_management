@@ -4,9 +4,6 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 // Si estamos en la pestaña list, no renderizamos el selector aquí
 if ( isset( $tab ) && $tab === 'list' ) return;
 
-// Detectar la página actual para mantenerla en los enlaces del selector
-$current_page = isset($_GET['page']) ? sanitize_text_field($_GET['page']) : 'hrm-empleados';
-
 // Obtener empleados si no fueron provistos por el scope
 if ( ! isset( $all_emps ) ) {
     if ( isset( $db_emp ) && is_object( $db_emp ) ) {
@@ -56,26 +53,11 @@ if ( $curr_id > 0 ) {
             
             <!-- Employee list -->
             <div id="hrm-employee-items" class="hrm-employee-items">
-                <!-- Opción: Ninguno -->
-                <a 
-                    class="dropdown-item hrm-employee-item py-2" 
-                    href="?page=<?= esc_attr( $current_page ) ?>&tab=<?= esc_attr( $tab ?? 'list' ) ?>&id=0"
-                    data-employee-id="0"
-                    data-employee-name="Ninguno"
-                    data-employee-search="ninguno">
-                    <div class="d-flex align-items-center gap-2">
-                        <div>
-                            <strong class="d-block hrm-table-text-main">Ninguno</strong>
-                            <small class="hrm-table-text-secondary">Sin selección</small>
-                        </div>
-                    </div>
-                </a>
-                
                 <?php if ( ! empty( $all_emps ) ) : ?>
                     <?php foreach ( $all_emps as $e ) : ?>
                         <a 
                             class="dropdown-item hrm-employee-item py-2" 
-                            href="?page=<?= esc_attr( $current_page ) ?>&tab=<?= esc_attr( $tab ?? 'list' ) ?>&id=<?= esc_attr( $e->id ) ?>"
+                            href="?page=hrm-empleados&tab=<?= esc_attr( $tab ?? 'list' ) ?>&id=<?= esc_attr( $e->id ) ?>"
                             data-employee-id="<?= esc_attr( $e->id ) ?>"
                             data-employee-name="<?= esc_attr( $e->nombre . ' ' . $e->apellido ) ?>"
                             data-employee-search="<?= esc_attr( strtolower( $e->nombre . ' ' . $e->apellido . ' ' . $e->rut ) ) ?>">

@@ -42,7 +42,7 @@ if ( ! defined( 'HRM_CACHE_TIMEOUT' ) ) {
  * Evita cargar Bootstrap en todo el admin para reducir conflictos.
  */
 function hrm_enqueue_bootstrap( $hook ) {
-    if ( ! hrm_is_plugin_admin_screen() && strpos( $hook, 'hrm' ) === false ) {
+    if ( strpos( $hook, 'hrm' ) === false ) {
         return;
     }
 
@@ -70,7 +70,7 @@ add_action( 'admin_enqueue_scripts', 'hrm_enqueue_bootstrap' );
  */
 function hrm_enqueue_main_styles( $hook ) {
     // Cargar solo en páginas del plugin
-    if ( ! hrm_is_plugin_admin_screen() && strpos( $hook, 'hrm' ) === false ) {
+    if ( strpos( $hook, 'hrm' ) === false ) {
         return;
     }
 
@@ -93,7 +93,7 @@ add_action( 'admin_enqueue_scripts', 'hrm_enqueue_main_styles' );
  */
 function hrm_enqueue_dark_mode_assets( $hook ) {
     // Cargar en todas las páginas del admin del plugin
-    if ( ! hrm_is_plugin_admin_screen() && strpos( $hook, 'hrm' ) === false ) {
+    if ( strpos( $hook, 'hrm' ) === false ) {
         return;
     }
 
@@ -139,17 +139,7 @@ function hrm_is_plugin_admin_screen() {
     }
 
     $page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
-    if ( ! $page ) {
-        return false;
-    }
-
-    // Slugs adicionales del plugin que no empiezan con 'hrm-'
-    $extra_pages = array(
-        'employees-documents',
-        'hrm-employees-documents',
-    );
-
-    return ( strpos( $page, 'hrm' ) === 0 || in_array( $page, $extra_pages, true ) );
+    return ( $page && strpos( $page, 'hrm' ) === 0 );
 }
 
 /**
@@ -185,100 +175,6 @@ function hrm_add_admin_body_class( $classes ) {
 add_filter( 'admin_body_class', 'hrm_add_admin_body_class' );
 
 /**
- * ============================================================================
- * PERMISOS: Documentos del Empleado
- * ============================================================================
- */
-
-/**
- * Determina si el usuario actual puede ver la página "Documentos del Empleado".
- *
- * Roles requeridos por negocio:
- * - administrator
- * - administrador_anaconda
- * - supervisor
- * - editor_vacaciones
- */
-function hrm_user_can_view_employee_documents(): bool {
-    if ( ! is_user_logged_in() ) {
-        return false;
-    }
-
-    // Capacidades (preferidas) + fallback por roles (para instalaciones donde no se asignaron caps).
-    if (
-        current_user_can( 'manage_options' )
-        || current_user_can( 'edit_hrm_employees' )
-        || current_user_can( 'manage_hrm_vacaciones' )
-        || current_user_can( 'view_hrm_admin_views' )
-        || current_user_can( 'view_hrm_employee_admin' )
-        || current_user_can( 'manage_hrm_employees' )
-    ) {
-        return true;
-    }
-
-    $roles = (array) ( wp_get_current_user()->roles ?? array() );
-    return in_array( 'administrador_anaconda', $roles, true )
-        || in_array( 'supervisor', $roles, true )
-        || in_array( 'editor_vacaciones', $roles, true );
-}
-
-/**
- * Determina si el usuario actual puede subir documentos (POST hrm_action=upload_document).
- */
-function hrm_user_can_upload_employee_documents(): bool {
-    if ( ! is_user_logged_in() ) {
-        return false;
-    }
-
-    if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) ) {
-        return true;
-    }
-
-    $roles = (array) ( wp_get_current_user()->roles ?? array() );
-    return in_array( 'administrador_anaconda', $roles, true )
-        || in_array( 'supervisor', $roles, true )
-        || in_array( 'editor_vacaciones', $roles, true );
-}
-
-/**
- * Determina si el usuario actual puede eliminar documentos.
- */
-function hrm_user_can_delete_employee_documents(): bool {
-    if ( ! is_user_logged_in() ) {
-        return false;
-    }
-
-    if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) ) {
-        return true;
-    }
-
-    $roles = (array) ( wp_get_current_user()->roles ?? array() );
-    if ( in_array( 'administrador_anaconda', $roles, true ) ) {
-        return true;
-    }
-
-    return function_exists( 'hrm_es_supervisor_global' ) && hrm_es_supervisor_global();
-}
-
-/**
- * Determina si el usuario puede gestionar tipos/directorios.
- * (No incluye editor_vacaciones).
- */
-function hrm_user_can_manage_document_types(): bool {
-    if ( ! is_user_logged_in() ) {
-        return false;
-    }
-
-    if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) || current_user_can( 'view_hrm_admin_views' ) ) {
-        return true;
-    }
-
-    $roles = (array) ( wp_get_current_user()->roles ?? array() );
-    return in_array( 'administrador_anaconda', $roles, true )
-        || in_array( 'supervisor', $roles, true );
-}
-
-/**
  * Guardar preferencia de modo oscuro por usuario.
  */
 function hrm_ajax_save_dark_mode_preference() {
@@ -304,7 +200,9 @@ add_action( 'wp_ajax_myplugin_dark_mode_set', 'hrm_ajax_save_dark_mode_preferenc
  * Encolar estilos del módulo de vacaciones en admin
  */
 function hrm_enqueue_vacaciones_admin_styles( $hook ) {
-    if ( ! hrm_is_plugin_admin_screen() && strpos( $hook, 'hrm' ) === false ) return;
+    if ( strpos( $hook, 'hrm' ) === false ) {
+        return;
+    }
 
     wp_enqueue_style(
         'hrm-vacaciones-admin-css',
@@ -342,7 +240,9 @@ add_action( 'wp_enqueue_scripts', 'hrm_enqueue_vacaciones_frontend_styles' );
  */
 function hrm_enqueue_documents_list_scripts( $hook ) {
     // Cargar solo en páginas del plugin
-    if ( ! hrm_is_plugin_admin_screen() && strpos( $hook, 'hrm' ) === false ) return;
+    if ( strpos( $hook, 'hrm' ) === false ) {
+        return;
+    }
 
     wp_enqueue_script(
         'hrm-documents-list',
@@ -359,7 +259,7 @@ add_action( 'admin_enqueue_scripts', 'hrm_enqueue_documents_list_scripts' );
 
 // Encolar script general de la sidebar (maneja apertura/cierre en móvil)
 function hrm_enqueue_sidebar_script( $hook ) {
-    if ( ! hrm_is_plugin_admin_screen() && strpos( $hook, 'hrm' ) === false ) return;
+    if ( strpos( $hook, 'hrm' ) === false ) return;
 
     wp_enqueue_script(
         'hrm-sidebar-js',
@@ -376,7 +276,9 @@ add_action( 'admin_enqueue_scripts', 'hrm_enqueue_sidebar_script' );
  */
 function hrm_enqueue_documents_upload_scripts( $hook ) {
     // Cargar solo en páginas del plugin
-    if ( ! hrm_is_plugin_admin_screen() && strpos( $hook, 'hrm' ) === false ) return;
+    if ( strpos( $hook, 'hrm' ) === false ) {
+        return;
+    }
 
     // Evitar encolar el script en páginas que no contienen el formulario de upload
     $page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
@@ -392,7 +294,7 @@ function hrm_enqueue_documents_upload_scripts( $hook ) {
     if ( $tab === 'upload' ) {
         $allowed = true;
     }
-    if ( $page === 'hrm-mi-documentos' || $page === 'hrm-empleados' || $page === 'employees-documents' || $page === 'hrm-employees-documents' ) {
+    if ( $page === 'hrm-mi-documentos' || $page === 'hrm-empleados' ) {
         // En hrm-empleados puede haber un modal de upload (cuando se pasa id)
         if ( $tab === 'upload' || isset( $_GET['id'] ) ) {
             $allowed = true;
@@ -421,7 +323,9 @@ add_action( 'admin_enqueue_scripts', 'hrm_enqueue_documents_upload_scripts' );
  */
 function hrm_enqueue_documents_list_init_scripts( $hook ) {
     // Cargar solo en páginas del plugin
-    if ( ! hrm_is_plugin_admin_screen() && strpos( $hook, 'hrm' ) === false ) return;
+    if ( strpos( $hook, 'hrm' ) === false ) {
+        return;
+    }
 
     wp_enqueue_script(
         'hrm-documents-list-init',
@@ -437,7 +341,9 @@ add_action( 'admin_enqueue_scripts', 'hrm_enqueue_documents_list_init_scripts' )
  * Encolar scripts principales del plugin
  */
 function hrm_enqueue_main_scripts( $hook ) {
-    if ( ! hrm_is_plugin_admin_screen() && strpos( $hook, 'hrm' ) === false ) return;
+    if ( strpos( $hook, 'hrm' ) === false ) {
+        return;
+    }
 
     wp_enqueue_script(
         'hrm-script',
@@ -453,7 +359,9 @@ add_action( 'admin_enqueue_scripts', 'hrm_enqueue_main_scripts' );
  * Encolar assets exclusivos de la vista Employees Detail.
  */
 function hrm_enqueue_employee_detail_assets( $hook ) {
-    if ( ! hrm_is_plugin_admin_screen() && strpos( $hook, 'hrm' ) === false ) return;
+    if ( strpos( $hook, 'hrm' ) === false ) {
+        return;
+    }
 
     $page  = isset( $_GET['page'] ) ? sanitize_text_field( $_GET['page'] ) : '';
     $tab   = isset( $_GET['tab'] ) ? sanitize_text_field( $_GET['tab'] ) : '';
@@ -519,7 +427,7 @@ add_action('admin_enqueue_scripts', 'mi_script_toggle');
  */
 function hrm_enqueue_sidebar_refresh_script( $hook ) {
     // Solo en páginas del plugin
-    if ( ! hrm_is_plugin_admin_screen() && strpos( $hook, 'hrm' ) === false ) {
+    if ( strpos( $hook, 'hrm' ) === false ) {
         return;
     }
 
@@ -692,57 +600,6 @@ function hrm_get_departamentos_gerente( $user_id ) {
     );
     
     return ! empty( $departamentos ) ? $departamentos : array();
-}
-
-/**
- * 🔥 NUEVA: Verificar si el usuario es un "Supervisor Global"
- * (Editor de Vacaciones o Gerente de Sistemas)
- * 
- * @param int $user_id ID del usuario a verificar (default: usuario actual)
- * @return bool True si tiene supervisión global
- */
-function hrm_es_supervisor_global( $user_id = 0 ) {
-    if ( ! $user_id ) {
-        $user_id = get_current_user_id();
-    }
-    
-    // Caché estático para evitar múltiples queries
-    static $cache = array();
-    if ( isset( $cache[ $user_id ] ) ) {
-        return $cache[ $user_id ];
-    }
-    
-    // Opción 1: Tiene capability de editor de vacaciones
-    if ( user_can( $user_id, 'manage_hrm_vacaciones' ) ) {
-        $cache[ $user_id ] = true;
-        return true;
-    }
-    
-    // Opción 2: Es Gerente de Sistemas
-    global $wpdb;
-    $table_empleados = $wpdb->prefix . 'rrhh_empleados';
-    
-    $datos = $wpdb->get_row(
-        $wpdb->prepare(
-            "SELECT departamento, puesto FROM {$table_empleados} WHERE user_id = %d LIMIT 1",
-            $user_id
-        ),
-        ARRAY_A
-    );
-    
-    if ( $datos ) {
-        $depto = strtolower( trim( $datos['departamento'] ?? '' ) );
-        $puesto = strtolower( trim( $datos['puesto'] ?? '' ) );
-        
-        // Es supervisor global si es Gerente de Sistemas
-        $es_gerente_sistemas = ( $depto === 'sistemas' && stripos( $puesto, 'gerente' ) !== false );
-        
-        $cache[ $user_id ] = $es_gerente_sistemas;
-        return $es_gerente_sistemas;
-    }
-    
-    $cache[ $user_id ] = false;
-    return false;
 }
 
 /**

@@ -102,38 +102,115 @@
     border-bottom: none;
 }
 
-.hrm-nav summary {
-    cursor: pointer;
-    user-select: none;
-    transition: background 0.2s ease;
-    color: #495057;
-    text-decoration: none;
+/* Estilos para el contenedor de profile-mid */
+.hrm-profile-mid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
 }
 
-.hrm-nav summary:hover {
+.hrm-profile-mid details {
+    border-bottom: 1px solid #e9ecef;
+}
+
+.hrm-profile-mid details:last-child {
+    border-bottom: none;
+}
+
+/* Estilos para la sección de ajustes */
+.myplugin-settings {
+    border-bottom: 1px solid #e9ecef;
+}
+
+/* Summary (encabezado del acordeón) - estilos generales */
+.hrm-nav summary,
+.hrm-profile-mid summary,
+.myplugin-settings summary {
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.3s ease;
+    color: #495057;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.75rem 1rem;
+}
+
+.hrm-nav summary:hover,
+.hrm-profile-mid summary:hover,
+.myplugin-settings summary:hover {
     background: #f8f9fa;
     color: #212529;
 }
 
-.hrm-nav summary::-webkit-details-marker {
+/* Indicador visual de apertura (marker) */
+.hrm-nav summary::before,
+.hrm-profile-mid summary::before,
+.myplugin-settings summary::before {
+    content: '';
+    display: inline-block;
+    width: 0.5em;
+    height: 0.5em;
     margin-right: 0.5rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.3s ease;
+    vertical-align: 0.125em;
 }
 
-.hrm-nav a {
+/* Rotación del marker cuando está abierto */
+.hrm-nav details[open] > summary::before,
+.hrm-profile-mid details[open] > summary::before,
+.myplugin-settings[open] > summary::before {
+    transform: rotate(45deg);
+}
+
+/* Ocultar el marker por defecto de los navegadores */
+.hrm-nav summary::-webkit-details-marker,
+.hrm-profile-mid summary::-webkit-details-marker,
+.myplugin-settings summary::-webkit-details-marker {
+    display: none;
+}
+
+/* Links dentro del acordeón */
+.hrm-nav a,
+.hrm-profile-mid a {
     color: #495057;
     text-decoration: none;
     transition: all 0.2s ease;
 }
 
-.hrm-nav a:hover {
+.hrm-nav a:hover,
+.hrm-profile-mid a:hover {
     color: #212529;
     background: #f8f9fa;
 }
 
-.hrm-nav a.active {
+.hrm-nav a.active,
+.hrm-profile-mid a.active {
     color: #0d6efd;
     background: #e7f1ff;
     font-weight: 600;
+    border-left: 3px solid #0d6efd;
+    padding-left: calc(0.75rem - 3px);
+}
+
+/* Contenido del acordeón con animación suave */
+.hrm-nav details > *:not(summary),
+.hrm-profile-mid details > *:not(summary),
+.myplugin-settings > *:not(summary) {
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* ============================================================
@@ -182,6 +259,11 @@
  * ============================================================ */
 
 /* Dot de notificación en el menú padre (Gestión de Vacaciones) */
+.hrm-notification-dot {
+    position: absolute;
+    top: 50%;
+    right: 0.5rem;
+    width: 8px;
     height: 8px;
     background-color: #dc3545;
     border-radius: 50%;

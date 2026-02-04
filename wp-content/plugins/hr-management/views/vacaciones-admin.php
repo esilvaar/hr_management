@@ -38,7 +38,7 @@ if ( $current_user && $current_user->ID ) {
 
 $search_term = sanitize_text_field( $_GET['empleado'] ?? '' );
 $estado_filtro = sanitize_text_field( $_GET['estado'] ?? 'PENDIENTE' );
-$tab_activo = sanitize_text_field( $_GET['tab'] ?? 'solicitudes' );
+$tab_activo = sanitize_text_field( $_GET['tab'] ?? 'departamentos' );
 
 // Determinar capacidades del usuario actual
 $es_usuario_administrativo = current_user_can( 'edit_hrm_employees' ) || current_user_can( 'manage_hrm_vacaciones' ) || current_user_can( 'manage_options' );
@@ -145,14 +145,25 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
             <!-- Navegación de Tabs -->
             <ul class="nav nav-tabs nav-fill mb-4 border-bottom-2" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link <?php echo $tab_activo === 'trabajadores' ? 'active' : ''; ?> d-flex align-items-center justify-content-center gap-2" 
+                    <button class="nav-link <?php echo $tab_activo === 'solicitudes' ? 'active' : ''; ?> d-flex align-items-center justify-content-center gap-2" 
+                            id="tab-solicitudes" 
+                            type="button" 
+                            role="tab" 
+                            aria-controls="contenido-solicitudes" 
+                            aria-selected="<?php echo $tab_activo === 'solicitudes' ? 'true' : 'false'; ?>">
+                        <span class="hrm-tab-icon"><span class="dashicons dashicons-clipboard"></span></span>
+                        <span class="fw-semibold">Solicitudes de Día Completo<?php echo ( $count_dia_completo > 0 ) ? ' (' . intval( $count_dia_completo ) . ')' : ''; ?></span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link <?php echo $tab_activo === 'departamentos' ? 'active' : ''; ?> d-flex align-items-center justify-content-center gap-2" 
                             id="tab-departamentos" 
                             type="button" 
                             role="tab" 
                             aria-controls="contenido-departamentos" 
-                            aria-selected="<?php echo $tab_activo === 'trabajadores' ? 'true' : 'false'; ?>">
-                        <span class="hrm-tab-icon"><span class="dashicons dashicons-groups"></span></span>
-                        <span class="fw-semibold">Resumen de Trabajadores</span>
+                            aria-selected="<?php echo $tab_activo === 'departamentos' ? 'true' : 'false'; ?>">
+                        <span class="hrm-tab-icon"><span class="dashicons dashicons-building"></span></span>
+                        <span class="fw-semibold">Resumen de Departamentos</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -164,17 +175,6 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                             aria-selected="<?php echo $tab_activo === 'medio-dia' ? 'true' : 'false'; ?>">
                         <span class="hrm-tab-icon"><span class="dashicons dashicons-clock"></span></span>
                         <span class="fw-semibold">Solicitudes de Medio Día<?php echo ( $count_medio_dia > 0 ) ? ' (' . intval( $count_medio_dia ) . ')' : ''; ?></span>
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link <?php echo $tab_activo === 'solicitudes' ? 'active' : ''; ?> d-flex align-items-center justify-content-center gap-2" 
-                            id="tab-solicitudes" 
-                            type="button" 
-                            role="tab" 
-                            aria-controls="contenido-solicitudes" 
-                            aria-selected="<?php echo $tab_activo === 'solicitudes' ? 'true' : 'false'; ?>">
-                        <span class="hrm-tab-icon"><span class="dashicons dashicons-clipboard"></span></span>
-                        <span class="fw-semibold">Solicitudes de Día Completo<?php echo ( $count_dia_completo > 0 ) ? ' (' . intval( $count_dia_completo ) . ')' : ''; ?></span>
                     </button>
                 </li>
                 
@@ -191,7 +191,6 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
         <div class="hrm-panel-search-body">
             <form method="get" class="row g-3 align-items-end">
                 <input type="hidden" name="page" value="<?php echo esc_attr( $_GET['page'] ); ?>">
-                <input type="hidden" name="tab" value="solicitudes">
                 
                 <div class="col-md-5">
                     <label for="empleado" class="form-label fw-semibold"><span class="dashicons dashicons-search"></span> Buscar Empleado</label>
@@ -222,17 +221,19 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                 </div>
                 
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center gap-2">
-                        <span class="dashicons dashicons-search"></span> Filtrar
+                    <button type="submit" class="btn btn-success btn-lg w-100 d-flex align-items-center justify-content-center gap-2">
+                        <span class="dashicons dashicons-search"></span> Buscar
                     </button>
                 </div>
                 
-                <div class="col-md-2">
-                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=' . $_GET['page'] . '&tab=solicitudes' ) ); ?>" 
-                       class="btn btn-outline-secondary btn-lg w-100 d-flex align-items-center justify-content-center gap-2">
-                        <span class="dashicons dashicons-image-rotate"></span> Limpiar
-                    </a>
-                </div>
+                <?php if ( ! empty( $_GET['empleado'] ) || ! empty( $_GET['estado'] ) ) : ?>
+                    <div class="col-md-2">
+                        <a href="<?php echo esc_url( admin_url( 'admin.php?page=' . $_GET['page'] ) ); ?>" 
+                           class="btn btn-outline-secondary btn-lg w-100 d-flex align-items-center justify-content-center gap-2">
+                            <span class="dashicons dashicons-image-rotate"></span> Limpiar
+                        </a>
+                    </div>
+                <?php endif; ?>
             </form>
         </div>
     </div>
@@ -465,12 +466,12 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
 
             </div> <!-- Cierre del tab-pane contenido-solicitudes -->
 
-            <!-- Contenido Tab 1: Resumen de Trabajadores -->
-            <div id="contenido-departamentos" class="tab-pane fade <?php echo $tab_activo === 'trabajadores' ? 'show active' : ''; ?>" role="tabpanel" aria-labelledby="tab-departamentos">
+            <!-- Contenido Tab 2: Departamentos -->
+            <div id="contenido-departamentos" class="tab-pane fade <?php echo $tab_activo === 'departamentos' ? 'show active' : ''; ?>" role="tabpanel" aria-labelledby="tab-departamentos">
                 <div class="hrm-panel shadow-sm border-0 rounded-3">
                     <div class="hrm-panel-header bg-light border-bottom px-4 py-3 d-flex align-items-center justify-content-between">
                         <h2 class="fs-5 fw-bold text-dark mb-0 d-flex align-items-center gap-2">
-                            <span class="dashicons dashicons-groups"></span> Resumen de Trabajadores
+                            <span class="dashicons dashicons-building"></span> Resumen de Departamentos
                         </h2>
                         <button 
                             id="btnSincronizarPersonal"
@@ -608,15 +609,14 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                             </div>
                             
                             <div class="col-md-2">
-                                <button type="submit" class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center gap-2">
-                                    <span class="dashicons dashicons-search"></span> Filtrar
+                                <button type="submit" class="btn btn-primary btn-lg w-100">
+                                    <span class="dashicons dashicons-search me-1"></span> Filtrar
                                 </button>
                             </div>
                             
                             <div class="col-md-2">
-                                <a href="<?php echo esc_url( admin_url( 'admin.php?page=' . $_GET['page'] . '&tab=medio-dia' ) ); ?>" 
-                                   class="btn btn-outline-secondary btn-lg w-100 d-flex align-items-center justify-content-center gap-2">
-                                    <span class="dashicons dashicons-image-rotate"></span> Limpiar
+                                <a href="<?php echo esc_url( remove_query_arg( ['empleado_md', 'estado_md'] ) ); ?>" class="btn btn-outline-secondary btn-lg w-100">
+                                    <span class="dashicons dashicons-image-rotate me-1"></span> Limpiar
                                 </a>
                             </div>
                         </form>
@@ -624,18 +624,6 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                 </div>
 
                 <!-- Tabla de Solicitudes de Medio Día -->
-                <?php 
-                // Calcular datos de medio día ANTES de renderizar el encabezado
-                $pagina_md = isset( $_GET['paged_md'] ) ? max( 1, intval( $_GET['paged_md'] ) ) : 1;
-                $items_por_pagina = 10; // Define la cantidad de items por página
-                
-                $medio_dias = hrm_get_solicitudes_medio_dia( 
-                    $_GET['empleado_md'] ?? '', 
-                    $_GET['estado_md'] ?? 'PENDIENTE',
-                    $pagina_md,
-                    $items_por_pagina
-                );
-                ?>
                 <div class="hrm-panel shadow-sm border-0 rounded-3">
                     <div class="hrm-panel-header bg-light border-bottom px-4 py-3 d-flex align-items-center justify-content-between">
                         <h4 class="mb-0">
@@ -651,15 +639,13 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                                 echo '<span class="text-dark"> Todas las Solicitudes de Medio Día</span>';
                             }
                             ?>
-                            <span class="text-dark">
-                            : <strong><?php echo count( $medio_dias ); ?></strong>
-                        </span>
+                            
                         </h4>
                         
                     </div>
                     <div class="hrm-panel-body">
                         <div class="table-responsive">
-                            <table class="table table-hover table-striped mb-0 align-middle">
+                            <table class="table table-hover border">
                                 <thead class="table-light">
                                     <tr>
                                         <th class="py-3 px-4"><span class="dashicons dashicons-businessperson"></span> Empleado</th>
@@ -671,7 +657,16 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                                 </thead>
                                 <tbody>
                                     <?php 
-                                    // $medio_dias ya fue calculado antes de renderizar el encabezado
+                                    // Paginación para medio día
+                                    $pagina_md = isset( $_GET['paged_md'] ) ? max( 1, intval( $_GET['paged_md'] ) ) : 1;
+                                    
+                                    $medio_dias = hrm_get_solicitudes_medio_dia( 
+                                        $_GET['empleado_md'] ?? '', 
+                                        $_GET['estado_md'] ?? 'PENDIENTE',
+                                        $pagina_md,
+                                        $items_por_pagina
+                                    );
+                                    
                                     if ( ! empty( $medio_dias ) ) : 
                                         foreach ( $medio_dias as $solicitud ) :
                                             $nombre_empleado = $solicitud['nombre'] . ' ' . $solicitud['apellido'];
@@ -909,8 +904,8 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
 <!-- =====================================================
      MODAL VER DETALLES DE SOLICITUD DE MEDIO DÍA
      ===================================================== -->
-<div id="modalVerMedioDia" class="modal-ver-medio-dia myplugin-modal-overlay">
-    <div class="modal-contenido bg-white rounded-4 shadow-lg p-4 myplugin-modal-content-md">
+<div id="modalVerMedioDia" class="modal-ver-medio-dia" class="myplugin-modal-overlay">
+    <div class="modal-contenido bg-white rounded-4 shadow-lg p-4" class="myplugin-modal-content-md">
         <div class="modal-header border-bottom pb-3 mb-4 d-flex justify-content-between align-items-center">
             <h2 class="modal-titulo fs-4 fw-bold text-primary d-flex align-items-center gap-2 mb-0">
                 <span class="dashicons dashicons-visibility"></span> Detalles de Solicitud de Medio Día
@@ -973,8 +968,8 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
 <!-- =====================================================
      MODAL DE RECHAZO DE MEDIO DÍA
      ===================================================== -->
-<div id="modalRechazoMedioDia" class="modal-rechazo-md myplugin-modal-overlay">
-    <div class="modal-contenido bg-white rounded-4 shadow-lg p-4 myplugin-modal-content-lg">
+<div id="modalRechazoMedioDia" class="modal-rechazo-md" class="myplugin-modal-overlay">
+    <div class="modal-contenido bg-white rounded-4 shadow-lg p-4" class="myplugin-modal-content-lg">
         <div class="modal-header border-bottom border-3 border-danger pb-3 mb-4">
             <h2 class="modal-titulo fs-4 fw-bold text-danger d-flex align-items-center gap-2 mb-0">
                 <span class="dashicons dashicons-dismiss"></span> Rechazar Solicitud de Medio Día

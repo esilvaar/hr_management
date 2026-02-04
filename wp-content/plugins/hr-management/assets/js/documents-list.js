@@ -536,7 +536,7 @@ function setupYearFilter() {
     document.addEventListener('click', function(e) {
         const target = e.target;
         if ( target !== searchInput && !itemsContainer.contains( target ) && target !== itemsContainer ) {
-            if ( typeof window.hrmHideDropdown === 'function' ) window.hrmHideDropdown(itemsContainer);
+            if ( typeof restoreDropdown === 'function' ) restoreDropdown(itemsContainer);
         }
     });
 
@@ -544,7 +544,7 @@ function setupYearFilter() {
     searchInput.addEventListener('keydown', function(e) {
         if ( e.key === 'Escape' || e.keyCode === 27 ) {
             e.preventDefault();
-            if ( typeof window.hrmHideDropdown === 'function' ) window.hrmHideDropdown(itemsContainer);
+            if ( typeof restoreDropdown === 'function' ) restoreDropdown(itemsContainer);
             searchInput.blur();
         }
     });

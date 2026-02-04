@@ -155,21 +155,11 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
     // --- ACCIÓN C: Subir Documentos ---
     elseif ( $action === 'upload_document' && check_admin_referer( 'hrm_upload_file', 'hrm_upload_nonce' ) ) {
         $emp_id = absint( $_POST['employee_id'] );
-        
-        // Validar permisos: admin, edit_hrm_employees o supervisor global
-        $can_upload = current_user_can( 'manage_options' ) || 
-                      current_user_can( 'edit_hrm_employees' ) ||
-                      hrm_es_supervisor_global();
-        
-        if ( ! $can_upload ) {
-            $message_error = 'No tienes permisos para subir documentos.';
-            error_log( 'HRM: Intento de upload sin permisos - User ID: ' . get_current_user_id() . ', Empleado ID: ' . $emp_id );
-        } else {
-            $tipo   = wp_kses_post( trim( $_POST['tipo_documento'] ?? 'Generico' ) );
-            $anio_raw = isset($_POST['anio_documento']) ? trim($_POST['anio_documento']) : '';
-            $anio   = ! empty($anio_raw) ? (int)$anio_raw : 0;
-            $empleado_obj = $db_emp->get( $emp_id );
-            $files = $_FILES['archivos_subidos'] ?? [];
+        $tipo   = wp_kses_post( trim( $_POST['tipo_documento'] ?? 'Generico' ) );
+        $anio_raw = isset($_POST['anio_documento']) ? trim($_POST['anio_documento']) : '';
+        $anio   = ! empty($anio_raw) ? (int)$anio_raw : 0;
+        $empleado_obj = $db_emp->get( $emp_id );
+        $files = $_FILES['archivos_subidos'] ?? [];
         
         // Debug: Log del valor recibido
         error_log('DEBUG anio_documento: ' . var_export($anio_raw, true) . ' | anio: ' . $anio);
@@ -268,35 +258,23 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                 if ( $count_err > 0 ) $message_error = "Fallaron $count_err archivo(s).";
             }
         }
-        }
     }
 
     // --- ACCIÓN D: Eliminar Documento ---
     elseif ( $action === 'delete_document' && check_admin_referer( 'hrm_delete_file', 'hrm_delete_nonce' ) ) {
-        
-        // Validar permisos: admin, edit_hrm_employees o supervisor global
-        $can_delete = current_user_can( 'manage_options' ) || 
-                      current_user_can( 'edit_hrm_employees' ) ||
-                      hrm_es_supervisor_global();
-        
-        if ( ! $can_delete ) {
-            $message_error = 'No tienes permisos para eliminar documentos.';
-            error_log( 'HRM: Intento de delete sin permisos - User ID: ' . get_current_user_id() );
+        $doc_id = absint( $_POST['doc_id'] );
+        $doc    = $db_docs->get( $doc_id );
+
+        if ( $doc ) {
+            $upload_dir = wp_upload_dir();
+            $file_path  = str_replace( $upload_dir['baseurl'], $upload_dir['basedir'], $doc->url );
+
+            if ( file_exists( $file_path ) ) unlink( $file_path ); 
+            $db_docs->delete( $doc_id ); 
+            
+            $message_success = 'Archivo eliminado correctamente.';
         } else {
-            $doc_id = absint( $_POST['doc_id'] );
-            $doc    = $db_docs->get( $doc_id );
-
-            if ( $doc ) {
-                $upload_dir = wp_upload_dir();
-                $file_path  = str_replace( $upload_dir['baseurl'], $upload_dir['basedir'], $doc->url );
-
-                if ( file_exists( $file_path ) ) unlink( $file_path ); 
-                $db_docs->delete( $doc_id ); 
-                
-                $message_success = 'Archivo eliminado correctamente.';
-            } else {
-                $message_error = 'El archivo no existe.';
-            }
+            $message_error = 'El archivo no existe.';
         }
     }
 }

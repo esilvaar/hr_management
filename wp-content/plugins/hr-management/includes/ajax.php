@@ -364,13 +364,6 @@ function hrm_ajax_get_employee_documents() {
 
     // También exponer endpoint para crear tipos desde la UI (si no existe ya)
 
-    // Si el usuario es editor de vacaciones, limitar a solo documentos tipo "Contrato"
-    if ( in_array( 'editor_vacaciones', $current_user->roles, true ) ) {
-        $documents = array_filter( $documents, function( $doc ) {
-            $tipo = isset( $doc->tipo ) ? strtolower( trim( $doc->tipo ) ) : '';
-            return $tipo === 'contrato';
-        } );
-    }
     
     // Filtrar por tipo de documento si se especifica (acepta ID o nombre)
     if ( $doc_type !== 'all' ) {
@@ -447,7 +440,7 @@ function hrm_ajax_get_employee_documents() {
                 'url'     => $doc->url,
             );
         }, $documents ),
-        'can_delete'  => current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) || hrm_es_supervisor_global(),
+        'can_delete'  => current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ),
         'delete_nonce' => wp_create_nonce( 'hrm_delete_file' ),
         'employee_id'  => $employee->id
     ) );
@@ -477,19 +470,8 @@ function hrm_ajax_delete_employee_document() {
     }
 
     // Verificar permisos
-    $es_admin = current_user_can( 'manage_options' );
-    $es_editor = current_user_can( 'edit_hrm_employees' );
-    $es_supervisor_global = function_exists( 'hrm_es_supervisor_global' ) && hrm_es_supervisor_global();
-    $roles = (array) ( wp_get_current_user()->roles ?? array() );
-    $es_anaconda = in_array( 'administrador_anaconda', $roles, true );
-
-    if ( ! $es_admin && ! $es_editor && ! $es_supervisor_global && ! $es_anaconda ) {
-        error_log( "HRM Delete Document - Permiso denegado para user_id=" . get_current_user_id() );
+    if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'edit_hrm_employees' ) ) {
         wp_send_json_error( [ 'message' => 'No tienes permisos para eliminar documentos.' ], 403 );
-    }
-    
-    if ( $es_supervisor_global ) {
-        error_log( "HRM Delete Document - Supervisor Global detectado (user_id=" . get_current_user_id() . ") - Permiso concedido" );
     }
 
     // Limpiar buffer por si hay salida anterior que rompa JSON
@@ -771,11 +753,8 @@ function hrm_ajax_create_document_type() {
         wp_send_json_error( [ 'message' => 'No autorizado' ], 401 );
     }
 
-    // Verificar permisos: admin, supervisor, administrador_anaconda (no editor_vacaciones)
-    $can_manage_types = function_exists( 'hrm_user_can_manage_document_types' )
-        ? hrm_user_can_manage_document_types()
-        : ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) );
-    if ( ! $can_manage_types ) {
+    // Verificar permisos: admin o editar empleados
+    if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'edit_hrm_employees' ) ) {
         wp_send_json_error( [ 'message' => 'No tienes permisos para crear tipos' ], 403 );
     }
 
@@ -838,6 +817,8 @@ function hrm_ajax_create_document_type() {
     }
 
     wp_send_json_success( [ 'id' => $id, 'name' => $nombre, 'created_file' => $created_file, 'created_file_path' => $created_file_path ] );
+
+    wp_send_json_success( [ 'id' => $id, 'name' => $nombre, 'created_file' => $created_file ] );
 }
 
 add_action( 'wp_ajax_hrm_create_document_type', 'hrm_ajax_create_document_type' );
@@ -850,11 +831,8 @@ function hrm_ajax_delete_document_type() {
         wp_send_json_error( [ 'message' => 'No autorizado' ], 401 );
     }
 
-    // Verificar permisos: admin, supervisor, administrador_anaconda (no editor_vacaciones)
-    $can_manage_types = function_exists( 'hrm_user_can_manage_document_types' )
-        ? hrm_user_can_manage_document_types()
-        : ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) );
-    if ( ! $can_manage_types ) {
+    // Verificar permisos
+    if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'edit_hrm_employees' ) ) {
         wp_send_json_error( [ 'message' => 'No tienes permisos para eliminar tipos' ], 403 );
     }
 

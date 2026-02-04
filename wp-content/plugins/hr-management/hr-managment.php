@@ -173,15 +173,14 @@ function hrm_redirect_non_admin_after_login($redirect_to, $request, $user)
         return admin_url('admin.php?page=hrm-empleados&tab=list');
     }
 
-    // Si es editor_vacaciones, llevarlo a Solicitudes de Vacaciones
-    if (in_array('editor_vacaciones', (array) $user->roles, true)) {
+    // Editor de Vacaciones: forzar a panel de Vacaciones (fallback cuando otros filtros o plugins sobreescriben)
+    if (in_array('editor_vacaciones', (array) $user->roles, true) || user_can($user, 'manage_hrm_vacaciones')) {
         error_log('[HRM-DEBUG] Redirecting editor_vacaciones to hrm-vacaciones for user_id=' . intval($user->ID));
         return admin_url('admin.php?page=hrm-vacaciones');
     }
 
-    // Si es un usuario "empleado", llevarlo a su perfil dentro del plugin
+    // Si es un usuario "empleado" puro, llevarlo a su perfil dentro del plugin
     if (in_array('empleado', (array) $user->roles, true)) {
-        error_log('[HRM-DEBUG] Redirecting empleado to hrm-mi-perfil-info for user_id=' . intval($user->ID));
         return admin_url('admin.php?page=hrm-mi-perfil-info');
     }
 
@@ -190,32 +189,6 @@ function hrm_redirect_non_admin_after_login($redirect_to, $request, $user)
     return $redirect_to;
 }
 add_filter('login_redirect', 'hrm_redirect_non_admin_after_login', 10, 3);
-
-/**
- * Asegurar acceso a páginas de documentos para roles internos.
- * Algunos roles personalizados pueden no tener 'read' asignado.
- */
-function hrm_grant_documents_page_access_caps( $allcaps, $caps, $args, $user ) {
-    $current_page = isset( $_GET['page'] ) ? sanitize_text_field( $_GET['page'] ) : '';
-    if ( $current_page !== 'hrm-employees-documents' && $current_page !== 'employees-documents' ) {
-        return $allcaps;
-    }
-
-    if ( empty( $user ) || empty( $user->roles ) ) {
-        return $allcaps;
-    }
-
-    $allowed_roles = array( 'editor_vacaciones', 'supervisor', 'administrador_anaconda', 'empleado' );
-    foreach ( (array) $user->roles as $role ) {
-        if ( in_array( $role, $allowed_roles, true ) ) {
-            $allcaps['read'] = true;
-            break;
-        }
-    }
-
-    return $allcaps;
-}
-add_filter( 'user_has_cap', 'hrm_grant_documents_page_access_caps', 0, 4 );
 
 /**
  * ============================================================================
@@ -235,9 +208,7 @@ function hrm_enqueue_admin_assets()
         $page = sanitize_text_field($_GET['page']);
 
         // Estilos de sidebar/layout y JS específicos (todas las páginas HRM)
-        // Incluir slugs adicionales que no empiezan con 'hrm-'
-        $extra_pages = array( 'employees-documents', 'hrm-employees-documents' );
-        if (strpos($page, 'hrm') === 0 || $page === 'hr-management' || in_array( $page, $extra_pages, true )) {
+        if (strpos($page, 'hrm') === 0 || $page === 'hr-management') {
             // CSS general del plugin
             wp_enqueue_style(
                 'hrm-style',
@@ -283,7 +254,7 @@ function hrm_enqueue_admin_assets()
             wp_enqueue_style(
                 'hrm-sidebar-responsive',
                 HRM_PLUGIN_URL . 'assets/css/sidebar-responsive.css',
-                array('hrm-plugin-common'),
+                array('hrm-admin-sidebar'),
                 HRM_PLUGIN_VERSION
             );
 
@@ -536,18 +507,15 @@ function hrm_render_vacaciones_admin_page()
     // Esto es necesario en caso de que se hayan agregado capacidades al rol
     // después de que el usuario fue asignado al rol
     $current_user = wp_get_current_user();
-    $is_editor_vac = in_array('editor_vacaciones', (array) $current_user->roles, true);
-    
     if ($current_user && $current_user->ID) {
         // Recargar las capacidades del usuario desde la base de datos
         $current_user->get_role_caps();
 
         // Log para debug
-        error_log('HRM: Capacidades del usuario ' . $current_user->ID . ' recargadas. Tiene manage_hrm_vacaciones: ' . ($current_user->has_cap('manage_hrm_vacaciones') ? 'YES' : 'NO') . '. Es editor_vacaciones: ' . ($is_editor_vac ? 'YES' : 'NO'));
+        error_log('HRM: Capacidades del usuario ' . $current_user->ID . ' recargadas. Tiene manage_hrm_vacaciones: ' . ($current_user->has_cap('manage_hrm_vacaciones') ? 'YES' : 'NO'));
     }
 
-    // Permitir acceso si tiene permisos o es editor_vacaciones
-    if (!current_user_can('manage_options') && !current_user_can('view_hrm_admin_views') && !current_user_can('manage_hrm_vacaciones') && !$is_editor_vac) {
+    if (!current_user_can('manage_options') && !current_user_can('view_hrm_admin_views') && !current_user_can('manage_hrm_vacaciones')) {
         wp_die(__('No tienes permisos para ver esta página.', 'hr-management'), __('Acceso denegado', 'hr-management'), array('response' => 403));
     }
 
@@ -882,6 +850,36 @@ function hrm_register_admin_menus()
             );
         }
 
+        if (current_user_can('manage_hrm_vacaciones')) {
+            add_menu_page(
+                'Vacaciones',
+                'Vacaciones',
+                'manage_hrm_vacaciones',
+                'hrm-vacaciones',
+                'hrm_render_vacaciones_admin_page',
+                'dashicons-calendar-alt',
+                6
+            );
+
+            add_submenu_page(
+                'hrm-vacaciones',
+                'Vacaciones',
+                'Vacaciones',
+                'manage_hrm_vacaciones',
+                'hrm-vacaciones',
+                'hrm_render_vacaciones_admin_page'
+            );
+
+            add_submenu_page(
+                'hrm-vacaciones',
+                'Solicitud de Vacaciones',
+                '',
+                'manage_hrm_vacaciones',
+                'hrm-vacaciones-formulario',
+                'hrm_render_formulario_solicitud_page'
+            );
+        }
+
         // MENÚ PRINCIPAL: Mi Perfil (posición 6 para que esté al inicio)
         if (empty($skip_my_profile_for_anaconda)) {
             add_menu_page(
@@ -985,40 +983,6 @@ function hrm_register_admin_menus()
         // (excluyendo administradores y administrador_anaconda). Lo registramos
         // fuera del bloque para que también esté disponible a administradores
         // y al rol administrador_anaconda cuando corresponda.
-    }
-
-    // =========================================================================
-    // MENÚ DE VACACIONES - Registrado para TODOS los usuarios logueados
-    // La verificación de permisos se hace en la función de renderizado
-    // =========================================================================
-    if (is_user_logged_in()) {
-        add_menu_page(
-            'Vacaciones',
-            'Vacaciones',
-            'read',
-            'hrm-vacaciones',
-            'hrm_render_vacaciones_admin_page',
-            'dashicons-calendar-alt',
-            7
-        );
-
-        add_submenu_page(
-            'hrm-vacaciones',
-            'Solicitudes',
-            'Solicitudes',
-            'read',
-            'hrm-vacaciones',
-            'hrm_render_vacaciones_admin_page'
-        );
-
-        add_submenu_page(
-            'hrm-vacaciones',
-            'Ver Solicitud',
-            '',
-            'read',
-            'hrm-vacaciones-formulario',
-            'hrm_render_formulario_solicitud_page'
-        );
     }
 
     // Registrar la página de Convivencia para cualquier usuario logueado.
@@ -1270,27 +1234,6 @@ function hrm_register_admin_menus()
                 hrm_render_mis_documentos_licencias_page(); }
         );
     }
-
-    // Registrar la página de gestión de documentos (slug dinámico solicitado)
-    // Se registra con parent_slug = null para que sea accesible pero no aparezca en el menú nativo de WP
-    add_submenu_page(
-        null,
-        'Documentos del Empleado',
-        'Documentos del Empleado',
-        'view_hrm_employee_admin',
-        'hrm-employees-documents',
-        'hrm_render_employees_documents_page'
-    );
-
-    // Alias solicitado (sin prefijo hrm-)
-    add_submenu_page(
-        null,
-        'Documentos del Empleado',
-        'Documentos del Empleado',
-        'view_hrm_employee_admin',
-        'employees-documents',
-        'hrm_render_employees_documents_page'
-    );
 }
 add_action('admin_menu', 'hrm_register_admin_menus');
 
@@ -1624,71 +1567,4 @@ function hrm_render_formulario_solicitud_page()
     }
 
     hrm_get_template_part('vacaciones-formulario-vista');
-}
-
-/**
- * Renderizar página de gestión de documentos avanzada (para admins y editores de vacaciones)
- */
-function hrm_render_employees_documents_page() {
-    if (!is_user_logged_in()) {
-        wp_die('Debes iniciar sesión.');
-    }
-
-    // Permitir: administrator, administrador_anaconda, supervisor y editor_vacaciones
-    $can_view = function_exists( 'hrm_user_can_view_employee_documents' )
-        ? hrm_user_can_view_employee_documents()
-        : ( current_user_can('manage_options') || current_user_can('view_hrm_admin_views') );
-
-    if ( ! $can_view ) {
-        wp_die('No tienes permisos para esta vista.');
-    }
-
-    hrm_ensure_db_classes();
-    $db_emp = new HRM_DB_Empleados();
-    $db_docs = new HRM_DB_Documentos();
-    
-    $id = isset($_GET['id']) ? absint($_GET['id']) : 0;
-    $employee = $id ? $db_emp->get($id) : null;
-    $documents = $employee ? $db_docs->get_by_rut($employee->rut) : [];
-    
-    // Tipos de documento
-    $hrm_tipos_documento = $db_docs->get_all_types();
-    if (empty($hrm_tipos_documento)) {
-        $hrm_tipos_documento = apply_filters('hrm_tipos_documento', array('Contrato', 'Liquidaciones', 'Licencia'));
-    }
-
-    echo '<div class="wrap hrm-admin-wrap">';
-    echo '<div class="hrm-admin-layout">';
-    hrm_get_template_part('partials/sidebar-loader');
-    
-    echo '<main class="hrm-content">';
-    
-    // Mostrar mensajes si existen
-    if ( isset( $_GET['message_success'] ) ) {
-        echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( rawurldecode( $_GET['message_success'] ) ) . '</p></div>';
-    }
-    if ( isset( $_GET['message_error'] ) ) {
-        echo '<div class="notice notice-error is-dismissible"><p>' . esc_html( rawurldecode( $_GET['message_error'] ) ) . '</p></div>';
-    }
-
-    // Selector de empleado
-    $all_emps = $db_emp->get_visible_for_user(get_current_user_id(), null);
-    hrm_get_template_part('employee-selector', '', [
-        'all_emps' => $all_emps,
-        'tab' => 'upload', // Referencia interna para compatibilidad
-        'id' => $id,
-        'db_emp' => $db_emp
-    ]);
-
-    echo '<div class="hrm-admin-panel">';
-    if ($employee) {
-        hrm_get_template_part('Administrador/employees-documents', '', compact('employee', 'documents', 'hrm_tipos_documento'));
-    } else {
-        echo '<div class="hrm-empty-placeholder hrm-empty-placeholder--docs"><h2><strong>⚠️ Atención:</strong> Por favor selecciona un empleado para gestionar sus documentos.</h2></div>';
-    }
-    echo '</div>';
-    
-    echo '</main>';
-    echo '</div>';
-    echo '</div>';
 }

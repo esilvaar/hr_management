@@ -71,20 +71,17 @@
                 'view_hrm_employee_admin' => true,
                 'edit_hrm_employees' => true,
                 'view_hrm_own_profile' => true,
-                'manage_hrm_documentos' => true,
             ));
         }
 
-        // Crear rol 'editor_vacaciones'
         // Crear rol 'editor_vacaciones'
         if (!get_role('editor_vacaciones')) {
             add_role('editor_vacaciones', 'Editor Vacaciones', array(
                 'read' => true,
                 'upload_files' => true,
-                'manage_hrm_vacaciones' => true,  // ✅ AGREGAR ESTA LÍNEA
+                'manage_hrm_vacaciones' => true,
                 'view_hrm_employee_admin' => true,
                 'view_hrm_own_profile' => true,
-                'edit_hrm_employees' => true,  // Permiso para subir/gestionar documentos
             ));
         }
     }
@@ -188,9 +185,6 @@
             if (!$supervisor->has_cap('manage_hrm_vacaciones')) {
                 $supervisor->add_cap('manage_hrm_vacaciones');
             }
-            if (!$supervisor->has_cap('manage_hrm_documentos')) {
-                $supervisor->add_cap('manage_hrm_documentos');
-            }
             if (!$supervisor->has_cap('read')) {
                 $supervisor->add_cap('read');
             }
@@ -210,7 +204,6 @@
             $editor_vac->add_cap('manage_hrm_vacaciones');
             $editor_vac->add_cap('view_hrm_employee_admin');
             $editor_vac->add_cap('view_hrm_own_profile');
-            $editor_vac->add_cap('edit_hrm_employees');  // Permiso para subir/gestionar documentos
             if (!$editor_vac->has_cap('read')) {
                 $editor_vac->add_cap('read');
             }
@@ -278,34 +271,3 @@
         error_log('[HRM] Capabilities updated for user_id=' . intval($current_user->ID) . ' (administrador_anaconda)');
     }
     add_action('admin_init', 'hrm_force_update_user_capabilities', 1);
-
-    /**
-     * Redirigir a los usuarios a páginas específicas según su rol después de iniciar sesión.
-     */
-    function hrm_custom_login_redirect($redirect_to, $request, $user) {
-        if (isset($user->roles) && is_array($user->roles)) {
-            // Redirigir al administrador de anaconda a la lista de empleados
-            if (in_array('administrador_anaconda', $user->roles, true)) {
-                return admin_url('admin.php?page=hrm-empleados&tab=list');
-            }
-
-            // Redirigir al supervisor a la lista de empleados
-            if (in_array('supervisor', $user->roles, true)) {
-                return admin_url('admin.php?page=hrm-empleados&tab=list');
-            }
-
-            // Redirigir al editor de vacaciones a la página de gestión de vacaciones
-            if (in_array('editor_vacaciones', $user->roles, true)) {
-                return admin_url('admin.php?page=hrm-vacaciones');
-            }
-
-            // Redirigir al empleado a su perfil
-            if (in_array('empleado', $user->roles, true)) {
-                return admin_url('admin.php?page=hrm-mi-perfil-info');
-            }
-        }
-        return $redirect_to;
-    }
-    add_filter('login_redirect', 'hrm_custom_login_redirect', 10, 3);
-
-

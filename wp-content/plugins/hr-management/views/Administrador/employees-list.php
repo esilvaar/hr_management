@@ -106,11 +106,11 @@ if ( ! empty( $lista_empleados ) ) {
                                     <?php if ( ! empty( $avatar_url ) ) : ?>
                                         <img src="<?= esc_url( $avatar_url ) ?>" 
                                              alt="<?= esc_attr( $empleado->nombre ) ?>" 
-                                             class="rounded-circle myplugin-avatar-50"
-                                             style="width:50px;height:50px;object-fit:cover;" />
+                                             class="rounded-circle" 
+                                             class="myplugin-avatar-50">
                                     <?php else : ?>
-                                        <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center myplugin-avatar-50"
-                                             style="width:50px;height:50px;">
+                                        <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center" 
+                                             class="myplugin-avatar-50">
                                             <span class="text-muted fw-bold">
                                                 <?= esc_html( strtoupper( substr( $empleado->nombre, 0, 1 ) . substr( $empleado->apellido, 0, 1 ) ) ) ?>
                                             </span>

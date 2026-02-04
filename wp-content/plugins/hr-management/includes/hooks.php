@@ -39,15 +39,12 @@ function hrm_map_document_capabilities( $caps, $cap, $user_id, $args ) {
     if ( $cap === 'view_hrm_admin_views' && $current_page === 'hrm-anaconda-documents' ) {
         $user = get_user_by( 'id', $user_id );
         if ( $user ) {
-            $allowed_roles = array( 'administrator', 'administrador_anaconda', 'supervisor' );
+            $allowed_roles = array( 'administrator', 'administrador_anaconda' );
             foreach ( (array) $user->roles as $role ) {
                 if ( in_array( $role, $allowed_roles, true ) ) {
+                    // Mapeamos a 'read' para permitir acceso si el usuario está autenticado
                     return array( 'read' );
                 }
-            }
-
-            if ( user_can( $user, 'manage_hrm_documentos' ) ) {
-                return array( 'read' );
             }
         }
     }
@@ -166,16 +163,11 @@ function hrm_ensure_capabilities_on_admin_init() {
         // Si el usuario tiene uno de estos roles, asegurar que tenga 'read'
         if ( ! empty( $current_user->roles ) ) {
             foreach ( $current_user->roles as $role ) {
-
                 if ( in_array( $role, $allowed_roles, true ) ) {
+                    // Forzar agregar la capability 'read' si no existe
                     if ( ! $current_user->has_cap( 'read' ) ) {
                         $current_user->add_cap( 'read' );
                         error_log( '[HRM-DEBUG] Added read capability to user' );
-                    }
-
-                    if ( user_can( $current_user, 'manage_hrm_documentos' ) && ! $current_user->has_cap( 'view_hrm_admin_views' ) ) {
-                        $current_user->add_cap( 'view_hrm_admin_views' );
-                        error_log( '[HRM-DEBUG] Granted view_hrm_admin_views for manage_hrm_documentos user' );
                     }
 
                     // Además forzar view_hrm_admin_views para usuarios con rol administrador_anaconda
@@ -303,8 +295,6 @@ function hrm_redirect_wp_profile_page() {
         'hrm-mi-documentos-contratos',
         'hrm-mi-documentos-liquidaciones',
         'hrm-mi-documentos-licencias',
-        'employees-documents',
-        'hrm-employees-documents',
         'hrm-vacaciones',
         'hrm-vacaciones-formulario',
         'hrm-convivencia',
@@ -380,11 +370,8 @@ function hrm_handle_upload_document() {
         wp_send_json_error( array( 'message' => 'Usuario no autenticado' ), 401 );
     }
 
-    // Permisos: admin, supervisor, administrador_anaconda, editor_vacaciones
-    $can_upload = function_exists( 'hrm_user_can_upload_employee_documents' )
-        ? hrm_user_can_upload_employee_documents()
-        : ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) );
-    if ( ! $can_upload ) {
+    // Permisos: admin o editar empleados
+    if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'edit_hrm_employees' ) ) {
         wp_send_json_error( array( 'message' => 'No tienes permisos para subir documentos' ), 403 );
     }
 
@@ -498,53 +485,3 @@ function hrm_handle_upload_document() {
     wp_send_json_success( array( 'message' => 'Archivos subidos', 'files' => $saved ) );
 }
 add_action( 'admin_init', 'hrm_handle_upload_document', 5 );
-
-add_action('admin_init', function() {
-    // No ejecutar en el contexto de AJAX
-    if (wp_doing_ajax()) {
-        return;
-    }
-
-    $current_user = wp_get_current_user();
-    
-    // Redirigir editor_vacaciones a la página de vacaciones
-    if (in_array('editor_vacaciones', (array) $current_user->roles, true)) {
-        global $pagenow;
-        
-        // Solo redirigir si está en el dashboard, página principal de admin o perfil
-        if ($pagenow === 'index.php' || $pagenow === 'profile.php' || $pagenow === 'admin.php') {
-            $vacaciones_url = admin_url('admin.php?page=hrm-vacaciones');
-            
-            // Verificar que no esté ya en esa página para evitar bucles de redirección
-            if (!isset($_GET['page']) || $_GET['page'] !== 'hrm-vacaciones') {
-                // Para admin.php, solo redirigir si no hay 'page' o es una no permitida
-                if ($pagenow === 'admin.php' && isset($_GET['page'])) {
-                    // Lista de páginas permitidas para este rol (puedes añadir más si es necesario)
-                    $allowed_pages = [
-                        'hrm-vacaciones',
-                        'hrm-empleados', // Para ver documentos
-                        'hrm-mi-perfil-info',
-                        'hrm-mi-perfil-vacaciones',
-                        'hrm-mi-documentos-contratos',
-                        'hrm-mi-documentos-liquidaciones',
-                        'hrm-convivencia'
-                    ];
-
-                    // Si la página actual no está en la lista de permitidas, no hacer nada.
-                    // Esto previene la redirección desde páginas que sí debe poder ver.
-                    // La lógica de redirección se activa si está en admin.php sin una 'page' query.
-                    if (in_array($_GET['page'], $allowed_pages)) {
-                        return;
-                    }
-                    // Si es un tipo de documento dinámico
-                    if (strpos($_GET['page'], 'hrm-mi-documentos-type-') === 0) {
-                        return;
-                    }
-                }
-
-                wp_safe_redirect($vacaciones_url);
-                exit;
-            }
-        }
-    }
-});
