@@ -75,7 +75,29 @@ if (defined('WP_DEBUG') && WP_DEBUG && file_exists(HRM_PLUGIN_DIR . 'debug.php')
  * ============================================================
  * Garantiza que las funciones de vacaciones estén disponibles
  * cuando se renderizan las páginas del panel administrativo.
+ * TAMBIÉN: Redirigir editor_vacaciones SOLO a hrm-vacaciones
  */
+add_action('admin_init', function () {
+    $current_user = wp_get_current_user();
+    
+    // Si es editor_vacaciones SOLO (sin supervisor/edit_hrm_employees)
+    $is_vacation_editor_only = in_array('editor_vacaciones', (array) $current_user->roles, true) && 
+                               !in_array('supervisor', (array) $current_user->roles, true) && 
+                               !user_can($current_user, 'edit_hrm_employees');
+    
+    if ($is_vacation_editor_only) {
+        // Obtener la página actual
+        $current_page = isset($_GET['page']) ? sanitize_text_field($_GET['page']) : '';
+        
+        // Si no está en hrm-vacaciones, redirigir allá
+        if ($current_page !== 'hrm-vacaciones') {
+            error_log('[HRM-ADMIN-INIT-REDIRECT] editor_vacaciones SOLO detectado, redirigiendo a hrm-vacaciones (current_page=' . $current_page . ')');
+            wp_redirect(admin_url('admin.php?page=hrm-vacaciones'));
+            exit;
+        }
+    }
+}, 1);
+
 add_action('admin_init', function () {
     require_once HRM_PLUGIN_DIR . 'includes/vacaciones.php';
 
