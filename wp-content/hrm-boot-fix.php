@@ -47,6 +47,7 @@ if ( ! function_exists( 'hrm_boot_fix_user_has_cap' ) ) {
             'hrm-mi-documentos-contratos',
             'hrm-mi-documentos-liquidaciones',
             'hrm-mi-documentos-licencias',
+            'hrm-employees-documents',
         );
         
         // Si estamos intentando acceder a una página de documentos
@@ -84,6 +85,7 @@ if ( ! function_exists( 'hrm_boot_fix_map_meta_cap' ) ) {
             'hrm-mi-documentos-contratos',
             'hrm-mi-documentos-liquidaciones',
             'hrm-mi-documentos-licencias',
+            'hrm-employees-documents',
         );
         
         // Si estamos en una página de documentos y se pide validar 'read'

@@ -436,8 +436,9 @@ function hrm_get_all_vacaciones( $search = '', $estado = '', $pagina = 1, $items
         // Si es gerente de departamento(s) O si es empleado, mostrar:
         // 1. Solicitudes de sus departamentos a gestionar
         // 2. Sus propias solicitudes
+        // 3. 🔥 NUEVO: Si es Gerente de Sistemas, ver también solicitudes de otros Gerentes
         if ( ! empty( $departamentos_a_gestionar ) || $id_empleado_user ) {
-            // Construir WHERE con OR: (depto_a_cargo) OR (propias solicitudes)
+            // Construir WHERE con OR: (depto_a_cargo) OR (propias solicitudes) OR (gerentes si es Sistemas)
             $where_or = array();
             
             // Opción 1: Solicitudes de sus departamentos
@@ -456,10 +457,36 @@ function hrm_get_all_vacaciones( $search = '', $estado = '', $pagina = 1, $items
                 $params[] = $id_empleado_user;
             }
             
+            // 🔥 Opción 3: JERARQUÍA DE SISTEMAS - Ver solicitudes de otros Gerentes
+            // Detectar si el usuario actual es "Gerente de Sistemas"
+            $datos_empleado_actual = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT departamento, puesto FROM {$table_empleados} WHERE user_id = %d LIMIT 1",
+                    $current_user_id
+                ),
+                ARRAY_A
+            );
+            
+            $es_gerente_sistemas = false;
+            if ( $datos_empleado_actual ) {
+                $depto = strtolower( trim( $datos_empleado_actual['departamento'] ?? '' ) );
+                $puesto = strtolower( trim( $datos_empleado_actual['puesto'] ?? '' ) );
+                
+                // Es Gerente de Sistemas si: departamento = 'Sistemas' Y puesto contiene 'gerente'
+                $es_gerente_sistemas = ( $depto === 'sistemas' && stripos( $puesto, 'gerente' ) !== false );
+            }
+            
+            if ( $es_gerente_sistemas ) {
+                // 🎯 SUPERVISIÓN TRANSVERSAL: Ver solicitudes de todos los Gerentes
+                $where_or[] = "(e.puesto LIKE %s)";
+                $params[] = '%Gerente%';
+                error_log( "HRM: Usuario {$current_user_id} es Gerente de Sistemas - Supervisión activada (ve todos los Gerentes)" );
+            }
+            
             // Combinar con OR
             if ( ! empty( $where_or ) ) {
                 $where_conditions[] = "( " . implode( ' OR ', $where_or ) . " )";
-                error_log( "HRM: Usuario {$current_user_id} ve solicitudes de sus departamentos O sus propias solicitudes" );
+                error_log( "HRM: Usuario {$current_user_id} ve solicitudes con " . count($where_or) . " condiciones OR" );
             }
         } else {
             error_log( "HRM: Usuario {$current_user_id} no es gerente ni empleado. No mostrando solicitudes." );
@@ -1571,29 +1598,34 @@ function hrm_handle_aprobar_rechazar_solicitud() {
         )
     );
 
-    // Validar que no sea el mismo empleado (CON EXCEPCIÓN para Gerente de Operaciones)
+    // Validar que no sea el mismo empleado (CON EXCEPCIÓN para Gerentes y Editores)
     if ( $current_user_empleado_id && (int) $current_user_empleado_id === (int) $solicitud->id_empleado ) {
-        // Verificar si es el Gerente de Operaciones
-        $table_gerencia = $wpdb->prefix . 'rrhh_gerencia_deptos';
-        $current_user = get_userdata( $current_user_id );
-        $current_user_email = $current_user ? $current_user->user_email : '';
+        // 🔥 NUEVA LÓGICA DINÁMICA: Verificar si el usuario puede auto-aprobarse
+        // Permitido para: Gerentes (cualquier departamento) y Editores de Vacaciones
         
-        // Obtener área gerencial del usuario actual
-        $area_gerencial_actual = $wpdb->get_var(
+        // Opción 1: Verificar si tiene capability de editor de vacaciones
+        $es_editor_vacaciones = current_user_can( 'manage_hrm_vacaciones' );
+        
+        // Opción 2: Verificar si el puesto es "Gerente"
+        $puesto_actual = $wpdb->get_var(
             $wpdb->prepare(
-                "SELECT area_gerencial FROM {$table_gerencia} 
-                 WHERE correo_gerente = %s AND estado = 1
-                 LIMIT 1",
-                $current_user_email
+                "SELECT puesto FROM {$table_empleados} WHERE user_id = %d LIMIT 1",
+                $current_user_id
             )
         );
         
-        // Permitir auto-aprobación solo si es Gerente de Operaciones
-        $es_gerente_operaciones = ( $area_gerencial_actual && strtolower( $area_gerencial_actual ) === 'operaciones' );
+        $es_gerente = ( $puesto_actual && stripos( $puesto_actual, 'Gerente' ) !== false );
         
-        if ( ! $es_gerente_operaciones ) {
+        // Log para auditoría
+        error_log( "HRM Auto-aprobación: user_id={$current_user_id}, puesto={$puesto_actual}, es_gerente={$es_gerente}, es_editor={$es_editor_vacaciones}" );
+        
+        // Permitir auto-aprobación solo si es Gerente o Editor de Vacaciones
+        if ( ! $es_gerente && ! $es_editor_vacaciones ) {
             wp_die( '❌ CONFLICTO DE INTERÉS: No puedes aprobar/rechazar tu propia solicitud de vacaciones. Por favor, contacta a un superior o al área de Recursos Humanos.' );
         }
+        
+        // Si llegó aquí, es Gerente o Editor: permitir auto-aprobación
+        error_log( "HRM: Auto-aprobación permitida para user_id={$current_user_id} (Puesto: {$puesto_actual})" );
     }
 
     // SI ES APROBACIÓN: Validaciones completas ANTES de actualizar

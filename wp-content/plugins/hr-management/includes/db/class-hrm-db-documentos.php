@@ -71,9 +71,23 @@ class HRM_DB_Documentos extends HRM_DB_Table {
      * Buscar documentos por RUT
      * @param string $rut_empleado
      * @param string|null $tipo_documento Filtrar por tipo específico (ej: 'contrato', 'liquidaciones', 'licencia')
+     * @param bool $bypass_security Si true, ignora filtros de seguridad (para supervisores globales)
      */
-    public function get_by_rut( $rut_empleado, $tipo_documento = null ) {
+    public function get_by_rut( $rut_empleado, $tipo_documento = null, $bypass_security = false ) {
         global $wpdb;
+        
+        // 🔥 NUEVA LÓGICA: Verificar si el usuario actual es Supervisor Global
+        if ( ! $bypass_security && function_exists( 'hrm_es_supervisor_global' ) ) {
+            $es_supervisor_global = hrm_es_supervisor_global();
+            
+            // Si es supervisor global, puede ver documentos de CUALQUIER empleado
+            if ( $es_supervisor_global ) {
+                error_log( "HRM Documentos: Usuario " . get_current_user_id() . " es Supervisor Global - Bypass activado" );
+                // Llamar recursivamente con bypass activado
+                return $this->get_by_rut( $rut_empleado, $tipo_documento, true );
+            }
+        }
+        
         $rut = sanitize_text_field( $rut_empleado );
 
         // Nombre de la tabla de tipos (resuelto automáticamente)

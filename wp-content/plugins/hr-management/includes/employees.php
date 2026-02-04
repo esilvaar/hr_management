@@ -30,13 +30,16 @@ function hrm_render_employees_admin_page() {
         return;
     }
 
+    // Para otros roles: usar el mapeo por defecto
+    $current_user = wp_get_current_user();
+    $current_tab = isset( $_GET['tab'] ) ? sanitize_text_field( $_GET['tab'] ) : '';
+    
     $default_map = array(
         'supervisor' => HRM_PLUGIN_DIR . 'views/Administrador/employees-admin.php',
-        'editor_vacaciones' => HRM_PLUGIN_DIR . 'views/employees-editor_vacaciones.php',
         'empleado' => HRM_PLUGIN_DIR . 'views/Empleado/employees-empleados.php',
     );
     $map = apply_filters( 'hrm_role_views_map', $default_map );
-    $current_user = wp_get_current_user();
+    
     if ( ! empty( $current_user->roles ) ) {
         foreach ( $current_user->roles as $r ) {
             if ( isset( $map[ $r ] ) && file_exists( $map[ $r ] ) ) {

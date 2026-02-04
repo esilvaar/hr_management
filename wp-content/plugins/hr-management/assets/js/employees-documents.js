@@ -12,11 +12,14 @@
         const msgDiv = document.getElementById('hrm-documents-message');
         const hiddenInput = document.getElementById('hrm_upload_employee_id');
 
-        function showSelectEmployeeAlert() {
+        function showSelectEmployeeAlert(shouldScroll) {
             const bigMsg = '<div class="alert alert-warning text-center hrm-big-alert"><span class="me-2">⚠️</span><strong>Atención:</strong> Por favor selecciona un usuario para continuar.</div>';
             if (msgDiv) {
                 msgDiv.innerHTML = bigMsg;
-                msgDiv.scrollIntoView({behavior: 'smooth', block: 'center'});
+                // Solo hacer scroll si se solicita explícitamente (ej: al hacer click en botón)
+                if (shouldScroll) {
+                    msgDiv.scrollIntoView({behavior: 'smooth', block: 'center'});
+                }
             }
             const container = document.getElementById('hrm-documents-container');
             if (container) container.innerHTML = bigMsg;
@@ -47,7 +50,7 @@
 
                 if (!curHasEmployee || !curEmployeeId) {
                     e.preventDefault();
-                    showSelectEmployeeAlert();
+                    showSelectEmployeeAlert(true);
                     return;
                 }
 
@@ -89,9 +92,9 @@
             };
         }
 
-        // Mostrar alerta inicial si no hay empleado
+        // Mostrar alerta inicial si no hay empleado (sin scroll automático)
         if (btnNuevo && btnNuevo.dataset.hasEmployee !== '1') {
-            showSelectEmployeeAlert();
+            showSelectEmployeeAlert(false);
         }
 
         // Función pública para actualizar employee desde otras partes del código

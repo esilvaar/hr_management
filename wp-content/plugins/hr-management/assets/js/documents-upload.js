@@ -60,21 +60,12 @@ function setupDocumentTypeSearch() {
         const yearLabel = document.querySelector('label[for="hrm-anio-search"]');
         if ( ! yearContainer || !yearInput || !yearHidden ) return;
 
-        if ( nm === 'contrato' ) {
-            // hide year label + field and disable validation
-            if ( yearLabel ) yearLabel.style.display = 'none';
-            yearContainer.style.display = 'none';
-            yearInput.disabled = true;
-            yearInput.classList.add('visually-hidden');
-            yearHidden.value = '';
-            yearHidden.removeAttribute('required');
-        } else {
-            if ( yearLabel ) yearLabel.style.display = '';
-            yearContainer.style.display = '';
-            yearInput.disabled = false;
-            yearInput.classList.remove('visually-hidden');
-            yearHidden.setAttribute('required','required');
-        }
+        // Always show year for all document types including Contrato
+        if ( yearLabel ) yearLabel.style.display = '';
+        yearContainer.style.display = '';
+        yearInput.disabled = false;
+        yearInput.classList.remove('visually-hidden');
+        yearHidden.setAttribute('required','required');
     }
 
     // Expose helper globally so other modules can trigger the same behaviour

@@ -52,24 +52,65 @@
         });
 
         // Comportamiento ACCORDION: solo una sección abierta a la vez
+        // Pero no cerrar secciones que tienen un elemento activo
         var navDetails = document.querySelectorAll('.hrm-nav > details');
-        var profileMidDetails = document.querySelector('.hrm-profile-mid > details');
-        var allDetails = Array.from(navDetails);
-        
-        // Incluir el details de "Documentos-Reglamentos" si existe
-        if(profileMidDetails) allDetails.push(profileMidDetails);
+        var profileMidDetails = document.querySelectorAll('.hrm-profile-mid > details');
+        var hrmSidebarRole = sidebar ? sidebar.dataset.hrmRole : '';
+        var accordionRoles = ['administrator', 'administrador_anaconda', 'supervisor', 'editor_vacaciones'];
+        var accordionTargets = Array.from(navDetails).concat(Array.from(profileMidDetails));
 
-        allDetails.forEach(function(details){
-            details.addEventListener('toggle', function(){
-                if(this.open){
-                    // Cerrar todos los otros details
-                    allDetails.forEach(function(other){
-                        if(other !== details && other.open){
-                            other.open = false;
-                        }
-                    });
+        if (!accordionTargets.length) {
+            return;
+        }
+
+        // Función para verificar si un details tiene un enlace activo
+        function hasActiveLink(details) {
+            return details.querySelector('.nav-link.active, a.active') !== null;
+        }
+
+        if (hrmSidebarRole === 'empleado') {
+            // Para empleados, mantener todas abiertas
+            accordionTargets.forEach(function(details){
+                details.open = true;
+                details.addEventListener('toggle', function(){
+                    if (!this.open) {
+                        this.open = true;
+                    }
+                });
+            });
+        } else if (accordionRoles.includes(hrmSidebarRole)) {
+            // Comportamiento acordeón: al abrir una, cerrar las demás (excepto las que tienen activo)
+            accordionTargets.forEach(function(details){
+                details.addEventListener('toggle', function(){
+                    if(this.open){
+                        accordionTargets.forEach(function(other){
+                            // Solo cerrar si no es el actual Y no tiene un enlace activo
+                            if(other !== details && other.open && !hasActiveLink(other)){
+                                other.open = false;
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Al cargar, asegurar que solo las secciones con activo estén abiertas
+            // más la primera sección si ninguna tiene activo
+            var anyActive = false;
+            accordionTargets.forEach(function(details){
+                if(hasActiveLink(details)){
+                    details.open = true;
+                    anyActive = true;
                 }
             });
-        });
+
+            // Si hay una sección activa, cerrar las demás que no tienen activo
+            if(anyActive){
+                accordionTargets.forEach(function(details){
+                    if(!hasActiveLink(details) && details.open){
+                        details.open = false;
+                    }
+                });
+            }
+        }
     });
 })();
