@@ -36,9 +36,13 @@ function hrm_map_document_capabilities( $caps, $cap, $user_id, $args ) {
     // CRÍTICO: Mapear 'manage_hrm_vacaciones' a 'read' para acceso a páginas de vacaciones
     if ( in_array( $current_page, array( 'hrm-vacaciones', 'hrm-vacaciones-formulario' ), true ) && $cap === 'manage_hrm_vacaciones' ) {
         $user = get_user_by( 'id', $user_id );
-        if ( $user && $user->has_cap( 'manage_hrm_vacaciones' ) ) {
-            // Usuario tiene la capability, permitir acceso directo
-            return array(); // array vacío = permitir
+        if ( $user ) {
+            // Verificar directamente en la tabla usermeta sin llamar a has_cap() para evitar loop infinito
+            $user_meta = get_user_meta( $user_id, $GLOBALS['wpdb']->prefix . 'capabilities', true );
+            if ( is_array( $user_meta ) && isset( $user_meta['manage_hrm_vacaciones'] ) && $user_meta['manage_hrm_vacaciones'] ) {
+                // Usuario tiene la capability, permitir acceso directo
+                return array(); // array vacío = permitir
+            }
         }
     }
 
@@ -330,8 +334,15 @@ function hrm_redirect_wp_profile_page() {
         exit;
     }
 
-    // PERMITIR acceso a profile.php para otros usuarios (su propio perfil para editar avatar/contraseña)
-    if ( $pagenow === 'profile.php' && ! $is_admin_anaconda ) {
+    // Para editor_vacaciones, BLOQUEAR acceso a profile.php y redirigir a página de vacaciones
+    $is_editor_vacaciones = in_array( 'editor_vacaciones', (array) $current_user->roles );
+    if ( $is_editor_vacaciones && $pagenow === 'profile.php' ) {
+        wp_safe_redirect( admin_url( 'admin.php?page=hrm-vacaciones' ) );
+        exit;
+    }
+
+    // PERMITIR acceso a profile.php para otros usuarios EXCEPTO editor_vacaciones (su propio perfil para editar avatar/contraseña)
+    if ( $pagenow === 'profile.php' && ! $is_admin_anaconda && ! $is_editor_vacaciones ) {
         return;
     }
 

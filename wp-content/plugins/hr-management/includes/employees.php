@@ -43,6 +43,7 @@ function hrm_render_employees_admin_page() {
 
     $default_map = array(
         'supervisor' => HRM_PLUGIN_DIR . 'views/Administrador/employees-admin.php',
+        'editor_vacaciones' => HRM_PLUGIN_DIR . 'views/vacaciones-admin.php',
         'empleado' => HRM_PLUGIN_DIR . 'views/Empleado/employees-empleados.php',
     );
     $map = apply_filters( 'hrm_role_views_map', $default_map );
