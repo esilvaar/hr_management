@@ -759,7 +759,7 @@ function hrm_register_admin_menus()
             'hrm-empleados',
             'Vacaciones',
             'Vacaciones',
-            'view_hrm_admin_views',  // Cambiar a capacidad especial
+            'manage_hrm_vacaciones',
             'hrm-vacaciones',
             'hrm_render_vacaciones_admin_page'
         );
@@ -769,7 +769,7 @@ function hrm_register_admin_menus()
             'hrm-empleados',
             'Solicitud de Vacaciones',
             '',  // No mostrar en el menú
-            'view_hrm_admin_views',
+            'manage_hrm_vacaciones',
             'hrm-vacaciones-formulario',
             'hrm_render_formulario_solicitud_page'
         );
