@@ -1,4 +1,11 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+// Inicializar $solicitudes si no fue pasada
+if ( ! isset( $solicitudes ) ) {
+    $solicitudes = array();
+}
+
 // Los estilos se cargan en functions.php mediante hooks de WordPress
 // No encolar estilos aquí, ya que es demasiado tarde en el ciclo
 // En este caso agregamos un enqueue por-vista para reglas menores y utilidades
@@ -27,8 +34,6 @@ wp_localize_script( 'hrm-vacaciones-admin', 'hrmVacacionesAdminData', array(
     'sincronizarNonce' => wp_create_nonce( 'hrm_sincronizar_personal' ),
     'solicitudesData' => $vacaciones_js_solicitudes,
 ) );
-
-if ( ! defined( 'ABSPATH' ) ) exit;
 
 // IMPORTANTE: Forzar actualización de capacidades del usuario actual
 $current_user = wp_get_current_user();
