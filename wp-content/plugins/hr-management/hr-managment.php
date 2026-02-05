@@ -174,53 +174,9 @@ register_deactivation_hook(__FILE__, 'hrm_deactivate_plugin');
  * ============================================================================
  * REDIRECCIÓN AL LOGIN PARA USUARIOS NO-ADMIN
  * ============================================================================
+ * NOTA: La redirección se maneja en includes/helpers.php mediante
+ * hrm_login_redirect_after_login() con mejor lógica de precedencia
  */
-
-/**
- * Redirigir a los usuarios después del login según su rol.
- * - Administrators: dashboard por defecto
- * - administrador_anaconda: vista de empleados del plugin (admin views)
- * - Otros usuarios: su perfil del plugin
- */
-function hrm_redirect_non_admin_after_login($redirect_to, $request, $user)
-{
-    // Si hay error en el login, no redirigir
-    if (isset($user->errors) && !empty($user->errors)) {
-        return $redirect_to;
-    }
-
-    // Si no es un objeto de usuario válido, no redirigir
-    if (!is_a($user, 'WP_User')) {
-        return $redirect_to;
-    }
-
-    // Si es administrador de WordPress, dejar el comportamiento por defecto (dashboard)
-    if (in_array('administrator', (array) $user->roles, true)) {
-        return $redirect_to;
-    }
-
-    // Si es administrador_anaconda o supervisor (o tiene capability para editar empleados), redirigir a la lista de empleados
-    if (in_array('administrador_anaconda', (array) $user->roles, true) || in_array('supervisor', (array) $user->roles, true) || user_can($user, 'edit_hrm_employees')) {
-        error_log('[HRM-DEBUG] Redirecting admin_anaconda/supervisor/edit_hrm_employees to employee list for user_id=' . intval($user->ID));
-        return admin_url('admin.php?page=hrm-empleados&tab=list');
-    }
-
-    // Editor de Vacaciones: forzar a panel de Vacaciones (fallback cuando otros filtros o plugins sobreescriben)
-    if (in_array('editor_vacaciones', (array) $user->roles, true) || user_can($user, 'manage_hrm_vacaciones')) {
-        error_log('[HRM-DEBUG] Redirecting editor_vacaciones to hrm-vacaciones for user_id=' . intval($user->ID));
-        return admin_url('admin.php?page=hrm-vacaciones');
-    }
-
-    // Si es un usuario "empleado" puro, llevarlo a su perfil dentro del plugin
-    if (in_array('empleado', (array) $user->roles, true)) {
-        return admin_url('admin.php?page=hrm-mi-perfil-info');
-    }
-
-    // Para otros roles (supervisor, editor_vacaciones, etc.) — no forzar redirección aquí,
-    // permitir que otros filtros (o la lógica por defecto) decidan.
-    return $redirect_to;
-}
-add_filter('login_redirect', 'hrm_redirect_non_admin_after_login', 10, 3);
 
 /**
  * ============================================================================
