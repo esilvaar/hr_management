@@ -89,9 +89,19 @@ add_action('admin_init', function () {
         // Obtener la página actual
         $current_page = isset($_GET['page']) ? sanitize_text_field($_GET['page']) : '';
         
-        // Si no está en hrm-vacaciones, redirigir allá
-        if ($current_page !== 'hrm-vacaciones') {
+        // IMPORTANTE: Solo redirigir si la página actual NO es una página permitida
+        // Páginas permitidas para editor_vacaciones: hrm-vacaciones, hrm-vacaciones-formulario
+        $allowed_pages = array('hrm-vacaciones', 'hrm-vacaciones-formulario');
+        
+        // Si NO está en una página permitida Y hay parámetro ?page=, entonces redirigir
+        if (!empty($current_page) && !in_array($current_page, $allowed_pages, true)) {
             error_log('[HRM-ADMIN-INIT-REDIRECT] editor_vacaciones SOLO detectado, redirigiendo a hrm-vacaciones (current_page=' . $current_page . ')');
+            wp_redirect(admin_url('admin.php?page=hrm-vacaciones'));
+            exit;
+        }
+        // Si NO hay parámetro ?page= en todo, también redirigir a vacaciones
+        elseif (empty($current_page)) {
+            error_log('[HRM-ADMIN-INIT-REDIRECT] editor_vacaciones SOLO accedió a /wp-admin/, redirigiendo a hrm-vacaciones');
             wp_redirect(admin_url('admin.php?page=hrm-vacaciones'));
             exit;
         }
