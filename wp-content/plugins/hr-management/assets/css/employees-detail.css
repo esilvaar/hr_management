@@ -285,3 +285,113 @@
 .rounded-circle {
     border-radius: 50% !important;
 }
+/* =============================================================================
+   CONTACTOS DE EMERGENCIA - Estilos Personalizados
+   ============================================================================= */
+
+#hrm-emergency-contacts-container {
+    width: 100%;
+    min-height: 200px;
+}
+
+#hrm-emergency-contacts-container .table-responsive {
+    margin: 0;
+    width: 100%;
+}
+
+.hrm-ec-edit-btn,
+.hrm-ec-delete-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.hrm-ec-edit-btn .dashicons,
+.hrm-ec-delete-btn .dashicons {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+}
+
+#hrm-emergency-contact-panel {
+    z-index: 1050;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+#hrm-emergency-contact-panel.myplugin-hidden {
+    display: none;
+}
+
+#hrm-emergency-contact-panel:not(.myplugin-hidden) {
+    display: block;
+}
+
+/* Asegurar que la tabla sea responsiva */
+#hrm-emergency-contacts-container .table-responsive {
+    margin: 0;
+    width: 100%;
+}
+
+#hrm-emergency-contacts-container .table {
+    margin-bottom: 0;
+    width: 100%;
+}
+
+#hrm-emergency-contacts-container .table th {
+    font-weight: 600;
+    font-size: 0.875rem;
+    background-color: #f8f9fa;
+    white-space: nowrap;
+}
+
+#hrm-emergency-contacts-container .table td {
+    vertical-align: middle;
+    font-size: 0.875rem;
+    padding: 0.75rem;
+    word-break: break-word;
+}
+
+#hrm-emergency-contacts-container .table tbody tr:hover {
+    background-color: rgba(0, 115, 170, 0.05);
+}
+
+/* Expandir la tabla al máximo del contenedor */
+#hrm-emergency-contacts-container {
+    display: flex;
+    flex-direction: column;
+}
+
+#hrm-emergency-contacts-container .table-responsive {
+    flex: 1;
+    min-height: 200px;
+}
+
+#hrm-emergency-contacts-container .table {
+    table-layout: fixed;
+}
+
+#hrm-emergency-contacts-container .table th:last-child,
+#hrm-emergency-contacts-container .table td:last-child {
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    #hrm-emergency-contacts-container .table th,
+    #hrm-emergency-contacts-container .table td {
+        padding: 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    #hrm-emergency-contacts-container .table th {
+        white-space: normal;
+    }
+}

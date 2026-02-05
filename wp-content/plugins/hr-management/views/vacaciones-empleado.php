@@ -102,7 +102,8 @@ if ( ! isset( $solicitudes ) ) {
 $show = sanitize_key( $_GET['show'] ?? '' );
 
 // Generar URL para el formulario manteniendo la página actual (sea perfil o debug)
-$form_admin_url = add_query_arg( 'show', 'form' );
+// Se limpia 'solicitud_creada' para evitar modales residuales entre tipos de solicitud
+$form_admin_url = remove_query_arg( 'solicitud_creada', add_query_arg( 'show', 'form' ) );
 ?>
 
 <div class="card shadow-sm mx-auto mt-3 hrm-vacaciones-card">
@@ -485,7 +486,7 @@ $form_admin_url = add_query_arg( 'show', 'form' );
                 <a href="<?= esc_url( $form_admin_url ) ?>" class="hrm-new-request btn btn-dark">
                     <span class="dashicons dashicons-plus me-2"></span> Nueva solicitud de vacaciones
                 </a>
-                <a href="<?= esc_url( add_query_arg( 'show', 'medio-dia' ) ) ?>" class="hrm-md-request btn btn-warning">
+                <a href="<?= esc_url( remove_query_arg( 'solicitud_creada', add_query_arg( 'show', 'medio-dia' ) ) ) ?>" class="hrm-md-request btn btn-warning">
                     <span class="dashicons dashicons-clock me-2"></span> Solicitar medio día
                 </a>
             </div>

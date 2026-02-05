@@ -43,15 +43,19 @@ if ( $current_user && $current_user->ID ) {
 
 $search_term = sanitize_text_field( $_GET['empleado'] ?? '' );
 $estado_filtro = sanitize_text_field( $_GET['estado'] ?? 'PENDIENTE' );
-$tab_activo = sanitize_text_field( $_GET['tab'] ?? 'solicitudes' );
 
-// Determinar capacidades del usuario actual
+// Determinar capacidades del usuario actual ANTES de establecer tab_activo
 $es_usuario_administrativo = current_user_can( 'edit_hrm_employees' ) || current_user_can( 'manage_hrm_vacaciones' ) || current_user_can( 'manage_options' );
 
 // Si es supervisor (gerente), obtener sus departamentos a cargo desde la tabla de gerencia
 // EXCEPTO si es editor de vacaciones (que ve TODO sin filtros)
 $es_supervisor = current_user_can( 'edit_hrm_employees' ) && ! current_user_can( 'manage_options' );
 $es_editor_vacaciones = current_user_can( 'manage_hrm_vacaciones' ) && ! current_user_can( 'edit_hrm_employees' );
+
+// Establecer tab por defecto según el rol
+// Para supervisores y editores de vacaciones: mostrar departamentos por defecto
+$tab_default = ( $es_supervisor || $es_editor_vacaciones ) ? 'departamentos' : 'solicitudes';
+$tab_activo = sanitize_text_field( $_GET['tab'] ?? $tab_default );
 $departamentos_supervisor = array(); // Array de departamentos a cargo
 $es_gerente_operaciones = false; // Flag para identificar al Gerente de Operaciones
 

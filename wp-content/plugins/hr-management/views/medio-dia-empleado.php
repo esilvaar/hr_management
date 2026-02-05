@@ -47,7 +47,7 @@ $solicitudes_medio_dia = $wpdb->get_results(
 );
 
 $show = sanitize_key( $_GET['show'] ?? '' );
-$form_admin_url = add_query_arg( 'show', 'form' );
+$form_admin_url = remove_query_arg( 'solicitud_creada', add_query_arg( 'show', 'form' ) );
 ?>
 
 <div class="card shadow-sm mx-auto mt-3 hrm-md-card">

@@ -108,7 +108,7 @@ $logo_blanco_url = esc_url( HRM_PLUGIN_URL . 'assets/images/logo-blanco.png' );
         // 1. Si explícitamente es rol de editor o tiene la capacidad de vacaciones SIN tener la de empleados
         //    Priorizamos Vacaciones para el rol Editor Vacaciones.
         if ($is_editor_vac || ($has_vacation_cap && !$has_employee_cap)) {
-            $logo_href = admin_url('admin.php?page=hrm-vacaciones&tab=solicitudes');
+            $logo_href = admin_url('admin.php?page=hrm-vacaciones&tab=departamentos');
         } 
         // 2. Si puede gestionar empleados (Admin, Supervisor, Anaconda)
         elseif ($has_employee_cap) {

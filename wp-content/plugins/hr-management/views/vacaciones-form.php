@@ -53,6 +53,18 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
 </div>
 
 <div id="alertaFondo" class="hrm-success-backdrop hrm-success-close"></div>
+
+<script>
+// Limpiar el query string inmediatamente después de mostrar el mensaje
+// Esto evita que el mensaje persista al recargar o navegar
+(function() {
+    if (window.history && window.history.replaceState) {
+        const url = new URL(window.location);
+        url.searchParams.delete('solicitud_creada');
+        window.history.replaceState({}, document.title, url.toString());
+    }
+})();
+</script>
 <?php endif; ?>
 
 <div class="documento-formal p-5 mx-auto my-3">

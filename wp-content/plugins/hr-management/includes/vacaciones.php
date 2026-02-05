@@ -2768,7 +2768,7 @@ function hrm_enviar_notificacion_confirmacion_medio_dia( $id_solicitud ) {
     $solicitud = $wpdb->get_row(
         $wpdb->prepare(
             "SELECT s.*, e.nombre, e.apellido, e.rut, e.correo, e.puesto, e.departamento
-             FROM {$wpdb->prefix}rrhh_solicitudes_ausencia s
+             FROM {$wpdb->prefix}rrhh_solicitudes_medio_dia s
              JOIN {$wpdb->prefix}rrhh_empleados e ON s.id_empleado = e.id_empleado
              WHERE s.id_solicitud = %d",
             $id_solicitud

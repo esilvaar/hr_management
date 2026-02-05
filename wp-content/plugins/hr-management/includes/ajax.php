@@ -208,6 +208,9 @@ function hrm_ensure_db_classes() {
     if ( ! class_exists( 'HRM_DB_Documentos' ) ) {
         require_once HRM_PLUGIN_DIR . 'includes/db/class-hrm-db-documentos.php';
     }
+    if ( ! class_exists( 'HRM_DB_Numeros_Emergencia' ) ) {
+        require_once HRM_PLUGIN_DIR . 'includes/db/class-hrm-db-numeros-emergencia.php';
+    }
 }
 
 /**
@@ -1360,3 +1363,235 @@ function hrm_handle_anaconda_documents_edit_doc() {
 add_action( 'wp_ajax_anaconda_documents_edit_doc', 'hrm_handle_anaconda_documents_edit_doc' );
 
 // AJAX handler for company documents removed per user request. Use page reloads to reflect changes in sidebar.
+
+/**
+ * AJAX handler para obtener contactos de emergencia
+ */
+function hrm_ajax_get_emergency_contacts() {
+    // Verificar que el usuario esté autenticado
+    if ( ! is_user_logged_in() ) {
+        wp_send_json_error( array( 'message' => 'No autenticado' ), 403 );
+    }
+
+    // Verificar nonce
+    $nonce = isset( $_REQUEST['security'] ) ? sanitize_text_field( $_REQUEST['security'] ) : '';
+    if ( ! wp_verify_nonce( $nonce, 'hrm_emergency_contacts' ) ) {
+        wp_send_json_error( array( 'message' => 'Nonce inválido' ), 403 );
+    }
+
+    // Obtener RUT del empleado
+    $rut = isset( $_REQUEST['employee_rut'] ) ? sanitize_text_field( $_REQUEST['employee_rut'] ) : '';
+    if ( empty( $rut ) ) {
+        wp_send_json_error( array( 'message' => 'RUT no válido' ), 400 );
+    }
+
+    // Cargar clases de DB
+    hrm_ensure_db_classes();
+    $db_ec = new HRM_DB_Numeros_Emergencia();
+    
+    // Obtener contactos
+    $contacts = $db_ec->get_by_rut( $rut );
+    
+    wp_send_json_success( array( 'contacts' => $contacts ) );
+}
+add_action( 'wp_ajax_hrm_get_emergency_contacts', 'hrm_ajax_get_emergency_contacts' );
+
+/**
+ * Validar número de teléfono usando regex
+ * Acepta formatos: +56912345678, 912345678, 02 1234 5678, etc.
+ */
+function hrm_validate_phone_number( $phone ) {
+    // Regex que acepta:
+    // +56 9 XXXX XXXX, +56912345678 (formato internacional Chile)
+    // 9 XXXX XXXX, 912345678 (formato nacional sin +56)
+    // 02 XXXX XXXX, 0212345678 (formato con código de área)
+    // Espacios y guiones permitidos
+    $phone_regex = '/^(\+?56)?[\s-]?(9[\s-]?\d{4}[\s-]?\d{4}|\d{2}[\s-]?\d{4}[\s-]?\d{4}|9\d{8}|\d{9})$/';
+    
+    // Limpiar espacios y guiones para validar
+    $clean_phone = preg_replace( '/[\s-]/', '', $phone );
+    
+    return (bool) preg_match( $phone_regex, $clean_phone );
+}
+
+/**
+ * AJAX handler para agregar contacto de emergencia
+ */
+function hrm_ajax_add_emergency_contact() {
+    // Verificar que el usuario esté autenticado
+    if ( ! is_user_logged_in() ) {
+        wp_send_json_error( array( 'message' => 'No autenticado' ), 403 );
+    }
+
+    // Verificar nonce
+    $nonce = isset( $_REQUEST['security'] ) ? sanitize_text_field( $_REQUEST['security'] ) : '';
+    if ( ! wp_verify_nonce( $nonce, 'hrm_emergency_contacts' ) ) {
+        wp_send_json_error( array( 'message' => 'Nonce inválido' ), 403 );
+    }
+
+    // Verificar permisos
+    $current_user = wp_get_current_user();
+    $employee_id = isset( $_REQUEST['employee_id'] ) ? absint( $_REQUEST['employee_id'] ) : 0;
+    $can_edit = current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' );
+    
+    // Si no es admin/supervisor, solo puede editar su propio perfil
+    if ( ! $can_edit ) {
+        // Verificar si es el propio perfil del usuario
+        hrm_ensure_db_classes();
+        $db_emp = new HRM_DB_Empleados();
+        $emp = $db_emp->get( $employee_id );
+        
+        if ( ! $emp || intval( $emp->user_id ) !== get_current_user_id() ) {
+            wp_send_json_error( array( 'message' => 'No tienes permisos para esto' ), 403 );
+        }
+    }
+
+    // Obtener datos
+    $rut = isset( $_REQUEST['employee_rut'] ) ? sanitize_text_field( $_REQUEST['employee_rut'] ) : '';
+    $nombre = isset( $_REQUEST['nombre_contacto'] ) ? sanitize_text_field( $_REQUEST['nombre_contacto'] ) : '';
+    $telefono = isset( $_REQUEST['numero_telefono'] ) ? sanitize_text_field( $_REQUEST['numero_telefono'] ) : '';
+    $relacion = isset( $_REQUEST['relacion'] ) ? sanitize_text_field( $_REQUEST['relacion'] ) : '';
+
+    if ( empty( $rut ) || empty( $nombre ) || empty( $telefono ) ) {
+        wp_send_json_error( array( 'message' => 'Faltan datos obligatorios' ), 400 );
+    }
+
+    // Validar formato de teléfono
+    if ( ! hrm_validate_phone_number( $telefono ) ) {
+        wp_send_json_error( array( 'message' => 'Por favor ingresa un número de teléfono válido (ej: +56912345678, 912345678 o 02 1234 5678).' ), 400 );
+    }
+
+    // Cargar clase de DB
+    hrm_ensure_db_classes();
+    $db_ec = new HRM_DB_Numeros_Emergencia();
+    
+    // Insertar contacto
+    $result = $db_ec->insert( array(
+        'rut_empleado'    => $rut,
+        'nombre_contacto' => $nombre,
+        'numero_telefono' => $telefono,
+        'relacion'        => $relacion,
+    ) );
+
+    if ( ! $result ) {
+        wp_send_json_error( array( 'message' => 'Error al agregar el contacto' ), 500 );
+    }
+
+    wp_send_json_success( array( 'message' => 'Contacto agregado exitosamente', 'contact_id' => $result ) );
+}
+add_action( 'wp_ajax_hrm_add_emergency_contact', 'hrm_ajax_add_emergency_contact' );
+
+/**
+ * AJAX handler para editar contacto de emergencia
+ */
+function hrm_ajax_edit_emergency_contact() {
+    // Verificar que el usuario esté autenticado
+    if ( ! is_user_logged_in() ) {
+        wp_send_json_error( array( 'message' => 'No autenticado' ), 403 );
+    }
+
+    // Verificar nonce
+    $nonce = isset( $_REQUEST['security'] ) ? sanitize_text_field( $_REQUEST['security'] ) : '';
+    if ( ! wp_verify_nonce( $nonce, 'hrm_emergency_contacts' ) ) {
+        wp_send_json_error( array( 'message' => 'Nonce inválido' ), 403 );
+    }
+
+    // Verificar permisos
+    $employee_id = isset( $_REQUEST['employee_id'] ) ? absint( $_REQUEST['employee_id'] ) : 0;
+    $can_edit = current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' );
+    
+    // Si no es admin/supervisor, solo puede editar su propio perfil
+    if ( ! $can_edit ) {
+        hrm_ensure_db_classes();
+        $db_emp = new HRM_DB_Empleados();
+        $emp = $db_emp->get( $employee_id );
+        
+        if ( ! $emp || intval( $emp->user_id ) !== get_current_user_id() ) {
+            wp_send_json_error( array( 'message' => 'No tienes permisos para esto' ), 403 );
+        }
+    }
+
+    // Obtener datos
+    $contact_id = isset( $_REQUEST['contact_id'] ) ? absint( $_REQUEST['contact_id'] ) : 0;
+    $nombre = isset( $_REQUEST['nombre_contacto'] ) ? sanitize_text_field( $_REQUEST['nombre_contacto'] ) : '';
+    $telefono = isset( $_REQUEST['numero_telefono'] ) ? sanitize_text_field( $_REQUEST['numero_telefono'] ) : '';
+    $relacion = isset( $_REQUEST['relacion'] ) ? sanitize_text_field( $_REQUEST['relacion'] ) : '';
+
+    if ( ! $contact_id || empty( $nombre ) || empty( $telefono ) ) {
+        wp_send_json_error( array( 'message' => 'Faltan datos obligatorios' ), 400 );
+    }
+
+    // Validar formato de teléfono
+    if ( ! hrm_validate_phone_number( $telefono ) ) {
+        wp_send_json_error( array( 'message' => 'Por favor ingresa un número de teléfono válido (ej: +56912345678, 912345678 o 02 1234 5678).' ), 400 );
+    }
+
+    // Cargar clase de DB
+    hrm_ensure_db_classes();
+    $db_ec = new HRM_DB_Numeros_Emergencia();
+    
+    // Actualizar contacto
+    $result = $db_ec->update( $contact_id, array(
+        'nombre_contacto' => $nombre,
+        'numero_telefono' => $telefono,
+        'relacion'        => $relacion,
+    ) );
+
+    if ( $result === false ) {
+        wp_send_json_error( array( 'message' => 'Error al actualizar el contacto' ), 500 );
+    }
+
+    wp_send_json_success( array( 'message' => 'Contacto actualizado exitosamente' ) );
+}
+add_action( 'wp_ajax_hrm_edit_emergency_contact', 'hrm_ajax_edit_emergency_contact' );
+
+/**
+ * AJAX handler para eliminar contacto de emergencia
+ */
+function hrm_ajax_delete_emergency_contact() {
+    // Verificar que el usuario esté autenticado
+    if ( ! is_user_logged_in() ) {
+        wp_send_json_error( array( 'message' => 'No autenticado' ), 403 );
+    }
+
+    // Verificar nonce
+    $nonce = isset( $_REQUEST['security'] ) ? sanitize_text_field( $_REQUEST['security'] ) : '';
+    if ( ! wp_verify_nonce( $nonce, 'hrm_emergency_contacts' ) ) {
+        wp_send_json_error( array( 'message' => 'Nonce inválido' ), 403 );
+    }
+
+    // Verificar permisos
+    $employee_id = isset( $_REQUEST['employee_id'] ) ? absint( $_REQUEST['employee_id'] ) : 0;
+    $can_edit = current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' );
+    
+    // Si no es admin/supervisor, solo puede eliminar contactos de su propio perfil
+    if ( ! $can_edit ) {
+        hrm_ensure_db_classes();
+        $db_emp = new HRM_DB_Empleados();
+        $emp = $db_emp->get( $employee_id );
+        
+        if ( ! $emp || intval( $emp->user_id ) !== get_current_user_id() ) {
+            wp_send_json_error( array( 'message' => 'No tienes permisos para esto' ), 403 );
+        }
+    }
+
+    // Obtener ID del contacto
+    $contact_id = isset( $_REQUEST['contact_id'] ) ? absint( $_REQUEST['contact_id'] ) : 0;
+    if ( ! $contact_id ) {
+        wp_send_json_error( array( 'message' => 'ID de contacto inválido' ), 400 );
+    }
+
+    // Cargar clase de DB
+    hrm_ensure_db_classes();
+    $db_ec = new HRM_DB_Numeros_Emergencia();
+    
+    // Eliminar contacto
+    $result = $db_ec->delete( $contact_id );
+
+    if ( $result === false ) {
+        wp_send_json_error( array( 'message' => 'Error al eliminar el contacto' ), 500 );
+    }
+
+    wp_send_json_success( array( 'message' => 'Contacto eliminado exitosamente' ) );
+}
+add_action( 'wp_ajax_hrm_delete_emergency_contact', 'hrm_ajax_delete_emergency_contact' );

@@ -7,16 +7,9 @@
         const alertaFondo = document.getElementById('alertaFondo');
         document.querySelectorAll('.hrm-success-close').forEach(function(el){
             el.addEventListener('click', function(){
+                // Solo cerrar el modal, la URL ya fue limpiada por el script inline
                 if (alerta && alerta.remove) alerta.remove();
                 if (alertaFondo && alertaFondo.remove) alertaFondo.remove();
-                // Redirigir a la página anterior después de cerrar el modal
-                setTimeout(function() {
-                    if (history && history.back) {
-                        history.back();
-                    } else {
-                        window.location.href = document.referrer || window.location.href.replace(/[?&]solicitud_creada=1/, '');
-                    }
-                }, 300);
             });
         });
 

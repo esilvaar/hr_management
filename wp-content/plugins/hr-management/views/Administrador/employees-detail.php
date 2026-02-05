@@ -38,6 +38,9 @@ $is_supervisor = current_user_can('edit_hrm_employees');
 $is_role_supervisor = in_array( 'supervisor', (array) $user->roles, true );
 $can_edit_employee = hrm_can_edit_employee( $employee->id );
 
+// Detectar si es editor de vacaciones viendo su propio perfil
+$is_editor_vacaciones_own = in_array( 'editor_vacaciones', (array) $user->roles, true ) && $is_own_profile && ! $is_admin && ! $is_supervisor;
+
 // Logging temporal para depurar permisos (remover en producción)
 if ( defined('WP_DEBUG') && WP_DEBUG ) {
     $roles = is_object( $user ) ? (array) $user->roles : array();
@@ -359,7 +362,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">Departamento</label>
-                                <?php if ( hrm_field_editable('departamento', $is_admin, $editable_fields) ) : ?>
+                                <?php if ( hrm_field_editable('departamento', $is_admin, $editable_fields) && ! $is_editor_vacaciones_own ) : ?>
                                     <select name="departamento" class="form-select">
                                         <option value="">Seleccionar</option>
                                         <?php if ( ! empty( $hrm_departamentos ) ) { foreach ( $hrm_departamentos as $dept ) { ?>
@@ -372,7 +375,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Puesto</label>
-                                <?php if ( hrm_field_editable('puesto', $is_admin, $editable_fields) ) : ?>
+                                <?php if ( hrm_field_editable('puesto', $is_admin, $editable_fields) && ! $is_editor_vacaciones_own ) : ?>
                                     <select name="puesto" class="form-select">
                                         <option value="">Seleccionar</option>
                                         <?php if ( ! empty( $hrm_puestos ) ) { foreach ( $hrm_puestos as $puesto ) { ?>
@@ -459,6 +462,22 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                     </div>
                 </div>
 
+                <div class="hrm-panel mb-3">
+                    <div class="hrm-panel-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><span class="dashicons dashicons-phone"></span> Contactos de Emergencia</h5>
+                        <?php if ( $is_own_profile || $is_admin || $is_supervisor ) : ?>
+                        <button type="button" class="btn btn-sm btn-primary" id="hrm-add-emergency-contact">
+                            <span class="dashicons dashicons-plus-alt"></span> Agregar
+                        </button>
+                        <?php endif; ?>
+                    </div>
+                    <div class="hrm-panel-body" style="padding: 0;">
+                        <div id="hrm-emergency-contacts-container">
+                            <p class="text-muted text-center py-3">Cargando contactos...</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="hrm-panel">
                     <div class="hrm-panel-body d-flex gap-2 justify-content-center flex-wrap">
                         <button type="submit" class="btn btn-success"><span class="dashicons dashicons-update"></span> Guardar Cambios</button>
@@ -522,6 +541,34 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
             <input type="hidden" name="current_estado" id="input-current-estado" value="<?= intval( $employee->estado ?? 1 ) ?>">
             <button type="submit" class="btn" id="btn-confirmar-toggle">Confirmar</button>
          </form>
+</div>
+</div>
+
+<div id="hrm-emergency-contact-panel" class="border rounded shadow p-4 mb-4 bg-white myplugin-fixed-panel myplugin-panel-500 myplugin-hidden">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0"><span class="dashicons dashicons-phone"></span> <span id="hrm-ec-title">Agregar Contacto de Emergencia</span></h5>
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="hrm-close-emergency-contact-panel">Cerrar</button>
+    </div>
+    <div id="hrm-emergency-contact-panel-body">
+        <div class="mb-3">
+            <label class="form-label">Nombre del Contacto *</label>
+            <input type="text" id="hrm_ec_nombre_contacto" class="form-control" placeholder="Ej: Juan Pérez">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Número Teléfono *</label>
+            <input type="tel" id="hrm_ec_numero_telefono" class="form-control" placeholder="Ej: +56912345678">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Relación con el Empleado</label>
+            <input type="text" id="hrm_ec_relacion" class="form-control" placeholder="Ej: Padre, Madre, Cónyuge, Hermano, etc.">
+        </div>
+        
+        <div id="hrm_ec_feedback" class="text-danger mt-1 small myplugin-hidden"></div>
+
+        <div class="d-flex justify-content-end gap-2 mt-3">
+            <button type="button" class="btn btn-secondary" id="hrm_ec_cancel">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="hrm_ec_save">Guardar Contacto</button>
+        </div>
     </div>
 </div>
 
@@ -552,8 +599,29 @@ wp_enqueue_script(
     true
 );
 
-// Variables para JS de documentos
+// Variables para JS de contactos de emergencia
 $has_employee = ! empty( $employee );
+$employee_id_ec = $has_employee ? intval( $employee->id ) : 0;
+$employee_rut = $has_employee ? esc_attr( $employee->rut ) : '';
+
+// Script para Contactos de Emergencia
+wp_enqueue_script(
+    'hrm-emergency-contacts',
+    HRM_PLUGIN_URL . 'assets/js/emergency-contacts.js',
+    array('jquery'),
+    defined('HRM_PLUGIN_VERSION') ? HRM_PLUGIN_VERSION : '1.0.0',
+    true
+);
+
+wp_localize_script( 'hrm-emergency-contacts', 'hrmEmergencyContactsData', array(
+    'employeeId' => $employee_id_ec,
+    'employeeRut' => $employee_rut,
+    'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+    'nonce' => wp_create_nonce( 'hrm_emergency_contacts' ),
+    'canEdit' => $is_own_profile || $is_admin || $is_supervisor ? true : false,
+) );
+
+// Variables para JS de documentos
 $employee_id  = $has_employee ? intval( $employee->id ) : 0;
 $doc_types_js = array();
 if ( ! empty( $hrm_tipos_documento ) ) {
