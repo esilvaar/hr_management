@@ -725,8 +725,8 @@ function hrm_render_profile_edit()
 function hrm_register_admin_menus()
 {
     // Determinar si el usuario tiene acceso a vistas de administrador
-    // Puede ser por manage_hrm_employees O por el rol administrador_anaconda con view_hrm_admin_views
-    $has_admin_access = current_user_can('manage_hrm_employees') || current_user_can('view_hrm_admin_views');
+    // Puede ser por manage_hrm_employees O por el rol administrador_anaconda con view_hrm_admin_views O por manage_hrm_vacaciones
+    $has_admin_access = current_user_can('manage_hrm_employees') || current_user_can('view_hrm_admin_views') || current_user_can('manage_hrm_vacaciones');
     // Debug: registrar roles y capacidades al ejecutar el registro de menús
     $_hrm_dbg_user = wp_get_current_user();
     $hrm_dbg_is_anaconda = in_array('administrador_anaconda', (array) $_hrm_dbg_user->roles);
