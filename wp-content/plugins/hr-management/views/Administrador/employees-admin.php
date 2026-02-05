@@ -8,6 +8,24 @@ $db_docs = new HRM_DB_Documentos();
 $tab = sanitize_key( $_GET['tab'] ?? 'list' );
 $id  = absint( $_GET['id'] ?? 0 );
 
+// Bloqueo por seguridad según tab y capabilities específicas
+if ( $tab === 'list' && ! current_user_can( 'view_hrm_employees_list' ) ) {
+    wp_die( 'No tienes permisos para ver el listado de empleados.', 'Acceso denegado', array( 'response' => 403 ) );
+}
+
+if ( $tab === 'upload' && $id && ! current_user_can( 'view_hrm_employee_upload' ) ) {
+    wp_die( 'No tienes permisos para ver o subir documentos de empleados.', 'Acceso denegado', array( 'response' => 403 ) );
+}
+
+if ( $tab === 'profile' && $id && function_exists('hrm_current_user_can_view') && ! hrm_current_user_can_view( 'employee_profile', $id ) ) {
+    wp_die( 'No tienes permisos para ver este perfil de empleado.', 'Acceso denegado', array( 'response' => 403 ) );
+}
+
+// Nuevo: proteger la vista de creación de empleados
+if ( $tab === 'new' && ! ( current_user_can( 'create_hrm_employees' ) || current_user_can( 'manage_options' ) ) ) {
+    wp_die( 'No tienes permisos para crear empleados.', 'Acceso denegado', array( 'response' => 403 ) );
+}
+
 $message_success = '';
 $message_error   = '';
 

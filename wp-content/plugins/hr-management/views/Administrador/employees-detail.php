@@ -67,9 +67,11 @@ if ( defined('WP_DEBUG') && WP_DEBUG ) {
 $editable_fields = array();
 if ( $is_admin ) {
     $editable_fields = array('nombre','apellido' ,'telefono', 'email', 'departamento', 'puesto', 'estado', 'anos_acreditados_anteriores', 'fecha_ingreso', 'tipo_contrato', 'salario', 'area_gerencia');
-} elseif ( $can_edit_employee ) {
+} elseif ( hrm_can_manage_employee( $employee->id ) ) {
+    // Usuarios que pueden gestionar a otros (supervisor, admin, anaconda) pueden editar campos laborales
     $editable_fields = array('nombre','apellido' ,'telefono', 'email', 'departamento', 'puesto', 'anos_acreditados_anteriores', 'fecha_ingreso');
 } elseif ( $is_own_profile ) {
+    // Perfil propio: sólo campos personales
     $editable_fields = array('nombre','apellido' ,'telefono', 'email', 'fecha_nacimiento');
 }
 
@@ -78,14 +80,20 @@ if ( $is_role_supervisor && $is_own_profile && ! $is_admin ) {
     $editable_fields = array('nombre','apellido','telefono','email','fecha_nacimiento');
 }  
 
-// Roles restringidos
-$restricted_roles = array( 'empleado', 'editor_vacaciones' );
+// Roles restringidos (incluye 'editor' para que tenga el mismo comportamiento que 'empleado')
+$restricted_roles = array( 'empleado', 'editor_vacaciones', 'editor' );
 if ( array_intersect( $restricted_roles, (array) $user->roles ) && ! $is_admin && ! $is_supervisor ) {
     if ( $is_own_profile ) {
         $editable_fields = array('nombre','apellido','telefono','email','fecha_nacimiento');
     } else {
         $editable_fields = array();
     }
+}
+
+// Seguridad: bloquear visualización de perfiles ajenos para roles restringidos
+if ( ! $is_own_profile && ! $is_admin && ! $is_supervisor ) {
+    // Los roles 'empleado' y 'editor_vacaciones' sólo pueden ver su propio perfil
+    wp_die( 'No tienes permisos para ver este perfil de empleado.', 'Acceso denegado', array( 'response' => 403 ) );
 }  
 
 // Obtener Avatar

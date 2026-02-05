@@ -658,8 +658,8 @@ function hrm_handle_employees_post() {
     
     // --- ACCIÓN B: Crear Empleado + Usuario WP (migrado del template a handler central) ---
     elseif ( $action === 'create_employee' && check_admin_referer( 'hrm_create_employee', 'hrm_create_employee_nonce' ) ) {
-        // Solo usuarios con capacidad de administrar empleados pueden crear (admin/supervisor)
-        if ( ! ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) ) ) {
+        // Sólo usuarios con la capability explícita pueden crear empleados (create_hrm_employees) o admins de WP
+        if ( ! ( current_user_can( 'create_hrm_employees' ) || current_user_can( 'manage_options' ) ) ) {
             hrm_redirect_with_message( $redirect_base, 'No tienes permisos para crear empleados.', 'error' );
         }
 

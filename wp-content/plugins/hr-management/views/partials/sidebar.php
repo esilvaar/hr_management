@@ -135,6 +135,13 @@ $logo_blanco_url = esc_url( HRM_PLUGIN_URL . 'assets/images/logo-blanco.png' );
         $can_supervisor = current_user_can('edit_hrm_employees');
         $can_vacation = current_user_can('manage_hrm_vacaciones');
         $can_employee = current_user_can('view_hrm_own_profile') || is_user_logged_in();
+
+        // Capabilities por vista (checks granulares)
+        $can_list = function_exists('hrm_current_user_can_view') ? hrm_current_user_can_view('employees_list') : current_user_can('view_hrm_employees_list');
+        $can_profile = function_exists('hrm_current_user_can_view') ? hrm_current_user_can_view('employee_profile') : current_user_can('view_hrm_employee_profile');
+        $can_upload = function_exists('hrm_current_user_can_view') ? hrm_current_user_can_view('employee_upload') : current_user_can('view_hrm_employee_upload');
+        $can_create = function_exists('hrm_current_user_can_view') ? hrm_current_user_can_view('employees_create') : current_user_can('create_hrm_employees');
+
         // Rol específico: administrador_anaconda
         $is_anaconda = in_array('administrador_anaconda', (array) wp_get_current_user()->roles, true);
         // Rol específico: empleado (para reordenar sidebar)
@@ -220,20 +227,22 @@ $logo_blanco_url = esc_url( HRM_PLUGIN_URL . 'assets/images/logo-blanco.png' );
         $is_new_active = $current_page === 'hrm-empleados' && $tab === 'new' ? 'active' : '';
         ?>
 
-        <?php if ($can_admin_views || $can_supervisor || $is_editor_role): ?>
+        <?php if ($can_list || $can_profile || $can_upload || $can_create || $is_editor_role): ?> 
             <details <?= $section === 'empleados' ? 'open' : ''; ?>>
                 <summary class="d-flex align-items-center gap-2 px-3 py-2 fw-semibold">
                     <span class="dashicons dashicons-businessman"></span>
                     <span class="flex-grow-1">Gestión de Empleados</span>
                 </summary>
                 <ul class="list-unstyled px-2 mb-2">
-                    <?php if (!$is_editor_role): ?>
+                    <?php if (!$is_editor_role && $can_list): ?>
                         <li>
                             <a class="nav-link px-3 py-2 <?= $is_list_active ?>"
                                 href="<?= esc_url(admin_url('admin.php?page=hrm-empleados&tab=list')); ?>">
                                 Lista de empleados
                             </a>
                         </li>
+                    <?php endif; ?>
+                    <?php if (!$is_editor_role && $can_profile): ?>
                         <li>
                             <a class="nav-link px-3 py-2 <?= $is_profile_active ?>"
                                 href="<?= esc_url($profile_url); ?>">
@@ -241,13 +250,15 @@ $logo_blanco_url = esc_url( HRM_PLUGIN_URL . 'assets/images/logo-blanco.png' );
                             </a>
                         </li>
                     <?php endif; ?>
-                    <li>
-                        <a class="nav-link px-3 py-2 <?= $is_upload_active ?>"
-                            href="<?= esc_url($upload_url); ?>">
-                            Documentos del Empleado
-                        </a>
-                    </li>
-                    <?php if ($can_admin_views):  // Solo quien pueda administrar puede crear nuevos ?>
+                    <?php if ($can_upload || $is_editor_role): ?>
+                        <li>
+                            <a class="nav-link px-3 py-2 <?= $is_upload_active ?>"
+                                href="<?= esc_url($upload_url); ?>">
+                                Documentos del Empleado
+                            </a>
+                        </li>
+                    <?php endif; ?>
+                    <?php if ($can_create):  // Solo quien pueda crear empleados puede crear nuevos ?>
                         <li>
                             <a class="nav-link px-3 py-2 <?= $is_new_active ?>"
                                 href="<?= esc_url(admin_url('admin.php?page=hrm-empleados&tab=new')); ?>">

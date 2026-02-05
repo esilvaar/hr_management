@@ -10,6 +10,11 @@ if ( ! empty( $lista_empleados ) ) {
 } elseif ( ! empty( $employees ) ) {
     $lista = $employees;
 }
+
+// Seguridad: bloquear acceso directo a esta vista para usuarios que no tengan la capability específica
+if ( ! current_user_can( 'view_hrm_employees_list' ) ) {
+    wp_die( 'No tienes permisos para ver el listado de empleados.', 'Acceso denegado', array( 'response' => 403 ) );
+}
 ?>
 
 <div class="rounded shadow-sm mx-auto mt-3">

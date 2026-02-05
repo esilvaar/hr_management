@@ -9,12 +9,68 @@
     }
 
     /**
+     * Mapeo de vistas a capabilities para granularidad por vista.
+     * Usar hrm_current_user_can_view() desde templates, AJAX y REST para verificar acceso.
+     */
+    function hrm_get_view_capabilities()
+    {
+        return array(
+            'dashboard' => 'view_hrm_dashboard',
+            'employees_list' => 'view_hrm_employees_list',
+            'employee_profile' => 'view_hrm_employee_profile',
+            'employee_upload' => 'view_hrm_employee_upload',
+            'employees_create' => 'create_hrm_employees',
+            'vacaciones_calendar' => 'view_hrm_vacaciones_calendar',
+            'vacaciones_create' => 'create_hrm_vacaciones',
+            'vacaciones_approve' => 'approve_hrm_vacaciones',
+            'reports' => 'view_hrm_reports',
+            'documents' => 'manage_hrm_documentos',
+        );
+    }
+
+    /**
+     * Helper: verifica que el usuario (o el usuario actual) pueda ver una vista.
+     * - $view_key: clave del mapeo devuelto por hrm_get_view_capabilities
+     * - $user_id: (opcional) ID de usuario. Si no se pasa, se usa el usuario actual.
+     */
+    function hrm_current_user_can_view($view_key, $user_id = null)
+    {
+        $caps = hrm_get_view_capabilities();
+        if (!isset($caps[$view_key])) {
+            return false;
+        }
+        $cap = $caps[$view_key];
+
+        // Si se pasa $user_id: comprobar si el usuario actual puede ver los datos del usuario objetivo
+        if ($user_id) {
+            $target_id = intval($user_id);
+            $current_user = wp_get_current_user();
+
+            // Caso especial: perfil de empleado
+            if ($view_key === 'employee_profile') {
+                // Si es su propio perfil, permitir si tiene capability propia
+                if ($current_user->ID === $target_id) {
+                    return current_user_can('view_hrm_own_profile') || current_user_can('view_hrm_employee_profile') || current_user_can('manage_hrm');
+                }
+                // Si es el perfil de otro usuario, sólo si puede ver perfiles ajenos
+                return current_user_can('view_hrm_employee_profile') || current_user_can('manage_hrm');
+            }
+
+            // Para otras vistas que puedan recibir $user_id (p.e. uploads), comprobamos la capability correspondiente
+            return current_user_can($cap) || current_user_can('manage_hrm');
+        }
+
+        return current_user_can($cap) || current_user_can('manage_hrm');
+    }
+
+    /**
      * Crear roles personalizados y asignar capabilities en la activación del plugin.
      */
     function hrm_create_roles()
     {
-        // Definir todas las capacidades del plugin
+        // Definir todas las capacidades del plugin (incluye capacidades por vista para granularidad)
         $all_caps = array(
+            // capacidades legacy / funcionales
             'view_hrm_employee_admin',
             'edit_hrm_employees',
             'view_hrm_own_profile',
@@ -26,6 +82,15 @@
             'approve_hrm_vacaciones',
             'view_hrm_reports',
             'manage_hrm_documentos',
+
+            // capacidades por vista (granularidad)
+            'view_hrm_dashboard',
+            'view_hrm_employees_list',
+            'view_hrm_employee_profile',
+            'view_hrm_employee_upload',
+            'create_hrm_employees',
+            'view_hrm_vacaciones_calendar',
+            'create_hrm_vacaciones',
         );
 
         // ================================================================
@@ -50,16 +115,29 @@
                 'view_hrm_employee_admin' => true,
                 'view_hrm_own_profile' => true,
                 'view_hrm_admin_views' => true,  // Nueva capacidad para ver vistas de admin
+                // vistas por defecto
+                'view_hrm_dashboard' => true,
+                'view_hrm_employees_list' => true,
+                'view_hrm_employee_profile' => true,
+                'view_hrm_employee_upload' => true,
+                'create_hrm_employees' => true,
+                'view_hrm_vacaciones_calendar' => true,
+                'view_hrm_reports' => true,
+                'manage_hrm_documentos' => true,
             ));
         }
 
-        // Crear rol 'empleado'
+        // Crear rol 'empleado' (solo acceso a su propio perfil y cosas básicas)
         if (!get_role('empleado')) {
             add_role('empleado', 'Empleado', array(
                 'read' => true,
                 'upload_files' => true,
                 'view_hrm_employee_admin' => true,
                 'view_hrm_own_profile' => true,
+                // granular (solo acceso propio donde aplique)
+                'view_hrm_dashboard' => true,
+                'view_hrm_vacaciones_calendar' => true,
+                'create_hrm_vacaciones' => true,
             ));
         }
 
@@ -73,11 +151,24 @@
                 'view_hrm_own_profile' => true,
                 'view_hrm_admin_views' => true,
                 'manage_hrm_employees' => true,
+                // vistas / acciones de supervisor
+                'view_hrm_dashboard' => true,
+                'view_hrm_employees_list' => true,
+                'view_hrm_employee_upload' => true,
+                'create_hrm_employees' => true,
+                'view_hrm_vacaciones_calendar' => true,
+                'approve_hrm_vacaciones' => true,
             ));
         } else {
             $supervisor = get_role('supervisor');
             $supervisor->add_cap('view_hrm_admin_views');
             $supervisor->add_cap('manage_hrm_employees');
+            // asegurar vistas
+            $supervisor->add_cap('view_hrm_dashboard');
+            $supervisor->add_cap('view_hrm_employees_list');
+            $supervisor->add_cap('view_hrm_employee_upload');
+            $supervisor->add_cap('create_hrm_employees');
+            $supervisor->add_cap('approve_hrm_vacaciones');
         }
 
         // Crear rol 'editor_vacaciones'
@@ -89,17 +180,26 @@
                 'view_hrm_employee_admin' => true,
                 'view_hrm_own_profile' => true,
                 'view_hrm_admin_views' => true,
+                'view_hrm_employee_upload' => true, // puede ver/gestionar documentos de empleados
             ));
         } else {
             $editor_vac = get_role('editor_vacaciones');
             $editor_vac->add_cap('view_hrm_admin_views');
+            $editor_vac->add_cap('view_hrm_employee_upload');
         }
 
-        // Asegurar que el rol 'editor' estándar de WP también tenga capacidades si es necesario
+        // Asegurar que el rol 'editor' estándar de WP tenga sólo acceso personal (no vistas admin)
         $wp_editor = get_role('editor');
         if ($wp_editor) {
-            $wp_editor->add_cap('view_hrm_admin_views');
-            $wp_editor->add_cap('view_hrm_employee_admin');
+            // Dar acceso sólo a ver su propio perfil
+            $wp_editor->add_cap('view_hrm_own_profile');
+            // Retirar capacidades administrativas previas por seguridad
+            if ($wp_editor->has_cap('view_hrm_admin_views')) {
+                $wp_editor->remove_cap('view_hrm_admin_views');
+            }
+            if ($wp_editor->has_cap('view_hrm_employee_admin')) {
+                $wp_editor->remove_cap('view_hrm_employee_admin');
+            }
         }
     }
 
@@ -124,7 +224,7 @@
      */
     function hrm_ensure_capabilities()
     {
-        // TODAS las capacidades personalizadas del plugin
+        // TODAS las capacidades personalizadas del plugin (incluye capacidades por vista)
         $all_caps = array(
             'view_hrm_employee_admin',
             'edit_hrm_employees',
@@ -138,6 +238,15 @@
             'view_hrm_reports',
             'manage_hrm_documentos',
             'manage_hrm_employees',
+
+            // vistas
+            'view_hrm_dashboard',
+            'view_hrm_employees_list',
+            'view_hrm_employee_profile',
+            'view_hrm_employee_upload',
+            'create_hrm_employees',
+            'view_hrm_vacaciones_calendar',
+            'create_hrm_vacaciones',
         );
 
         // ================================================================
@@ -169,6 +278,14 @@
             if (!$admin_anaconda->has_cap('view_hrm_admin_views')) {
                 $admin_anaconda->add_cap('view_hrm_admin_views');
             }
+
+            // asegurar vistas mínimas para este rol
+            $admin_anaconda->add_cap('view_hrm_dashboard');
+            $admin_anaconda->add_cap('view_hrm_employees_list');
+            $admin_anaconda->add_cap('view_hrm_employee_profile');
+            $admin_anaconda->add_cap('view_hrm_vacaciones_calendar');
+            $admin_anaconda->add_cap('view_hrm_reports');
+            $admin_anaconda->add_cap('manage_hrm_documentos');
 
             // NO agregar manage_hrm_employees - este usuario es un empleado normal con acceso especial a vistas
         }
@@ -211,6 +328,19 @@
             if (!$supervisor->has_cap('view_hrm_own_profile')) {
                 $supervisor->add_cap('view_hrm_own_profile');
             }
+            // Supervisores pueden ver lista y perfiles de empleados
+            if (!$supervisor->has_cap('view_hrm_employees_list')) {
+                $supervisor->add_cap('view_hrm_employees_list');
+            }
+            if (!$supervisor->has_cap('view_hrm_employee_profile')) {
+                $supervisor->add_cap('view_hrm_employee_profile');
+            }
+            if (!$supervisor->has_cap('view_hrm_employee_upload')) {
+                $supervisor->add_cap('view_hrm_employee_upload');
+            }
+            if (!$supervisor->has_cap('create_hrm_employees')) {
+                $supervisor->add_cap('create_hrm_employees');
+            }
             if (!$supervisor->has_cap('manage_hrm_vacaciones')) {
                 $supervisor->add_cap('manage_hrm_vacaciones');
             }
@@ -233,6 +363,10 @@
             $editor_vac->add_cap('manage_hrm_vacaciones');
             $editor_vac->add_cap('view_hrm_employee_admin');
             $editor_vac->add_cap('view_hrm_own_profile');
+            // Editor de vacaciones puede ver/subir documentos de empleados, pero no ver listados completos ni perfiles ajenos
+            if (!$editor_vac->has_cap('view_hrm_employee_upload')) {
+                $editor_vac->add_cap('view_hrm_employee_upload');
+            }
             if (!$editor_vac->has_cap('read')) {
                 $editor_vac->add_cap('read');
             }
@@ -275,6 +409,12 @@
             'view_hrm_admin_views',
             'view_hrm_employee_admin',
             'view_hrm_own_profile',
+            // vistas mínimas
+            'view_hrm_dashboard',
+            'view_hrm_employees_list',
+            'view_hrm_employee_profile',
+            'view_hrm_employee_upload',
+            'create_hrm_employees',
         );
 
         $needs_update = false;
