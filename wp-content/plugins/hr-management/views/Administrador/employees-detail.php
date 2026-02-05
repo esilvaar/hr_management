@@ -14,9 +14,17 @@ wp_localize_script( 'hrm-employees-detail', 'hrmEmployeeData', array(
 
 // Validar empleado
 if ( ! isset( $employee ) || ! is_object( $employee ) || empty( $employee->id ) ) {
-    echo '<div class="d-flex align-items-center justify-content-center myplugin-min-h-400">';
-    echo '<h2 class="myplugin-warning-title text-center"><strong>⚠️ Atención:</strong> Por favor selecciona un usuario para ver su perfil.</h2>';
-    echo '</div>';
+    ?>
+    <div class="d-flex flex-column align-items-center justify-content-center text-center myplugin-min-h-500 py-5">
+        <div class="mb-5">
+            <span class="dashicons dashicons-admin-users myplugin-icon-64 myplugin-opacity-50" style="font-size: 80px; width: 80px; height: 80px;"></span>
+        </div>
+        <h2 class="myplugin-warning-title mb-5 px-3"><strong>⚠️ Atención:</strong> Por favor selecciona un usuario para ver su perfil.</h2>
+        <div class="mt-2" style="max-width: 350px; width: 100%; margin: 0 auto;">
+             <?php hrm_get_template_part( 'employee-selector', '', compact( 'tab' ) ); ?>
+        </div>
+    </div>
+    <?php
     return;
 }
 

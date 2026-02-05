@@ -122,7 +122,7 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
     <!-- Panel de subida de documentos -->
     <div id="hrm-upload-panel" class="border rounded shadow p-4 mb-4 bg-white hrm-upload-panel">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="mb-0"><span class="dashicons dashicons-upload"></span> Subir Nuevo Documento</h5>
+            <h5 class="mb-0"><span class="dashicons dashicons-upload"></span> SubirDocumento</h5>
             <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-cerrar-upload">Cerrar</button>
         </div>
         <form method="post" enctype="multipart/form-data" id="hrm-upload-form">

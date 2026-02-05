@@ -357,7 +357,7 @@ if ( $tab !== 'list' ) {
             <?php endif; ?>
 
             <!-- Selector de Empleado (usando partial para mantener consistencia) -->
-            <?php if ( $tab !== 'list' && $tab !== 'new' ) : ?>
+            <?php if ( $tab !== 'list' && $tab !== 'new' && $id ) : ?>
                 <?php hrm_get_template_part( 'employee-selector', '', compact( 'all_emps', 'tab', 'id', 'db_emp' ) ); ?>
             <?php endif; ?>
 
@@ -372,7 +372,7 @@ if ( $tab !== 'list' ) {
 
                 <?php hrm_get_template_part( 'employees-detail', '', compact( 'employee', 'hrm_departamentos', 'hrm_puestos', 'hrm_tipos_contrato', 'message_success', 'message_error' ) ); ?>
 
-            <?php elseif ( $tab === 'upload' ) : ?>
+            <?php elseif ( $tab === 'upload' && $id ) : ?>
 
                 <?php hrm_get_template_part( 'employees-documents', '', compact( 'employee', 'documents', 'hrm_tipos_documento', 'message_success', 'message_error' ) ); ?>
 
@@ -380,9 +380,15 @@ if ( $tab !== 'list' ) {
 
                 <?php hrm_get_template_part( 'employees-create', '', compact( 'hrm_departamentos', 'hrm_puestos', 'hrm_tipos_contrato', 'message_success', 'message_error' ) ); ?>
 
-            <?php elseif ( $tab === 'profile' && ! $id ) : ?>
-                <div class="hrm-empty-placeholder">
-                    <h2><strong>⚠️ Atención:</strong> Por favor selecciona un usuario para continuar.</h2>
+            <?php elseif ( ( $tab === 'profile' || $tab === 'upload' ) && ! $id ) : ?>
+                <div class="hrm-empty-placeholder d-flex flex-column align-items-center justify-content-center text-center py-5 myplugin-min-h-500">
+                    <div class="mb-5">
+                        <span class="dashicons dashicons-admin-users myplugin-icon-64 myplugin-opacity-50" style="font-size: 80px; width: 80px; height: 80px;"></span>
+                    </div>
+                    <h2 class="myplugin-warning-title mb-5 px-3"><strong>⚠️ Atención:</strong> Por favor selecciona un usuario para continuar.</h2>
+                    <div class="mt-2" style="max-width: 350px; width: 100%; margin: 0 auto;">
+                        <?php hrm_get_template_part( 'employee-selector', '', compact( 'all_emps', 'tab', 'id', 'db_emp' ) ); ?>
+                    </div>
                 </div>
             <?php endif; ?>
 
