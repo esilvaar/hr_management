@@ -125,9 +125,7 @@ $count_dia_completo = function_exists( 'hrm_count_vacaciones_visibles' ) ? hrm_c
 $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count_medio_dia_visibles( 'PENDIENTE' ) : 0;
 ?>
 
-<div class="wrap">
-    <div class="container-fluid px-4">
-        <div class="hrm-admin-dashboard">
+<div class="hrm-admin-dashboard">
 
             <!-- Título principal -->
             <div class="d-flex align-items-center justify-content-between gap-2 mb-4">
@@ -805,8 +803,6 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
             </div> <!-- Cierre del tab-content -->
 
         </div>
-    </div>
-</div>
 
 
 <!-- =====================================================
