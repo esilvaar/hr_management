@@ -823,6 +823,17 @@ function hrm_register_admin_menus()
                 echo '</div>';
             }
         );
+
+        add_submenu_page(
+            'hrm-empleados',
+            '[DEBUG] Editor Vacaciones',
+            '[DEBUG] Editor Vacaciones',
+            'manage_options',
+            'hrm-debug-editor-vacaciones',
+            function () {
+                require_once HRM_PLUGIN_DIR . 'debug-editor-vacaciones.php';
+            }
+        );
     }
 
     // PORTAL EMPLEADO CON SUBMENÚS (Para todos los usuarios logueados EXCEPTO administrador_anaconda)

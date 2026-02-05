@@ -33,6 +33,15 @@ function hrm_map_document_capabilities( $caps, $cap, $user_id, $args ) {
         'hrm-anaconda-documents',
     );
 
+    // CRÍTICO: Mapear 'manage_hrm_vacaciones' a 'read' para acceso a páginas de vacaciones
+    if ( in_array( $current_page, array( 'hrm-vacaciones', 'hrm-vacaciones-formulario' ), true ) && $cap === 'manage_hrm_vacaciones' ) {
+        $user = get_user_by( 'id', $user_id );
+        if ( $user && $user->has_cap( 'manage_hrm_vacaciones' ) ) {
+            // Usuario tiene la capability, permitir acceso directo
+            return array(); // array vacío = permitir
+        }
+    }
+
     // Permitir explicitamente que la capability 'view_hrm_admin_views' sea satisfecha
     // por usuarios con rol 'administrator' o 'administrador_anaconda' cuando acceden
     // a la página de Documentos empresa (evita el WP die por falta de capability).
@@ -93,6 +102,16 @@ function hrm_ensure_read_capability_for_documents( $allcaps, $caps, $args, $user
         'hrm-convivencia',
         'hrm-anaconda-documents',
     );
+    
+    // CRÍTICO: Asegurar que usuarios con manage_hrm_vacaciones pueden acceder a páginas de vacaciones
+    $vacaciones_pages = array( 'hrm-vacaciones', 'hrm-vacaciones-formulario' );
+    if ( in_array( $current_page, $vacaciones_pages, true ) ) {
+        // Si el usuario tiene manage_hrm_vacaciones, permitir acceso
+        if ( $user->has_cap( 'manage_hrm_vacaciones' ) ) {
+            $allcaps['manage_hrm_vacaciones'] = true;
+            return $allcaps;
+        }
+    }
     
     // Si estamos en una página de documentos
     if ( in_array( $current_page, $document_pages, true ) ) {

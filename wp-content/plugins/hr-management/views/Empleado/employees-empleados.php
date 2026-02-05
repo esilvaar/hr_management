@@ -231,7 +231,6 @@ if ( $tab === 'upload' ) {
     <div class="hrm-admin-layout">
         <?php hrm_get_template_part( 'partials/sidebar-loader' ); ?>
         <main class="hrm-content">
-            <h1 class="wp-heading-inline">Mi Perfil</h1>
             
             <?php if ( ! empty( $message_success ) ) : ?>
                 <div class="notice notice-success is-dismissible"><p><?= esc_html( $message_success ) ?></p></div>
@@ -241,11 +240,7 @@ if ( $tab === 'upload' ) {
                 <div class="notice notice-error is-dismissible"><p><?= esc_html( $message_error ) ?></p></div>
             <?php endif; ?>
 
-            <!-- Tabs de Navegación -->
-            <h2 class="nav-tab-wrapper">
-                <a href="?page=hrm-mi-perfil&tab=profile" class="nav-tab <?= $tab === 'profile' ? 'nav-tab-active' : '' ?>">Perfil</a>
-                <a href="?page=hrm-mi-perfil&tab=upload" class="nav-tab <?= $tab === 'upload' ? 'nav-tab-active' : '' ?>">Documentos</a>
-            </h2>
+           
 
             <div class="hrm-admin-panel">
 
