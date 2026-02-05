@@ -239,7 +239,7 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
             </details>
         <?php endif; ?>
 
-        <?php if ($can_vacation || $can_admin_views): ?>
+        <?php if ($can_vacation || $can_admin_views || $is_editor_role): ?>
             <!-- Vacaciones -->
             <?php 
             $count_pendientes = function_exists('hrm_contar_solicitudes_pendientes') ? hrm_contar_solicitudes_pendientes() : 0;
