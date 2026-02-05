@@ -43,7 +43,7 @@ if ( $current_user && $current_user->ID ) {
 
 $search_term = sanitize_text_field( $_GET['empleado'] ?? '' );
 $estado_filtro = sanitize_text_field( $_GET['estado'] ?? 'PENDIENTE' );
-$tab_activo = sanitize_text_field( $_GET['tab'] ?? 'departamentos' );
+$tab_activo = sanitize_text_field( $_GET['tab'] ?? 'solicitudes' );
 
 // Determinar capacidades del usuario actual
 $es_usuario_administrativo = current_user_can( 'edit_hrm_employees' ) || current_user_can( 'manage_hrm_vacaciones' ) || current_user_can( 'manage_options' );
@@ -123,9 +123,25 @@ $total_solicitudes = count( $solicitudes );
 // Contadores visibles (SOLO PENDIENTES - criterio operativo)
 $count_dia_completo = function_exists( 'hrm_count_vacaciones_visibles' ) ? hrm_count_vacaciones_visibles( 'PENDIENTE' ) : 0;
 $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count_medio_dia_visibles( 'PENDIENTE' ) : 0;
+
+$message_success = isset( $_GET['message_success'] ) ? rawurldecode( sanitize_text_field( wp_unslash( $_GET['message_success'] ) ) ) : '';
+$message_error = isset( $_GET['message_error'] ) ? rawurldecode( sanitize_text_field( wp_unslash( $_GET['message_error'] ) ) ) : '';
 ?>
 
-<div class="hrm-admin-dashboard">
+<div class="wrap hrm-admin-wrap">
+    <div class="hrm-admin-layout">
+        <?php hrm_get_template_part( 'partials/sidebar-loader' ); ?>
+        
+        <main class="hrm-content">
+            <?php if ( ! empty( $message_success ) ) : ?>
+                <div class="notice notice-success is-dismissible"><p><?= esc_html( $message_success ) ?></p></div>
+            <?php endif; ?>
+
+            <?php if ( ! empty( $message_error ) ) : ?>
+                <div class="notice notice-error is-dismissible"><p><?= esc_html( $message_error ) ?></p></div>
+            <?php endif; ?>
+
+            <div class="hrm-admin-dashboard">
 
             <!-- Título principal -->
             <div class="d-flex align-items-center justify-content-between gap-2 mb-4">
@@ -148,6 +164,28 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
             <!-- Navegación de Tabs -->
             <ul class="nav nav-tabs nav-fill mb-4 border-bottom-2" role="tablist">
                 <li class="nav-item" role="presentation">
+                        <button class="nav-link <?php echo $tab_activo === 'departamentos' ? 'active' : ''; ?> d-flex align-items-center justify-content-center gap-2" 
+                        id="tab-departamentos" 
+                        type="button" 
+                        role="tab" 
+                        aria-controls="contenido-departamentos" 
+                        aria-selected="<?php echo $tab_activo === 'departamentos' ? 'true' : 'false'; ?>">
+                        <span class="hrm-tab-icon"><span class="dashicons dashicons-building"></span></span>
+                        <span class="fw-semibold">Resumen de Trabajadores</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link <?php echo $tab_activo === 'medio-dia' ? 'active' : ''; ?> d-flex align-items-center justify-content-center gap-2" 
+                        id="tab-medio-dia" 
+                        type="button" 
+                        role="tab" 
+                        aria-controls="contenido-medio-dia" 
+                        aria-selected="<?php echo $tab_activo === 'medio-dia' ? 'true' : 'false'; ?>">
+                        <span class="hrm-tab-icon"><span class="dashicons dashicons-clock"></span></span>
+                        <span class="fw-semibold">Solicitudes de Medio Día<?php echo ( $count_medio_dia > 0 ) ? ' (' . intval( $count_medio_dia ) . ')' : ''; ?></span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
                     <button class="nav-link <?php echo $tab_activo === 'solicitudes' ? 'active' : ''; ?> d-flex align-items-center justify-content-center gap-2" 
                             id="tab-solicitudes" 
                             type="button" 
@@ -158,29 +196,7 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                         <span class="fw-semibold">Solicitudes de Día Completo<?php echo ( $count_dia_completo > 0 ) ? ' (' . intval( $count_dia_completo ) . ')' : ''; ?></span>
                     </button>
                 </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link <?php echo $tab_activo === 'departamentos' ? 'active' : ''; ?> d-flex align-items-center justify-content-center gap-2" 
-                            id="tab-departamentos" 
-                            type="button" 
-                            role="tab" 
-                            aria-controls="contenido-departamentos" 
-                            aria-selected="<?php echo $tab_activo === 'departamentos' ? 'true' : 'false'; ?>">
-                        <span class="hrm-tab-icon"><span class="dashicons dashicons-building"></span></span>
-                        <span class="fw-semibold">Resumen de Departamentos</span>
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link <?php echo $tab_activo === 'medio-dia' ? 'active' : ''; ?> d-flex align-items-center justify-content-center gap-2" 
-                            id="tab-medio-dia" 
-                            type="button" 
-                            role="tab" 
-                            aria-controls="contenido-medio-dia" 
-                            aria-selected="<?php echo $tab_activo === 'medio-dia' ? 'true' : 'false'; ?>">
-                        <span class="hrm-tab-icon"><span class="dashicons dashicons-clock"></span></span>
-                        <span class="fw-semibold">Solicitudes de Medio Día<?php echo ( $count_medio_dia > 0 ) ? ' (' . intval( $count_medio_dia ) . ')' : ''; ?></span>
-                    </button>
-                </li>
-                
+        
             </ul>
 
             <!-- Tab Content Container -->
@@ -311,10 +327,9 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                             
                             <!-- Botón de comentarios -->
                             <td class="py-3 px-4 text-center">
-                                <button class="btn btn-primary btn-sm rounded d-inline-flex align-items-center justify-content-center btn-comentarios" 
+                                <button class="btn btn-primary btn-sm rounded d-inline-flex align-items-center justify-content-center btn-comentarios myplugin-btn-square-40" 
                                         data-id="<?php echo esc_attr( $s['id_solicitud'] ); ?>" 
-                                        title="Ver comentarios"
-                                        class="myplugin-btn-square-40">
+                                        title="Ver comentarios">
                                     <span class="dashicons dashicons-format-chat"></span>
                                 </button>
                             </td>
@@ -361,8 +376,7 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                             <td class="py-3 px-4 text-center">
                                 <!-- Botón VER/EDITAR SOLICITUD -->
                                 <a href="<?php echo esc_url( add_query_arg( 'solicitud_id', $s['id_solicitud'], admin_url('admin.php?page=hrm-vacaciones-formulario') ) ); ?>" 
-                                   class="btn btn-info btn-sm d-inline-flex align-items-center gap-1 mb-2 mb-md-0"
-                                   class="myplugin-badge-110"
+                                   class="btn btn-info btn-sm d-inline-flex align-items-center gap-1 mb-2 mb-md-0 myplugin-badge-110"
                                    title="Ver o editar solicitud">
                                     <span class="dashicons dashicons-visibility"></span> Ver/Editar
                                 </a>
@@ -381,8 +395,7 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                                             <?php wp_nonce_field( 'hrm_aprobar_solicitud', 'hrm_nonce' ); ?>
                                             <input type="hidden" name="accion" value="aprobar">
                                             <input type="hidden" name="solicitud_id" value="<?php echo esc_attr( $s['id_solicitud'] ); ?>">
-                                            <button class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" 
-                                                    class="myplugin-badge-90"
+                                            <button class="btn btn-success btn-sm d-inline-flex align-items-center gap-1 myplugin-badge-90" 
                                                     <?php disabled( ! $puede_aprobar ); ?>
                                                     title="<?php echo $puede_aprobar ? 'Aprobar solicitud' : esc_attr( $razon ); ?>">
                                                 <span class="dashicons dashicons-yes-alt"></span> Aprobar
@@ -396,8 +409,7 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                                             <input type="hidden" name="accion" value="rechazar">
                                             <input type="hidden" name="solicitud_id" value="<?php echo esc_attr( $s['id_solicitud'] ); ?>">
                                             <input type="hidden" name="motivo_rechazo" value="">
-                                            <button class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 btn-rechazar-solicitud" 
-                                                    class="myplugin-badge-90"
+                                            <button class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 btn-rechazar-solicitud myplugin-badge-90" 
                                                     data-solicitud-id="<?php echo esc_attr( $s['id_solicitud'] ); ?>"
                                                     title="Rechazar solicitud">
                                                 <span class="dashicons dashicons-no-alt"></span> Rechazar
@@ -407,7 +419,7 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                                     
                                     <!-- ALERTA DE VALIDACIÓN -->
                                     <?php if ( ! $puede_aprobar ) : ?>
-                                        <div class="alert alert-warning alert-dismissible fade show mt-2 mb-0 p-2 small" role="alert" class="myplugin-alert-narrow">
+                                        <div class="alert alert-warning alert-dismissible fade show mt-2 mb-0 p-2 small myplugin-alert-narrow" role="alert">
                                             <div class="d-flex align-items-start gap-2">
                                                 <span class="dashicons dashicons-warning"></span>
                                                 <div class="small">
@@ -553,8 +565,8 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                                                         if ( $vacaciones_hoy > 0 ) {
                                                             // Obtener datos para el tooltip - Se actualiza cada vez que se carga la página
                                                             $tooltip_data = hrm_get_tooltip_vacaciones_hoy( $nombre_depto );
-                                                            echo '<div class="tooltip-vacaciones hrm-tooltip-dinamico" class="myplugin-inline-block" data-departamento="' . esc_attr( $nombre_depto ) . '">';
-                                                            echo '<button type="button" class="btn btn-link btn-vacaciones-detalle p-0" data-departamento="' . esc_attr( $nombre_depto ) . '" class="myplugin-link-btn"><span class="dashicons dashicons-palmtree"></span> ' . esc_html( $vacaciones_hoy ) . '</button>';
+                                                            echo '<div class="tooltip-vacaciones hrm-tooltip-dinamico myplugin-inline-block" data-departamento="' . esc_attr( $nombre_depto ) . '">';
+                                                            echo '<button type="button" class="btn btn-link btn-vacaciones-detalle p-0 myplugin-link-btn" data-departamento="' . esc_attr( $nombre_depto ) . '"><span class="dashicons dashicons-palmtree"></span> ' . esc_html( $vacaciones_hoy ) . '</button>';
                                                             echo '<span class="tooltip-text">' . nl2br( esc_html( $tooltip_data ) ) . '</span>';
                                                             echo '</div>';
                                                         } else {
@@ -719,8 +731,7 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                                                         <?php wp_nonce_field( 'hrm_aprobar_medio_dia_form', 'hrm_nonce' ); ?>
                                                         <input type="hidden" name="accion" value="aprobar">
                                                         <input type="hidden" name="solicitud_id" value="<?php echo esc_attr( $solicitud['id_solicitud'] ); ?>">
-                                                        <button class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" 
-                                                                class="myplugin-badge-90"
+                                                        <button class="btn btn-success btn-sm d-inline-flex align-items-center gap-1 myplugin-badge-90" 
                                                                 title="Aprobar solicitud">
                                                             <span class="dashicons dashicons-yes-alt"></span> Aprobar
                                                         </button>
@@ -733,8 +744,7 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                                                         <input type="hidden" name="accion" value="rechazar">
                                                         <input type="hidden" name="solicitud_id" value="<?php echo esc_attr( $solicitud['id_solicitud'] ); ?>">
                                                         <input type="hidden" name="motivo_rechazo" value="">
-                                                        <button class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 btn-rechazar-medio-dia" 
-                                                                class="myplugin-badge-90"
+                                                        <button class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 btn-rechazar-medio-dia myplugin-badge-90" 
                                                                 data-solicitud-id="<?php echo esc_attr( $solicitud['id_solicitud'] ); ?>"
                                                                 title="Rechazar solicitud">
                                                             <span class="dashicons dashicons-no-alt"></span> Rechazar
@@ -803,13 +813,16 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
             </div> <!-- Cierre del tab-content -->
 
         </div>
+    </main>
+</div>
+
 
 
 <!-- =====================================================
      MODAL DE RECHAZO CON MOTIVO
      ===================================================== -->
 <div id="modalRechazo" class="modal-rechazo">
-    <div class="modal-contenido bg-white rounded-4 shadow-lg p-4" class="myplugin-modal-content-lg">
+    <div class="modal-contenido bg-white rounded-4 shadow-lg p-4 myplugin-modal-content-lg">
         <div class="modal-header border-bottom border-3 border-danger pb-3 mb-4">
             <h2 class="modal-titulo fs-4 fw-bold text-danger d-flex align-items-center gap-2 mb-0">
                 <span class="dashicons dashicons-dismiss"></span> Rechazar Solicitud de Vacaciones
@@ -855,7 +868,7 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
      MODAL DE COMENTARIOS
      ===================================================== -->
 <div id="modalComentarios" class="modal-comentarios">
-    <div class="modal-contenido bg-white rounded-4 shadow-lg p-4" class="myplugin-modal-content-md">
+    <div class="modal-contenido bg-white rounded-4 shadow-lg p-4 myplugin-modal-content-md">
         <div class="modal-header border-bottom pb-3 mb-4">
             <h2 class="modal-titulo fs-4 fw-bold text-primary d-flex align-items-center gap-2 mb-0">
                 <span class="dashicons dashicons-format-chat"></span> Comentarios de la Solicitud
@@ -881,13 +894,13 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
 <!-- =====================================================
      MODAL DE EMPLEADOS EN VACACIONES
      ===================================================== -->
-<div id="modalVacacionesDetalle" class="modal-vacaciones-detalle" class="myplugin-modal-overlay">
-    <div class="modal-contenido bg-white rounded-4 shadow-lg p-4" class="myplugin-modal-content-md myplugin-modal-scroll">
+<div id="modalVacacionesDetalle" class="modal-vacaciones-detalle myplugin-modal-overlay">
+    <div class="modal-contenido bg-white rounded-4 shadow-lg p-4 myplugin-modal-content-md myplugin-modal-scroll">
         <div class="modal-header border-bottom border-3 pb-3 mb-4 d-flex justify-content-between align-items-center">
             <h2 class="modal-titulo fs-4 fw-bold text-info d-flex align-items-center gap-2 mb-0">
                 <span class="dashicons dashicons-palmtree"></span> Empleados en Vacaciones Hoy
             </h2>
-            <button type="button" class="modal-vacaciones-cerrar" class="myplugin-modal-close">×</button>
+            <button type="button" class="modal-vacaciones-cerrar myplugin-modal-close">×</button>
         </div>
         
         <div class="modal-body" id="modalVacacionesContenido">
@@ -905,13 +918,13 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
 <!-- =====================================================
      MODAL VER DETALLES DE SOLICITUD DE MEDIO DÍA
      ===================================================== -->
-<div id="modalVerMedioDia" class="modal-ver-medio-dia" class="myplugin-modal-overlay">
-    <div class="modal-contenido bg-white rounded-4 shadow-lg p-4" class="myplugin-modal-content-md">
+<div id="modalVerMedioDia" class="modal-ver-medio-dia myplugin-modal-overlay">
+    <div class="modal-contenido bg-white rounded-4 shadow-lg p-4 myplugin-modal-content-md">
         <div class="modal-header border-bottom pb-3 mb-4 d-flex justify-content-between align-items-center">
             <h2 class="modal-titulo fs-4 fw-bold text-primary d-flex align-items-center gap-2 mb-0">
                 <span class="dashicons dashicons-visibility"></span> Detalles de Solicitud de Medio Día
             </h2>
-            <button type="button" class="btn-cerrar-md" class="myplugin-modal-close">×</button>
+            <button type="button" class="btn-cerrar-md myplugin-modal-close">×</button>
         </div>
         
         <div class="modal-body">
@@ -952,7 +965,7 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                 </div>
             </div>
             
-            <div class="mb-3" id="mdRechazoSection" class="myplugin-hidden">
+            <div class="mb-3 myplugin-hidden" id="mdRechazoSection">
                 <small class="text-muted fw-bold"><span class="dashicons dashicons-no-alt"></span> MOTIVO DEL RECHAZO</small>
                 <div class="bg-light p-3 rounded-3 border-start border-4 border-danger">
                     <div id="mdMotivoRechazo" class="text-dark">-</div>
@@ -969,13 +982,13 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
 <!-- =====================================================
      MODAL DE RECHAZO DE MEDIO DÍA
      ===================================================== -->
-<div id="modalRechazoMedioDia" class="modal-rechazo-md" class="myplugin-modal-overlay">
-    <div class="modal-contenido bg-white rounded-4 shadow-lg p-4" class="myplugin-modal-content-lg">
+<div id="modalRechazoMedioDia" class="modal-rechazo-md myplugin-modal-overlay">
+    <div class="modal-contenido bg-white rounded-4 shadow-lg p-4 myplugin-modal-content-lg">
         <div class="modal-header border-bottom border-3 border-danger pb-3 mb-4">
             <h2 class="modal-titulo fs-4 fw-bold text-danger d-flex align-items-center gap-2 mb-0">
                 <span class="dashicons dashicons-dismiss"></span> Rechazar Solicitud de Medio Día
             </h2>
-            <button type="button" class="btn-cerrar-rechazo-md" class="myplugin-modal-close">×</button>
+            <button type="button" class="btn-cerrar-rechazo-md myplugin-modal-close">×</button>
         </div>
         
         <form id="formRechazoMedioDia" method="post" action="<?php echo admin_url('admin-post.php'); ?>">
@@ -1009,5 +1022,9 @@ $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count
                 <button type="submit" class="btn btn-danger btn-confirmar-rechazo-md">Rechazar Solicitud</button>
             </div>
         </form>
+    </div>
+</div>
+
+        </main>
     </div>
 </div>

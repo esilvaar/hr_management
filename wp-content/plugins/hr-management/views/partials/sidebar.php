@@ -7,22 +7,26 @@ if (!defined('ABSPATH'))
     exit;
 
 // Helpers seguros
-function hrm_get_query_var($key)
-{
-    return isset($_GET[$key]) ? sanitize_text_field($_GET[$key]) : '';
+if ( ! function_exists( 'hrm_get_query_var' ) ) {
+    function hrm_get_query_var($key)
+    {
+        return isset($_GET[$key]) ? sanitize_text_field($_GET[$key]) : '';
+    }
 }
 
-function hrm_sidebar_is_active($slug, $check_tab = null)
-{
-    $page = hrm_get_query_var('page');
-    $tab = hrm_get_query_var('tab');
+if ( ! function_exists( 'hrm_sidebar_is_active' ) ) {
+    function hrm_sidebar_is_active($slug, $check_tab = null)
+    {
+        $page = hrm_get_query_var('page');
+        $tab = hrm_get_query_var('tab');
 
-    if ($page !== $slug)
-        return '';
-    if ($check_tab !== null && $tab !== $check_tab)
-        return '';
+        if ($page !== $slug)
+            return '';
+        if ($check_tab !== null && $tab !== $check_tab)
+            return '';
 
-    return 'active';
+        return 'active';
+    }
 }
 
 // Estado actual
@@ -69,7 +73,9 @@ if ($emp_id) {
     $upload_url = add_query_arg('id', $emp_id, $upload_url);
 }
 
-$logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2)));
+// Logo URL (Assets está en la raíz del plugin)
+$logo_url = esc_url( HRM_PLUGIN_URL . 'assets/images/logo.webp' );
+$logo_blanco_url = esc_url( HRM_PLUGIN_URL . 'assets/images/logo-blanco.png' );
 
 ?>
 
@@ -85,24 +91,38 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
     <!-- Header -->
     <div class="hrm-sidebar-header d-flex align-items-center justify-content-center p-3 border-bottom">
         <?php
-        // Determinar URL del logo según el rol del usuario
-        $logo_href = admin_url('admin.php?page=hrm-mi-perfil-info'); // Por defecto empleado
+        $current_user = wp_get_current_user();
+        $user_roles   = (array) $current_user->roles;
         
-        if (current_user_can('manage_options') || current_user_can('edit_hrm_employees')) {
-            // Admin o Supervisor: ir a lista de empleados
+        // Detectar roles clave
+        $is_editor_vac = in_array('editor_vacaciones', $user_roles, true);
+        $is_anaconda   = in_array('administrador_anaconda', $user_roles, true);
+        
+        // Capacidad base para ver el panel de vacaciones (forzada vía filter en hooks.php para estos roles)
+        $has_vacation_cap = current_user_can('manage_hrm_vacaciones');
+        
+        // Capacidad base para gestionar empleados
+        $has_employee_cap = current_user_can('manage_options') || current_user_can('edit_hrm_employees') || $is_anaconda;
+
+        // Decisión de destino para el Logo
+        // 1. Si explícitamente es rol de editor o tiene la capacidad de vacaciones SIN tener la de empleados
+        //    Priorizamos Vacaciones para el rol Editor Vacaciones.
+        if ($is_editor_vac || ($has_vacation_cap && !$has_employee_cap)) {
+            $logo_href = admin_url('admin.php?page=hrm-vacaciones&tab=solicitudes');
+        } 
+        // 2. Si puede gestionar empleados (Admin, Supervisor, Anaconda)
+        elseif ($has_employee_cap) {
             $logo_href = admin_url('admin.php?page=hrm-empleados&tab=list');
-        } elseif (in_array('editor_vacaciones', (array) wp_get_current_user()->roles, true)) {
-            // Editor de vacaciones: ir a gestión de vacaciones
-            $logo_href = admin_url('admin.php?page=hrm-vacaciones');
-        } elseif (current_user_can('manage_hrm_vacaciones')) {
-            // Gestor de vacaciones: ir a vacaciones
-            $logo_href = admin_url('admin.php?page=hrm-vacaciones');
+        } 
+        // 3. Destino por defecto para empleados regulares (Dashboard de su perfil)
+        else {
+            $logo_href = admin_url('admin.php?page=hrm-mi-perfil-info');
         }
         ?>
         <a href="<?= esc_url($logo_href); ?>"
             class="d-flex align-items-center justify-content-center">
             <img src="<?= $logo_url; ?>" class="img-fluid hrm-logo hrm-logo-light" alt="Logo">
-            <img src="<?= esc_url(plugins_url('assets/images/logo-blanco.png', dirname(__FILE__, 2))); ?>" class="img-fluid hrm-logo hrm-logo-dark" alt="Logo">
+            <img src="<?= $logo_blanco_url; ?>" class="img-fluid hrm-logo hrm-logo-dark" alt="Logo">
         </a>
     </div>
 
@@ -266,7 +286,7 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
                 <ul class="list-unstyled px-2 mb-2">
                     <li>
                         <a class="nav-link px-3 py-2 <?= $is_vacaciones_active ?> d-flex align-items-center justify-content-between"
-                            href="<?= esc_url(admin_url('admin.php?page=hrm-vacaciones')); ?>">
+                            href="<?= esc_url(admin_url('admin.php?page=hrm-vacaciones&tab=solicitudes')); ?>">
                             <span>Solicitudes de Vacaciones</span>
                             <?php if ( $count_pendientes > 0 ): ?>
                                 <span class="hrm-notification-badge badge bg-danger rounded-pill">

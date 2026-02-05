@@ -477,7 +477,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
     </div>
     <div id="hrm-pass-panel-body">
         <div class="alert alert-warning py-2 small">
-            <span class="dashicons dashicons-warning" class="myplugin-icon-16"></span> Esto cambiará el acceso a WordPress para el usuario.
+            <span class="dashicons dashicons-warning myplugin-icon-16"></span> Esto cambiará el acceso a WordPress para el usuario.
         </div>
         <div class="mb-2">
             <input type="password" id="hrm_panel_new_password" class="form-control" placeholder="Nueva contraseña (mín 8 caracteres)">

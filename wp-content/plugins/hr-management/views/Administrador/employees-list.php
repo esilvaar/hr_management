@@ -125,7 +125,7 @@ if ( ! empty( $lista_empleados ) ) {
                                         </span>
                                         <?php if ( isset( $empleado->estado ) && intval( $empleado->estado ) === 0 ) : ?>
                                             <span class="badge bg-danger" title="Empleado inactivo - Acceso bloqueado">
-                                                <span class="dashicons dashicons-lock" class="myplugin-icon-12"></span>
+                                                    <span class="dashicons dashicons-lock myplugin-icon-12"></span>
                                                 Inactivo
                                             </span>
                                         <?php endif; ?>
@@ -220,7 +220,7 @@ if ( ! empty( $lista_empleados ) ) {
                                 <div class="text-muted">
                                     <?php if ( $show_inactive ) : ?>
                                         <div class="mb-3">
-                                            <span class="dashicons dashicons-lock" class="myplugin-icon-64 myplugin-opacity-50"></span>
+                                                <span class="dashicons dashicons-lock myplugin-icon-64 myplugin-opacity-50"></span>
                                         </div>
                                         <p class="fs-5 fw-semibold m-2">No hay empleados inactivos.</p>
                                         <a href="?page=hrm-empleados&tab=list" class="btn btn-secondary mt-2">
@@ -228,7 +228,7 @@ if ( ! empty( $lista_empleados ) ) {
                                         </a>
                                     <?php else : ?>
                                         <div class="mb-3">
-                                            <span class="dashicons dashicons-admin-users mb-3" class="myplugin-icon-64 myplugin-opacity-50"></span>
+                                                <span class="dashicons dashicons-admin-users mb-3 myplugin-icon-64 myplugin-opacity-50"></span>
                                         </div>
                                         <p class="fs-5 fw-semibold m-2">No hay empleados activos registrados.</p>
                                         <a href="?page=hrm-empleados&tab=new" class="btn btn-primary mt-2">

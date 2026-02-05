@@ -481,18 +481,12 @@ function hrm_render_vacaciones_admin_page()
     $search = sanitize_text_field($_GET['empleado'] ?? '');
     $solicitudes = hrm_get_all_vacaciones($search);
 
-    echo '<div class="wrap">';
-    echo '<div class="hrm-admin-layout">';
-    hrm_get_template_part('partials/sidebar-loader');
-    echo '<main class="hrm-content">';
+    // La vista 'vacaciones-admin' ya incluye el wrap, layout y sidebar-loader
     hrm_get_template_part(
         'vacaciones-admin',
         '',
         ['solicitudes' => $solicitudes]
     );
-    echo '</main>';
-    echo '</div>';
-    echo '</div>';
 }
 
 
@@ -1292,15 +1286,9 @@ function hrm_render_anaconda_documents_page()
         return;
     }
 
-    echo '<div class="wrap hrm-admin-wrap">';
-    echo '<div class="hrm-admin-layout">';
-    hrm_get_template_part('partials/sidebar-loader');
-    echo '<main class="hrm-content">';
+    // La vista 'anaconda-documents-create' ya incluye el wrap, layout y sidebar-loader
     $GLOBALS['hrm_view_rendered']['anaconda-documents'] = true;
     hrm_get_template_part('anaconda-documents-create');
-    echo '</main>';
-    echo '</div>';
-    echo '</div>';
 }
 
 

@@ -69,13 +69,13 @@ if ( ! current_user_can( 'manage_options' ) && $current_user && $current_user->I
                         <div class="col-md-6 mb-3">
                             <label for="hrm_rut" class="form-label">RUT <span class="text-danger">*</span></label>
                             <input id="hrm_rut" name="rut" type="text" placeholder="12345678-9" class="form-control" required>
-                            <div id="hrm_rut_feedback" class="mt-2" class="myplugin-hidden"></div>
+                            <div id="hrm_rut_feedback" class="mt-2 myplugin-hidden"></div>
                         </div>
                         
                         <div class="col-md-6 mb-3">
                             <label for="hrm_email" class="form-label">Email <span class="text-danger">*</span></label>
                             <input id="hrm_email" name="email" type="email" class="form-control" required title="Ingresa un correo electrónico válido">
-                            <div id="hrm_email_feedback" class="mt-2" class="myplugin-hidden"></div>
+                            <div id="hrm_email_feedback" class="mt-2 myplugin-hidden"></div>
                         </div>
                     </div>
                     <!-- area_gerencia moved next to departamento select -->
@@ -277,7 +277,7 @@ if ( ! current_user_can( 'manage_options' ) && $current_user && $current_user->I
                     </div>
 
 
-                    <div id="hrm_rol_row" class="myplugin-hidden" class="mb-3">
+                    <div id="hrm_rol_row" class="myplugin-hidden mb-3">
                         <label for="hrm_rol_usuario_wp" class="form-label">Rol en WordPress <span class="text-danger">*</span></label>
                         <?php
                         // Determinar roles disponibles en el select dependiendo del usuario que mira la página

@@ -108,12 +108,27 @@ function hrm_ensure_read_capability_for_documents( $allcaps, $caps, $args, $user
     );
     
     // CRÍTICO: Asegurar que usuarios con manage_hrm_vacaciones pueden acceder a páginas de vacaciones
+    // O que el rol 'editor_vacaciones' siempre lo tenga disponible para lógica de UI (como links del logo)
     $vacaciones_pages = array( 'hrm-vacaciones', 'hrm-vacaciones-formulario' );
-    if ( in_array( $current_page, $vacaciones_pages, true ) ) {
-        // Si el usuario tiene manage_hrm_vacaciones, permitir acceso
-        if ( $user->has_cap( 'manage_hrm_vacaciones' ) ) {
-            $allcaps['manage_hrm_vacaciones'] = true;
-            return $allcaps;
+    
+    // Evitar llamar a $user->has_cap() o current_user_can() aquí para prevenir recursión infinita
+    $has_permission_role = false;
+    if ( isset( $user->roles ) && is_array( $user->roles ) ) {
+        $has_permission_role = in_array( 'editor_vacaciones', $user->roles, true ) || in_array( 'administrador_anaconda', $user->roles, true );
+    }
+
+    if ( in_array( $current_page, $vacaciones_pages, true ) || $has_permission_role ) {
+        if ( ! empty( $allcaps['manage_hrm_vacaciones'] ) || ! empty( $allcaps['view_hrm_admin_views'] ) || $has_permission_role ) {
+            $allcaps['read'] = true;
+            // Solo dar manage_hrm_vacaciones si corresponde, pero siempre asegurar read
+            if ( $has_permission_role || ! empty( $allcaps['manage_hrm_vacaciones'] ) ) {
+                $allcaps['manage_hrm_vacaciones'] = true;
+            }
+            
+            // Si estamos específicamente en las páginas de vacaciones, asegurar retorno inmediato
+            if ( in_array( $current_page, $vacaciones_pages, true ) ) {
+                return $allcaps;
+            }
         }
     }
     
@@ -121,8 +136,8 @@ function hrm_ensure_read_capability_for_documents( $allcaps, $caps, $args, $user
     if ( in_array( $current_page, $document_pages, true ) ) {
         $allowed_roles = array( 'empleado', 'supervisor', 'editor_vacaciones', 'administrador_anaconda' );
         
-        // Si el usuario tiene alguno de estos roles, asegurar que tiene 'read'
-        if ( ! empty( $user->roles ) ) {
+        // Evitar llamar a current_user_can() aquí
+        if ( ! empty( $user->roles ) && is_array( $user->roles ) ) {
             foreach ( $user->roles as $role ) {
                 if ( in_array( $role, $allowed_roles, true ) ) {
                     // Forzar que 'read' sea true
@@ -328,37 +343,32 @@ function hrm_redirect_wp_profile_page() {
         return;
     }
 
-    // Para administrador_anaconda, BLOQUEAR acceso a profile.php y redirigir a página del plugin
-    if ( $is_admin_anaconda && $pagenow === 'profile.php' ) {
-        wp_safe_redirect( admin_url( 'admin.php?page=hrm-empleados' ) );
-        exit;
-    }
-
-    // Para editor_vacaciones, BLOQUEAR acceso a profile.php y redirigir a página de vacaciones
-    $is_editor_vacaciones = in_array( 'editor_vacaciones', (array) $current_user->roles );
-    if ( $is_editor_vacaciones && $pagenow === 'profile.php' ) {
-        wp_safe_redirect( admin_url( 'admin.php?page=hrm-vacaciones' ) );
-        exit;
-    }
-
-    // PERMITIR acceso a profile.php para otros usuarios EXCEPTO editor_vacaciones (su propio perfil para editar avatar/contraseña)
-    if ( $pagenow === 'profile.php' && ! $is_admin_anaconda && ! $is_editor_vacaciones ) {
-        return;
-    }
-
-    // Permitir acceso limitado a user-edit.php solo si es el usuario actual (y no es administrador_anaconda)
-    if ( $pagenow === 'user-edit.php' ) {
-        $user_id = isset( $_GET['user_id'] ) ? absint( $_GET['user_id'] ) : 0;
-        if ( ! $is_admin_anaconda && ( $user_id === $current_user_id || $user_id === 0 ) ) {
-            return;
+    // BLOQUEAR acceso a profile.php para TODOS los usuarios no administradores (WP standard)
+    // Redirigir a sus respectivas páginas del plugin
+    if ( $pagenow === 'profile.php' || $pagenow === 'user-edit.php' ) {
+        if ( $is_admin_anaconda ) {
+            wp_safe_redirect( admin_url( 'admin.php?page=hrm-empleados' ) );
+            exit;
+        } elseif ( in_array( 'editor_vacaciones', (array) $current_user->roles, true ) ) {
+            wp_safe_redirect( admin_url( 'admin.php?page=hrm-vacaciones' ) );
+            exit;
+        } elseif ( in_array( 'supervisor', (array) $current_user->roles, true ) ) {
+            wp_safe_redirect( admin_url( 'admin.php?page=hrm-empleados' ) );
+            exit;
+        } else {
+            // Empleados regulares y otros
+            wp_safe_redirect( admin_url( 'admin.php?page=hrm-mi-perfil-info' ) );
+            exit;
         }
     }
 
-    // Para usuarios con capability del plugin (incluyendo administrador_anaconda), redirigir si intentan acceder a WP admin
+    // Para usuarios con capability del plugin, redirigir si intentan acceder a WP admin puro (dashboard, etc.)
     if ( current_user_can( 'view_hrm_employee_admin' ) ) {
         // Redirigir a la página apropiada según el rol
-        if ( $is_admin_anaconda ) {
+        if ( $is_admin_anaconda || in_array( 'supervisor', (array) $current_user->roles, true ) ) {
             wp_safe_redirect( admin_url( 'admin.php?page=hrm-empleados' ) );
+        } elseif ( in_array( 'editor_vacaciones', (array) $current_user->roles, true ) ) {
+            wp_safe_redirect( admin_url( 'admin.php?page=hrm-vacaciones' ) );
         } else {
             wp_safe_redirect( admin_url( 'admin.php?page=hrm-mi-perfil-info' ) );
         }

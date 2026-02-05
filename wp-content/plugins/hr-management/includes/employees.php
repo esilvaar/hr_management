@@ -21,41 +21,27 @@ function hrm_get_deptos_predefinidos_por_area( $area_gerencia ) {
  * Renderiza la página de administración (Vista)
  */
 function hrm_render_employees_admin_page() {
-    if ( current_user_can( 'manage_options' ) ) {
-        require_once HRM_PLUGIN_DIR . 'views/Administrador/employees-admin.php';
-        return;
-    }
-    if ( current_user_can( 'view_hrm_admin_views' ) ) {
-        require_once HRM_PLUGIN_DIR . 'views/Administrador/employees-admin.php';
-        return;
-    }
-
-    // Detectar si estamos en tab upload o si hay un ID de empleado
-    $tab  = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : '';
-    $emp_id = isset( $_GET['id'] ) ? absint( wp_unslash( $_GET['id'] ) ) : 0;
-    
-    // Si el editor_vacaciones accede a tab=upload o tiene un ID, mostrar la vista admin
-    if ( in_array( 'editor_vacaciones', (array) wp_get_current_user()->roles, true ) && 
-         ( $tab === 'upload' || $emp_id > 0 ) ) {
-        require_once HRM_PLUGIN_DIR . 'views/Administrador/employees-admin.php';
-        return;
-    }
-
-    $default_map = array(
-        'supervisor' => HRM_PLUGIN_DIR . 'views/Administrador/employees-admin.php',
-        'editor_vacaciones' => HRM_PLUGIN_DIR . 'views/vacaciones-admin.php',
-        'empleado' => HRM_PLUGIN_DIR . 'views/Empleado/employees-empleados.php',
-    );
-    $map = apply_filters( 'hrm_role_views_map', $default_map );
+    // 1. Prioridad: Admin, Anaconda, Supervisor, Editor Vacaciones -> Vista Admin
     $current_user = wp_get_current_user();
-    if ( ! empty( $current_user->roles ) ) {
-        foreach ( $current_user->roles as $r ) {
-            if ( isset( $map[ $r ] ) && file_exists( $map[ $r ] ) ) {
-                require_once $map[ $r ];
-                return;
-            }
-        }
+    $user_roles = (array) $current_user->roles;
+
+    if ( current_user_can( 'manage_options' ) || 
+         current_user_can( 'view_hrm_admin_views' ) || 
+         in_array( 'administrador_anaconda', $user_roles, true ) ||
+         in_array( 'supervisor', $user_roles, true ) ||
+         in_array( 'editor_vacaciones', $user_roles, true ) ) {
+        
+        require_once HRM_PLUGIN_DIR . 'views/Administrador/employees-admin.php';
+        return;
     }
+
+    // 2. Prioridad: Empleado -> Vista Empleado (Perfil propio)
+    if ( in_array( 'empleado', $user_roles, true ) ) {
+        require_once HRM_PLUGIN_DIR . 'views/Empleado/employees-empleados.php';
+        return;
+    }
+
+    // Fallback: Si no tiene roles específicos pero tiene capacidad de vista admin
     if ( current_user_can( 'view_hrm_employee_admin' ) && file_exists( HRM_PLUGIN_DIR . 'views/Empleado/employees-empleados.php' ) ) {
         require_once HRM_PLUGIN_DIR . 'views/Empleado/employees-empleados.php';
         return;

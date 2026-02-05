@@ -770,13 +770,21 @@ function hrm_login_redirect_after_login( $redirect_to, $requested_redirect_to, $
     $is_admin_anaconda = in_array( 'administrador_anaconda', $user_roles, true );
     $is_supervisor = in_array( 'supervisor', $user_roles, true );
     $is_editor_vacaciones = in_array( 'editor_vacaciones', $user_roles, true );
+    $is_regular_employee = in_array( 'empleado', $user_roles, true );
 
-    if ( $is_editor_vacaciones || user_can( $wp_user, 'manage_hrm_vacaciones' ) ) {
-        return admin_url( 'admin.php?page=hrm-vacaciones' );
-    }
-
+    // 1. Prioridad: Administradores y Supervisores (Gestión de Empleados)
     if ( user_can( $wp_user, 'manage_options' ) || $is_admin_anaconda || $is_supervisor || user_can( $wp_user, 'edit_hrm_employees' ) || user_can( $wp_user, 'view_hrm_admin_views' ) ) {
         return $employees_url;
+    }
+
+    // 2. Prioridad: Editores de Vacaciones
+    if ( $is_editor_vacaciones || user_can( $wp_user, 'manage_hrm_vacaciones' ) ) {
+        return admin_url( 'admin.php?page=hrm-vacaciones&tab=solicitudes' );
+    }
+
+    // 3. Prioridad: Empleados Regulares (Su propio panel)
+    if ( $is_regular_employee ) {
+        return admin_url( 'admin.php?page=hrm-mi-perfil-info' );
     }
 
     // Si no cumple las condiciones, respetar la redirección por defecto

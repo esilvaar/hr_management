@@ -188,7 +188,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                         $count_err++;
                         error_log( "HRM: Error moviendo archivo - {$files['name'][$i]} a $file_path" );
                     }
-                    }
                 }
                 if ( $count_ok > 0 ) $message_success = "Se subieron $count_ok archivo(s) en la carpeta del año $folder_year.";
                 if ( $count_err > 0 ) $message_error = "Fallaron $count_err archivo(s).";
@@ -213,6 +212,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
             $message_error = 'No tienes permiso para eliminar este documento.';
         }
     }
+}
 
 
 // 3. OBTENCIÓN DE DATOS
