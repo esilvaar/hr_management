@@ -735,14 +735,16 @@ function hrm_render_profile_edit()
 function hrm_register_admin_menus()
 {
     // Determinar si el usuario tiene acceso a vistas de administrador
-    // Puede ser por manage_hrm_employees O por el rol administrador_anaconda con view_hrm_admin_views O por manage_hrm_vacaciones
-    $has_admin_access = current_user_can('manage_hrm_employees') || current_user_can('view_hrm_admin_views') || current_user_can('manage_hrm_vacaciones');
+    // IMPORTANTE: Excluir manage_hrm_vacaciones de esta condición ya que tiene su propio menú
+    $has_admin_access = current_user_can('manage_hrm_employees') || current_user_can('view_hrm_admin_views');
+    
     // Debug: registrar roles y capacidades al ejecutar el registro de menús
     $_hrm_dbg_user = wp_get_current_user();
     $hrm_dbg_is_anaconda = in_array('administrador_anaconda', (array) $_hrm_dbg_user->roles);
-    error_log('[HRM-DEBUG] hrm_register_admin_menus user_id=' . intval($_hrm_dbg_user->ID) . ' roles=' . json_encode($_hrm_dbg_user->roles) . ' manage_options=' . (current_user_can('manage_options') ? 'YES' : 'NO') . ' view_hrm_admin_views=' . (current_user_can('view_hrm_admin_views') ? 'YES' : 'NO') . ' is_anaconda=' . ($hrm_dbg_is_anaconda ? 'YES' : 'NO'));
+    error_log('[HRM-DEBUG] hrm_register_admin_menus user_id=' . intval($_hrm_dbg_user->ID) . ' roles=' . json_encode($_hrm_dbg_user->roles) . ' manage_options=' . (current_user_can('manage_options') ? 'YES' : 'NO') . ' view_hrm_admin_views=' . (current_user_can('view_hrm_admin_views') ? 'YES' : 'NO') . ' manage_hrm_vacaciones=' . (current_user_can('manage_hrm_vacaciones') ? 'YES' : 'NO') . ' is_anaconda=' . ($hrm_dbg_is_anaconda ? 'YES' : 'NO'));
 
     // MENÚ PRINCIPAL: HR Management (solo para admins con manage_hrm_employees o view_hrm_admin_views)
+    // IMPORTANTE: manage_hrm_vacaciones NO incluye aquí porque tiene su propio menú abajo
     if (current_user_can('manage_options') || $has_admin_access) {
         add_menu_page(
             'HR Management',
