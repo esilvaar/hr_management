@@ -239,6 +239,11 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
             </details>
         <?php endif; ?>
 
+        <?php 
+        // Vacaciones: determinar si está activa
+        $is_vacaciones_active = $current_page === 'hrm-vacaciones' ? 'active' : '';
+        ?>
+
         <?php if ($can_vacation || $can_admin_views || $is_editor_role): ?>
             <!-- Vacaciones -->
             <?php 
@@ -260,7 +265,7 @@ $logo_url = esc_url(plugins_url('assets/images/logo.webp', dirname(__FILE__, 2))
                 </summary>
                 <ul class="list-unstyled px-2 mb-2">
                     <li>
-                        <a class="nav-link px-3 py-2 <?= hrm_sidebar_is_active('hrm-vacaciones'); ?> d-flex align-items-center justify-content-between"
+                        <a class="nav-link px-3 py-2 <?= $is_vacaciones_active ?> d-flex align-items-center justify-content-between"
                             href="<?= esc_url(admin_url('admin.php?page=hrm-vacaciones')); ?>">
                             <span>Solicitudes de Vacaciones</span>
                             <?php if ( $count_pendientes > 0 ): ?>
