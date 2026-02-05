@@ -362,6 +362,15 @@ function hrm_ajax_get_employee_documents() {
     // Obtener documentos del empleado
     $documents = $db_docs->get_by_rut( $employee->rut );
 
+    // Restricción para editor: solo puede ver 'Contratos'
+    $user_roles = (array) $current_user->roles;
+    if ( in_array( 'editor_vacaciones', $user_roles ) || in_array( 'editor', $user_roles ) ) {
+        $documents = array_filter( $documents, function( $doc ) {
+            $tipo_lower = strtolower( trim( $doc->tipo ) );
+            return ( $tipo_lower === 'contrato' || $tipo_lower === 'contratos' );
+        } );
+    }
+
     // También exponer endpoint para crear tipos desde la UI (si no existe ya)
 
     
@@ -758,6 +767,12 @@ function hrm_ajax_create_document_type() {
         wp_send_json_error( [ 'message' => 'No tienes permisos para crear tipos' ], 403 );
     }
 
+    // Restricción específica para el rol editor
+    $user_roles = (array) wp_get_current_user()->roles;
+    if ( in_array( 'editor_vacaciones', $user_roles ) || in_array( 'editor', $user_roles ) ) {
+        wp_send_json_error( [ 'message' => 'Los editores no tienen permisos para crear directorios' ], 403 );
+    }
+
     $nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
     if ( ! $nonce || ! wp_verify_nonce( $nonce, 'hrm_create_type' ) ) {
         wp_send_json_error( [ 'message' => 'Token de seguridad inválido' ], 403 );
@@ -834,6 +849,12 @@ function hrm_ajax_delete_document_type() {
     // Verificar permisos
     if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'edit_hrm_employees' ) ) {
         wp_send_json_error( [ 'message' => 'No tienes permisos para eliminar tipos' ], 403 );
+    }
+
+    // Restricción específica para el rol editor
+    $user_roles = (array) wp_get_current_user()->roles;
+    if ( in_array( 'editor_vacaciones', $user_roles ) || in_array( 'editor', $user_roles ) ) {
+        wp_send_json_error( [ 'message' => 'Los editores no tienen permisos para editar directorios' ], 403 );
     }
 
     $nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
@@ -1041,8 +1062,8 @@ function hrm_handle_anaconda_document_create() {
         wp_die( 'No autorizado', '', 403 );
     }
 
-    // Capability: restrict to admins or users who can manage options
-    if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_hrm_employees' ) ) {
+    // Capability: restrict to admins, managers, or users with admin view access (like supervisors)
+    if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_hrm_employees' ) && ! current_user_can( 'view_hrm_admin_views' ) ) {
         wp_die( 'No tienes permisos para crear documentos de empresa', '', 403 );
     }
 
@@ -1179,7 +1200,7 @@ function hrm_handle_anaconda_document_delete() {
         wp_die( 'No autorizado', '', 403 );
     }
 
-    if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_hrm_employees' ) ) {
+    if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_hrm_employees' ) && ! current_user_can( 'view_hrm_admin_views' ) ) {
         wp_die( 'No tienes permisos para eliminar documentos de empresa', '', 403 );
     }
 
@@ -1258,7 +1279,7 @@ function hrm_handle_anaconda_documents_edit_doc() {
     }
 
     // Check permissions
-    if ( ! current_user_can( 'manage_options' ) ) {
+    if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'view_hrm_admin_views' ) ) {
         wp_send_json_error( array( 'message' => 'Permiso denegado' ), 403 );
     }
 

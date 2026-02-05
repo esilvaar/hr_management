@@ -71,7 +71,13 @@
                 'view_hrm_employee_admin' => true,
                 'edit_hrm_employees' => true,
                 'view_hrm_own_profile' => true,
+                'view_hrm_admin_views' => true,
+                'manage_hrm_employees' => true,
             ));
+        } else {
+            $supervisor = get_role('supervisor');
+            $supervisor->add_cap('view_hrm_admin_views');
+            $supervisor->add_cap('manage_hrm_employees');
         }
 
         // Crear rol 'editor_vacaciones'
@@ -82,7 +88,18 @@
                 'manage_hrm_vacaciones' => true,
                 'view_hrm_employee_admin' => true,
                 'view_hrm_own_profile' => true,
+                'view_hrm_admin_views' => true,
             ));
+        } else {
+            $editor_vac = get_role('editor_vacaciones');
+            $editor_vac->add_cap('view_hrm_admin_views');
+        }
+
+        // Asegurar que el rol 'editor' estándar de WP también tenga capacidades si es necesario
+        $wp_editor = get_role('editor');
+        if ($wp_editor) {
+            $wp_editor->add_cap('view_hrm_admin_views');
+            $wp_editor->add_cap('view_hrm_employee_admin');
         }
     }
 
@@ -120,6 +137,7 @@
             'approve_hrm_vacaciones',
             'view_hrm_reports',
             'manage_hrm_documentos',
+            'manage_hrm_employees',
         );
 
         // ================================================================
@@ -172,12 +190,23 @@
         // Supervisor
         $supervisor = get_role('supervisor');
         if ($supervisor) {
+            error_log('HRM: Ensuring capabilities for role: supervisor');
             // Agregar capabilities explícitamente
             if (!$supervisor->has_cap('view_hrm_employee_admin')) {
                 $supervisor->add_cap('view_hrm_employee_admin');
+                error_log('HRM: Added view_hrm_employee_admin to supervisor');
             }
             if (!$supervisor->has_cap('edit_hrm_employees')) {
                 $supervisor->add_cap('edit_hrm_employees');
+                error_log('HRM: Added edit_hrm_employees to supervisor');
+            }
+            if (!$supervisor->has_cap('view_hrm_admin_views')) {
+                $supervisor->add_cap('view_hrm_admin_views');
+                error_log('HRM: Added view_hrm_admin_views to supervisor');
+            }
+            if (!$supervisor->has_cap('manage_hrm_employees')) {
+                $supervisor->add_cap('manage_hrm_employees');
+                error_log('HRM: Added manage_hrm_employees to supervisor');
             }
             if (!$supervisor->has_cap('view_hrm_own_profile')) {
                 $supervisor->add_cap('view_hrm_own_profile');
@@ -193,7 +222,7 @@
             }
 
             // Log para debug
-            error_log('HRM: Supervisor capabilities updated. Has edit_hrm_employees: ' . ($supervisor->has_cap('edit_hrm_employees') ? 'YES' : 'NO'));
+            error_log('HRM: Supervisor capabilities updated. Has view_hrm_admin_views: ' . ($supervisor->has_cap('view_hrm_admin_views') ? 'YES' : 'NO'));
         } else {
             error_log('HRM WARNING: Supervisor role does not exist! Run hrm_create_roles()');
         }

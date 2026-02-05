@@ -488,6 +488,15 @@ function hrm_handle_employees_post() {
             wp_send_json_error( array( 'message' => 'Tipo de documento no especificado.' ) );
         }
 
+        // Restricción para rol editor: SOLO 'Contratos'
+        $user_roles = (array) wp_get_current_user()->roles;
+        if ( in_array( 'editor_vacaciones', $user_roles ) || in_array( 'editor', $user_roles ) ) {
+            $tipo_lower = strtolower( trim( $tipo_input ) );
+            if ( $tipo_lower !== 'contrato' && $tipo_lower !== 'contratos' ) {
+                wp_send_json_error( array( 'message' => 'Los editores solo pueden subir documentos de tipo Contrato.' ) );
+            }
+        }
+
         if ( empty( $_FILES['archivos_subidos'] ) ) {
             wp_send_json_error( array( 'message' => 'No se detectaron archivos para subir.' ) );
         }

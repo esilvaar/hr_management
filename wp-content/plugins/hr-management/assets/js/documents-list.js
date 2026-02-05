@@ -2,12 +2,125 @@
  * Manejo de lista de documentos del empleado
  */
 
+// Dropdown helpers (Global scope)
+function hrmDetachDropdown(container, anchor) {
+    if ( !container || !anchor ) return;
+    if ( !container._orig ) container._orig = { parent: container.parentNode, nextSibling: container.nextSibling };
+    
+    container.classList.add('hrm-dropdown');
+    container.style.position = 'absolute';
+    container.style.zIndex = 11000;
+    container.style.boxSizing = 'border-box';
+
+    const anchorInputRect = anchor.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth;
+    
+    // Use max-content to allow automatic expansion only by content
+    container.style.width = 'max-content';
+    container.style.minWidth = anchorInputRect.width + 'px';
+    container.style.maxWidth = '95vw'; 
+    container.style.boxSizing = 'border-box';
+
+    container.style.display = 'block';
+    container.style.visibility = 'hidden';
+    document.body.appendChild( container );
+
+    // Force a layout calculation to get the true width of max-content
+    const menuWidth = container.offsetWidth;
+    
+    let left = anchorInputRect.left + window.scrollX;
+    
+    // If it goes off the right edge, push it left
+    if ( left + menuWidth > window.scrollX + viewportWidth - 16 ) {
+        left = window.scrollX + viewportWidth - menuWidth - 16;
+    }
+    
+    left = Math.max( left, window.scrollX + 8 );
+    const top = anchorInputRect.bottom + 4 + window.scrollY;
+
+    container.style.visibility = 'visible';
+    container.style.left = left + 'px';
+    container.style.right = 'auto';
+    container.style.top = top + 'px';
+    
+    window.requestAnimationFrame(() => container.classList.add('hrm-dropdown--visible'));
+    container.dataset.detached = '1';
+}
+
+function hrmRestoreDropdown(container) {
+    if ( !container ) return;
+    container.classList.remove('hrm-dropdown--visible');
+    const done = () => {
+        if ( container.dataset.detached === '1' && container._orig && container._orig.parent ) {
+            const parent = container._orig.parent;
+            const next = container._orig.nextSibling;
+            parent.insertBefore( container, next );
+        }
+        container.style.display = 'none';
+        container.style.position = '';
+        container.style.left = '';
+        container.style.top = '';
+        container.style.width = '';
+        container.style.maxWidth = '';
+        container.style.boxSizing = '';
+        container.style.right = '';
+        delete container.dataset.detached;
+        container.removeEventListener('transitionend', done);
+    };
+    container.addEventListener('transitionend', done, { once: true });
+    setTimeout(done, 300); 
+}
+
+// Export to window immediately
+window.hrmShowDropdown = hrmDetachDropdown;
+window.hrmHideDropdown = hrmRestoreDropdown;
+
 document.addEventListener('DOMContentLoaded', function() {
     loadEmployeeDocuments();
     setupTypeFilter();
     setupYearFilter();
     setupFilterClearButtons();
+    setupGlobalClickOutside();
 });
+
+function setupGlobalClickOutside() {
+    document.addEventListener('click', function(e) {
+        const dropdowns = [
+            { input: 'hrm-doc-type-filter-search', items: 'hrm-doc-type-filter-items' },
+            { input: 'hrm-doc-year-filter-search', items: 'hrm-doc-year-filter-items' },
+            { input: 'hrm-tipo-search', items: 'hrm-tipo-items' },
+            { input: 'hrm-anio-search', items: 'hrm-anio-items' }
+        ];
+
+        dropdowns.forEach( d => {
+            const input = document.getElementById(d.input);
+            const items = document.getElementById(d.items);
+            
+            if ( !items || items.style.display === 'none' ) return;
+
+            // If input exists, check if click is outside both input and items
+            if ( input ) {
+                if ( !input.contains(e.target) && !items.contains(e.target) ) {
+                    if ( typeof window.hrmHideDropdown === 'function' ) {
+                        window.hrmHideDropdown(items);
+                    } else {
+                        items.style.display = 'none';
+                        items.classList.remove('hrm-dropdown--visible');
+                    }
+                }
+            } else {
+                // If no input, just check items
+                if ( !items.contains(e.target) ) {
+                    if ( typeof window.hrmHideDropdown === 'function' ) {
+                        window.hrmHideDropdown(items);
+                    } else {
+                        items.style.display = 'none';
+                    }
+                }
+            }
+        });
+    });
+}
 
 function setupFilterClearButtons() {
     // per-filter clear buttons
@@ -124,6 +237,7 @@ function loadEmployeeDocuments() {
         container.innerHTML = '<p class="text-danger">Error al cargar documentos</p>';
     });
 }
+window.loadEmployeeDocuments = loadEmployeeDocuments;
 
 /**
  * Renderizado de la tabla de documentos (Frontend-side rendering)
@@ -221,71 +335,6 @@ function setupTypeFilter() {
     if ( itemsContainer.dataset.hrmTypeFilterAttached === '1' ) return;
     itemsContainer.dataset.hrmTypeFilterAttached = '1';
 
-    // Helpers to detach/restore dropdown (keeps behaviour consistent with year filter)
-    function detachDropdown(container, anchor) {
-        if ( !container || !anchor ) return;
-        if ( !container._orig ) container._orig = { parent: container.parentNode, nextSibling: container.nextSibling };
-        container.classList.add('hrm-dropdown');
-        container.style.position = 'absolute';
-        // Ensure detached dropdown appears above other elements (default)
-        container.style.zIndex = 3000;
-        container.style.boxSizing = 'border-box';
-
-        const anchorInputRect = anchor.getBoundingClientRect();
-        const maxAllowed = Math.min(window.innerWidth - 32, 900);
-        const width = Math.min(Math.max(anchorInputRect.width, 220), maxAllowed);
-        container.style.width = width + 'px';
-        container.style.maxWidth = Math.min(maxAllowed, 600) + 'px';
-
-        const menuRect = container.getBoundingClientRect();
-        const viewportWidth = document.documentElement.clientWidth;
-        let left = anchorInputRect.left + window.scrollX;
-        if ( left + menuRect.width > window.scrollX + viewportWidth - 8 ) {
-            left = window.scrollX + viewportWidth - menuRect.width - 8;
-        }
-        left = Math.max( left, window.scrollX + 8 );
-        const top = anchorInputRect.bottom + 4 + window.scrollY;
-
-        container.style.left = left + 'px';
-        container.style.right = 'auto';
-        container.style.top = top + 'px';
-
-        document.body.appendChild( container );
-        container.style.display = 'block';
-        // animate in
-        window.requestAnimationFrame(() => container.classList.add('hrm-dropdown--visible'));
-        container.dataset.detached = '1';
-    }
-
-    function restoreDropdown(container) {
-        if ( !container ) return;
-        // animate out
-        container.classList.remove('hrm-dropdown--visible');
-        const done = () => {
-            if ( container.dataset.detached === '1' && container._orig && container._orig.parent ) {
-                const parent = container._orig.parent;
-                const next = container._orig.nextSibling;
-                parent.insertBefore( container, next );
-            }
-            container.style.display = 'none';
-            container.style.position = '';
-            container.style.left = '';
-            container.style.top = '';
-            container.style.width = '';
-            container.style.maxWidth = '';
-            container.style.boxSizing = '';
-            container.style.right = '';
-            delete container.dataset.detached;
-            container.removeEventListener('transitionend', done);
-        };
-        container.addEventListener('transitionend', done, { once: true });
-        setTimeout(done, 300); // fallback
-    }
-
-    // expose to other scripts
-    window.hrmShowDropdown = detachDropdown;
-    window.hrmHideDropdown = restoreDropdown;
-
     // Source of types: hrmDocsListData.types if available, otherwise derive from document rows
     function getTypesSource() {
         // Prefer types derived from rendered document rows (ensures only types with documents are shown)
@@ -335,7 +384,8 @@ function setupTypeFilter() {
             searchInput.value = '(Todos)';
             const hid = document.getElementById('hrm-doc-filter-type-id'); if ( hid ) hid.value = '';
             // restore if detached
-            if ( typeof restoreDropdown === 'function' ) restoreDropdown(itemsContainer);
+            if ( typeof window.hrmHideDropdown === 'function' ) window.hrmHideDropdown(itemsContainer);
+            else itemsContainer.style.display = 'none';
             // update default year selection scoped to selected type
             const currentTypeHidden = document.getElementById('hrm-doc-filter-type-id');
             const currentTypeInput = document.getElementById('hrm-doc-type-filter-search');
@@ -369,8 +419,8 @@ function setupTypeFilter() {
                 const hid = document.getElementById('hrm-doc-filter-type-id');
                 if ( hid ) hid.value = t.id || '';
                 // restore dropdown to avoid leaving it detached
-                if ( typeof restoreDropdown === 'function' ) restoreDropdown(itemsContainer);
-                itemsContainer.style.display = 'none';
+                if ( typeof window.hrmHideDropdown === 'function' ) window.hrmHideDropdown(itemsContainer);
+                else itemsContainer.style.display = 'none';
                 if ( typeof applyActiveFilters === 'function' ) applyActiveFilters();
             });
             itemsContainer.appendChild( link );
@@ -383,7 +433,7 @@ function setupTypeFilter() {
         const types = getTypesSource();
         populateItems( types );
         // detach to body to avoid layout shift
-        detachDropdown(itemsContainer, searchInput);
+        if ( typeof window.hrmShowDropdown === 'function' ) window.hrmShowDropdown(itemsContainer, searchInput);
         if ( typeof updateFilterClearVisibility === 'function' ) updateFilterClearVisibility();
     });
 
@@ -392,26 +442,16 @@ function setupTypeFilter() {
         const query = this.value.toLowerCase();
         const types = getTypesSource().filter( t => (t.name || '').toLowerCase().includes( query ) || String(t.id).includes( query ) );
         populateItems( types );
-        detachDropdown(itemsContainer, searchInput);
+        if ( typeof window.hrmShowDropdown === 'function' ) window.hrmShowDropdown(itemsContainer, searchInput);
         if ( typeof updateFilterClearVisibility === 'function' ) updateFilterClearVisibility();
-    });
-
-    // Cerrar al hacer click fuera
-    document.addEventListener('click', function(e) {
-        const target = e.target;
-        if ( target !== searchInput && ! itemsContainer.contains( target ) && target !== itemsContainer ) {
-            // restore if detached
-            if ( typeof restoreDropdown === 'function' ) restoreDropdown(itemsContainer);
-            itemsContainer.style.display = 'none';
-        }
     });
 
     // Cerrar con tecla Escape
     searchInput.addEventListener('keydown', function(e) {
         if ( e.key === 'Escape' || e.keyCode === 27 ) {
             e.preventDefault();
-            if ( typeof restoreDropdown === 'function' ) restoreDropdown(itemsContainer);
-            itemsContainer.style.display = 'none';
+            if ( typeof window.hrmHideDropdown === 'function' ) window.hrmHideDropdown(itemsContainer);
+            else itemsContainer.style.display = 'none';
             searchInput.blur();
         }
     });
@@ -506,6 +546,8 @@ function setupYearFilter() {
             }
         }
         if ( typeof updateFilterClearVisibility === 'function' ) updateFilterClearVisibility();
+        // Aplicar filtros después de asegurar la selección por defecto
+        if ( typeof applyActiveFilters === 'function' ) applyActiveFilters();
     }
     window.hrmEnsureDefaultYearSelection = ensureDefaultYearSelection;
 
@@ -515,7 +557,6 @@ function setupYearFilter() {
         populateYearItems( sortedYears, itemsContainer );
         // show with fade/detach via global helper (if available)
         if ( typeof window.hrmShowDropdown === 'function' ) window.hrmShowDropdown(itemsContainer, searchInput);
-        else if ( typeof detachDropdown === 'function' ) detachDropdown(itemsContainer, searchInput);
         if ( typeof updateFilterClearVisibility === 'function' ) updateFilterClearVisibility();
     });
     
@@ -528,23 +569,15 @@ function setupYearFilter() {
             itemsContainer 
         );
         if ( typeof window.hrmShowDropdown === 'function' ) window.hrmShowDropdown(itemsContainer, searchInput);
-        else if ( typeof detachDropdown === 'function' ) detachDropdown(itemsContainer, searchInput);
         if ( typeof updateFilterClearVisibility === 'function' ) updateFilterClearVisibility();
     });
     
-    // Cerrar al hacer click fuera (no cerrar si se clica dentro del listado de items)
-    document.addEventListener('click', function(e) {
-        const target = e.target;
-        if ( target !== searchInput && !itemsContainer.contains( target ) && target !== itemsContainer ) {
-            if ( typeof restoreDropdown === 'function' ) restoreDropdown(itemsContainer);
-        }
-    });
-
     // Cerrar con tecla Escape
     searchInput.addEventListener('keydown', function(e) {
         if ( e.key === 'Escape' || e.keyCode === 27 ) {
             e.preventDefault();
-            if ( typeof restoreDropdown === 'function' ) restoreDropdown(itemsContainer);
+            if ( typeof window.hrmHideDropdown === 'function' ) window.hrmHideDropdown(itemsContainer);
+            else itemsContainer.style.display = 'none';
             searchInput.blur();
         }
     });

@@ -286,7 +286,7 @@ $logo_blanco_url = esc_url( HRM_PLUGIN_URL . 'assets/images/logo-blanco.png' );
                 <ul class="list-unstyled px-2 mb-2">
                     <li>
                         <a class="nav-link px-3 py-2 <?= $is_vacaciones_active ?> d-flex align-items-center justify-content-between"
-                            href="<?= esc_url(admin_url('admin.php?page=hrm-vacaciones&tab=solicitudes')); ?>">
+                            href="<?= esc_url(admin_url('admin.php?page=hrm-vacaciones&tab=departamentos')); ?>">
                             <span>Solicitudes de Vacaciones</span>
                             <?php if ( $count_pendientes > 0 ): ?>
                                 <span class="hrm-notification-badge badge bg-danger rounded-pill">

@@ -201,14 +201,6 @@ function setupDocumentTypeSearch() {
             }
         });
     }
-    
-    // Cerrar al hacer click fuera
-    document.addEventListener('click', function(e) {
-        if ( e.target !== searchInput && e.target !== itemsContainer ) {
-            if ( typeof window.hrmHideDropdown === 'function' ) window.hrmHideDropdown(itemsContainer);
-            else { itemsContainer.classList.remove('hrm-dropdown--visible'); setTimeout(()=>{ itemsContainer.style.display = 'none'; }, 220); }
-        }
-    });
 }
 
 /**
@@ -269,14 +261,6 @@ function setupYearSearch() {
     hiddenInput.value = '2026';
     // Actualizar visibilidad de clears en el listado (si existe)
     if ( typeof updateFilterClearVisibility === 'function' ) updateFilterClearVisibility();
-    
-    // Cerrar al hacer click fuera
-    document.addEventListener('click', function(e) {
-        if ( e.target !== searchInput && e.target !== itemsContainer ) {
-            if ( typeof window.hrmHideDropdown === 'function' ) window.hrmHideDropdown(itemsContainer);
-            else { itemsContainer.classList.remove('hrm-dropdown--visible'); setTimeout(()=>{ itemsContainer.style.display = 'none'; }, 220); }
-        }
-    });
 }
 
 /**

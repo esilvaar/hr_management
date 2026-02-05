@@ -148,6 +148,80 @@
     cursor: pointer;
 }
 
+/* ============================================================ 
+ * TEXT UTILITIES (FOR TABLES AND SELECTORS)
+ * ============================================================ */
+.hrm-table-text-main {
+    color: #212529;
+}
+
+.hrm-table-text-secondary {
+    color: #6c757d;
+}
+
+/* Employee Selector - Reset colors for light mode visibility */
+.hrm-employee-item .hrm-table-text-main,
+.hrm-employee-item strong {
+    color: #212529 !important;
+}
+
+/* Except for the clear selection option which should be red */
+.hrm-employee-item.text-danger strong,
+.hrm-employee-item.text-danger {
+    color: #dc3545 !important;
+}
+
+.hrm-employee-item .hrm-table-text-secondary {
+    color: #6c757d !important;
+}
+
+.hrm-employee-item {
+    background-color: transparent !important;
+}
+
+.hrm-employee-item:hover {
+    background-color: #f0f0f0 !important;
+}
+
+html.myplugin_dark .hrm-employee-item:hover {
+    background-color: #333333 !important;
+}
+
+/* Re-apply dark mode colors specifically for these items if in dark mode */
+html.myplugin_dark .hrm-employee-item .hrm-table-text-main,
+html.myplugin_dark .hrm-employee-item strong {
+    color: #ffffff !important;
+}
+
+html.myplugin_dark .hrm-employee-item.text-danger strong,
+html.myplugin_dark .hrm-employee-item.text-danger {
+    color: #ff6b6b !important; /* Lighter red for dark mode */
+}
+
+html.myplugin_dark .hrm-employee-item .hrm-table-text-secondary {
+    color: #f0f0f0 !important;
+}
+
+.hrm-employee-item:hover .hrm-table-text-main {
+    color: #000 !important;
+}
+
+html.myplugin_dark .hrm-employee-item:hover .hrm-table-text-main {
+    color: #fff !important;
+}
+
+/* Search bar in employee selector - Dark mode fix */
+html.myplugin_dark .hrm-employee-dropdown .sticky-top.bg-white {
+    background-color: #2d2d2d !important;
+    border-bottom-color: #444 !important;
+}
+
+html.myplugin_dark #hrm-employee-search {
+    background-color: #1a1a1a !important;
+    color: #fff !important;
+    border-color: #444 !important;
+}
+
 .myplugin-fixed-panel {
     margin: 0 auto;
     position: fixed;

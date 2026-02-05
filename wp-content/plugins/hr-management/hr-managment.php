@@ -729,6 +729,7 @@ function hrm_register_admin_menus()
         );
 
             // Submenú: Documentos empresa (para administradores)
+            error_log('[HRM-DEBUG] Registering anaconda documents submenu - user_id=' . get_current_user_id() . ' can_view_admin=' . (current_user_can('view_hrm_admin_views') ? 'YES' : 'NO'));
             add_submenu_page(
                 'hrm-empleados',
                 'Documentos empresa',
@@ -960,6 +961,8 @@ function hrm_register_admin_menus()
     // como submenús bajo 'hrm-empleados' para evitar duplicados.
     $current_user = wp_get_current_user();
     $is_anaconda = in_array('administrador_anaconda', (array) $current_user->roles);
+    $can_view_admin = current_user_can('view_hrm_admin_views');
+
     if (is_user_logged_in()) {
         if (current_user_can('manage_options')) {
             add_menu_page(
@@ -1031,9 +1034,9 @@ function hrm_register_admin_menus()
             // para evitar duplicados; se registra más abajo como submenú bajo
             // 'hrm-empleados' (mismo slug 'hrm-mi-perfil-vacaciones').
             error_log('[HRM-DEBUG] Registered top-level Convivencia for admin user_id=' . get_current_user_id());
-        } elseif ($is_anaconda) {
+        } elseif ($can_view_admin) {
             // Intentar añadir como submenús bajo HR Management para mantener UI
-            // Ensure parent menu exists for administrador_anaconda: if the parent
+            // Ensure parent menu exists for admin views: if the parent
             // 'hrm-empleados' wasn't registered earlier (due to capability checks),
             // register a minimal top-level menu so submenus can be attached and
             // the page slug becomes routable (avoids 403 "not allowed to access").
@@ -1067,7 +1070,7 @@ function hrm_register_admin_menus()
                 'hrm_render_vacaciones_empleado_page'
             );
 
-            // Añadir Mis Documentos y tipos para administrador_anaconda (como subpáginas bajo hrm-empleados)
+            // Añadir Mis Documentos y tipos para admin views (como subpáginas bajo hrm-empleados)
             add_submenu_page(
                 'hrm-empleados',
                 'Mis Documentos',
@@ -1077,7 +1080,7 @@ function hrm_register_admin_menus()
                 'hrm_render_mis_documentos_page'
             );
 
-            // Submenú: Documentos empresa (administrador_anaconda)
+            // Submenú: Documentos empresa (admin views)
             add_submenu_page(
                 'hrm-empleados',
                 'Documentos empresa',
@@ -1087,7 +1090,7 @@ function hrm_register_admin_menus()
                 'hrm_render_anaconda_documents_page'
             );
 
-            // Registrar tipos dinámicos también para administrador_anaconda
+            // Registrar tipos dinámicos también para admin views
             hrm_ensure_db_classes();
             $db_docs_temp2 = new HRM_DB_Documentos();
             $doc_types_temp2 = $db_docs_temp2->get_all_types();
@@ -1105,7 +1108,7 @@ function hrm_register_admin_menus()
                 }
             }
 
-            error_log('[HRM-DEBUG] Registered Convivencia and Mis Vacaciones as submenus for administrador_anaconda user_id=' . get_current_user_id());
+            error_log('[HRM-DEBUG] Registered Convivencia and Mis Vacaciones as submenus for admin view user_id=' . get_current_user_id());
         } else {
             // Registrar Convivencia para cualquier usuario autenticado (capacidad 'read')
             add_menu_page(
@@ -1121,14 +1124,14 @@ function hrm_register_admin_menus()
         }
     }
 
-    // ACCESO A MI PERFIL PARA ADMINISTRADORES (como submenú de HR Management)
-    if (current_user_can('manage_options')) {
+    // ACCESO A MI PERFIL PARA ADMINISTRADORES / SUPERVISORES (como submenú de HR Management)
+    if (current_user_can('manage_options') || $can_view_admin) {
         // Submenú: Mi Perfil
         add_submenu_page(
             'hrm-empleados',
             'Mi Perfil',
             'Mi Perfil',
-            'manage_options',
+            'read',
             'hrm-mi-perfil',
             function () {
                 hrm_render_profile_overview(); }
@@ -1139,7 +1142,7 @@ function hrm_register_admin_menus()
             'hrm-empleados',
             'Ver Información',
             'Ver Información',
-            'manage_options',
+            'read',
             'hrm-mi-perfil-info',
             function () {
                 hrm_render_profile_overview(); }
@@ -1150,7 +1153,7 @@ function hrm_register_admin_menus()
             'hrm-empleados',
             'Mis Vacaciones',
             'Mis Vacaciones',
-            'manage_options',
+            'read',
             'hrm-mi-perfil-vacaciones',
             function () {
                 hrm_render_vacaciones_empleado_page(); }
@@ -1161,7 +1164,7 @@ function hrm_register_admin_menus()
             'hrm-empleados',
             'Mis Documentos',
             'Mis Documentos',
-            'manage_options',
+            'read',
             'hrm-mi-documentos',
             function () {
                 hrm_render_mis_documentos_page(); }
@@ -1172,7 +1175,7 @@ function hrm_register_admin_menus()
             'hrm-empleados',
             'Mis Contratos',
             'Contratos',
-            'manage_options',
+            'read',
             'hrm-mi-documentos-contratos',
             function () {
                 hrm_render_mis_documentos_contratos_page(); }
@@ -1183,7 +1186,7 @@ function hrm_register_admin_menus()
             'hrm-empleados',
             'Mis Liquidaciones',
             'Liquidaciones',
-            'manage_options',
+            'read',
             'hrm-mi-documentos-liquidaciones',
             function () {
                 hrm_render_mis_documentos_liquidaciones_page(); }
@@ -1194,7 +1197,7 @@ function hrm_register_admin_menus()
             'hrm-empleados',
             'Mis Licencias',
             'Licencias',
-            'manage_options',
+            'read',
             'hrm-mi-documentos-licencias',
             function () {
                 hrm_render_mis_documentos_licencias_page(); }

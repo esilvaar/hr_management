@@ -54,6 +54,17 @@ if ( $curr_id > 0 ) {
             <!-- Employee list -->
             <div id="hrm-employee-items" class="hrm-employee-items">
                 <?php if ( ! empty( $all_emps ) ) : ?>
+                    <!-- Opción para limpiar selección -->
+                    <a class="dropdown-item hrm-employee-item py-2  text-danger" 
+                       href="?page=hrm-empleados&tab=<?= esc_attr( $tab ?? 'list' ) ?>"
+                       data-employee-id="0"
+                       data-employee-name="Seleccionar Empleado"
+                       data-employee-search="">
+                        <div class="d-flex align-items-center">
+                            <span class="dashicons dashicons-no-alt"></span>
+                            <strong>Ninguno</strong>
+                        </div>
+                    </a>
                     <?php foreach ( $all_emps as $e ) : ?>
                         <a 
                             class="dropdown-item hrm-employee-item py-2" 

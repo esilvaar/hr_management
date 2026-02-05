@@ -40,6 +40,8 @@ wp_enqueue_script(
 // No terminamos la ejecución aquí: permitimos mostrar filtros y botón incluso sin un empleado seleccionado.
 $has_employee = ! empty( $employee );
 $employee_id  = $has_employee ? intval( $employee->id ) : 0;
+$current_user_roles = (array) wp_get_current_user()->roles;
+$is_editor_vacaciones = in_array( 'editor_vacaciones', $current_user_roles ) || in_array( 'editor', $current_user_roles );
 
 // Pasar variables al JavaScript mediante wp_localize_script
 // Preparar lista de tipos para JS: normalizar a array de objetos { id, name }
@@ -58,8 +60,16 @@ if ( ! empty( $hrm_tipos_documento ) ) {
 
 // Remove 'Empresa' type from JS and selectors so it is not used client-side
 if ( ! empty( $doc_types_js ) ) {
-    $doc_types_js = array_filter( $doc_types_js, function( $t ) {
-        return strtolower( trim( (string) ($t['name'] ?? '') ) ) !== 'empresa';
+    $doc_types_js = array_filter( $doc_types_js, function( $t ) use ($is_editor_vacaciones) {
+        $name = strtolower( trim( (string) ($t['name'] ?? '') ) );
+        if ( $name === 'empresa' ) return false;
+        
+        // Si es editor_vacaciones, solo conservar 'Contratos'
+        if ( $is_editor_vacaciones ) {
+            return in_array( $name, [ 'contrato', 'contratos' ], true );
+        }
+        
+        return true;
     } );
     // Reindex
     $doc_types_js = array_values( $doc_types_js );
@@ -111,8 +121,10 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
                 </div>
 
                 <div class="d-flex gap-2 align-items-center">
-                    <button class="btn btn-success btn-sm" id="btn-nuevo-documento" data-employee-id="<?= esc_attr( $employee_id ) ?>" data-has-employee="<?= $has_employee ? '1' : '0' ?>" <?= ! $has_employee ? 'disabled aria-disabled="true"' : '' ?> title="<?= ! $has_employee ? 'Selecciona un usuario para habilitar' : 'Nuevo Documento' ?>">Nuevo Documento</button>
-                    <button class="btn btn-secondary btn-sm" id="btn-nuevo-directorio" data-has-employee="1" data-employee-id="" title="Nuevo Directorio">Nuevo Directorio</button>
+                    <button class="btn btn-success btn-sm" id="btn-nuevo-documento" data-employee-id="<?= esc_attr( $employee_id ) ?>" data-has-employee="<?= $has_employee ? '1' : '0' ?>" <?= ! $has_employee ? 'disabled aria-disabled="true"' : '' ?> title="<?= ! $has_employee ? 'Selecciona un usuario para habilitar' : 'Subir Documento' ?>">Subir Documento</button>
+                    <?php if ( ! $is_editor_vacaciones ) : ?>
+                        <button class="btn btn-secondary btn-sm" id="btn-nuevo-directorio" data-has-employee="1" data-employee-id="" title="Crear Directorio">Crear Directorio</button>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -155,6 +167,9 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
                                 }
                                 // Omitir tipo 'Empresa' completamente en el selector de subida
                                 if ( strtolower( trim( $tipo_name ) ) === 'empresa' ) continue;
+                                
+                                // Restricción para editor_vacaciones: SOLO puede subir 'Contratos'
+                                if ( $is_editor_vacaciones && ! in_array( strtolower( trim( $tipo_name ) ), [ 'contrato', 'contratos' ], true ) ) continue;
                             ?>
                                 <a class="dropdown-item py-2 px-3 hrm-tipo-item" href="#" data-tipo-id="<?= esc_attr( $tipo_id ) ?>" data-tipo-name="<?= esc_attr( $tipo_name ) ?>">
                                     <strong><?= esc_html( $tipo_name ) ?></strong>
@@ -206,6 +221,7 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
         </form>
     </div>
     <!-- Panel de Creacion de Directorios (modal similar a Subir) -->
+    <?php if ( ! $is_editor_vacaciones ) : ?>
     <div id="hrm-create-type-panel" class="border rounded shadow p-4 mb-4 bg-white hrm-create-type-panel">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="mb-0"><span ></span> Gestión de Directorios</h5>
@@ -259,6 +275,7 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
             </div>
         </form>
     </div>
+    <?php endif; ?>
 
     <!-- Listado de Documentos -->
     <div id="hrm-documents-message"></div>

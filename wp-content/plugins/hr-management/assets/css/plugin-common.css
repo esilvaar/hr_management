@@ -163,11 +163,93 @@
     border-color: #537345 !important;
 }
 
-.hrm-doc-type-filter-items, #hrm-doc-type-filter-items, #hrm-tipo-items, #hrm-anio-items, #hrm-doc-year-filter-items { position:absolute; top:100%; left:0; right:0; background:#fff !important; border:1px solid #dee2e6; border-top:none; max-height:none; overflow-y:visible; overflow-x:hidden; box-sizing:border-box; white-space:normal; z-index:3000; display:none; box-shadow:0 6px 20px rgba(0,0,0,0.08); }
+.hrm-doc-type-filter-items, #hrm-doc-type-filter-items, #hrm-tipo-items, #hrm-anio-items, #hrm-doc-year-filter-items { 
+    position:absolute; 
+    top:100%; 
+    left:0; 
+    background:#ffffff !important; 
+    color: #333333 !important;
+    border:1px solid #dee2e6; 
+    border-top:none; 
+    max-height:400px; 
+    overflow-y:auto; 
+    overflow-x:hidden !important; 
+    box-sizing:border-box; 
+    white-space:nowrap; 
+    z-index:11000; 
+    display:none; 
+    box-shadow:0 8px 16px rgba(0,0,0,0.15); 
+    border-radius: 0 0 6px 6px;
+    width: max-content !important;
+    min-width: 100%;
+}
+
+/* Explicitly force light background for items when NOT in dark mode */
+html:not(.myplugin_dark) body.hrm-admin-page #wpcontent .hrm-tipo-item, 
+html:not(.myplugin_dark) body.hrm-admin-page #wpcontent .hrm-anio-item, 
+html:not(.myplugin_dark) body.hrm-admin-page #wpcontent .hrm-doc-type-item, 
+html:not(.myplugin_dark) body.hrm-admin-page #wpcontent .dropdown-item {
+    background-color: #ffffff !important;
+    color: #333333 !important;
+}
+
+/* Items in light mode */
+.hrm-tipo-item, .hrm-anio-item, .hrm-doc-type-item, .dropdown-item {
+    background-color: #ffffff !important;
+    color: #333333 !important;
+    text-decoration: none !important;
+    transition: background 0.15s ease, color 0.15s ease;
+    display: block;
+    width: 100%;
+}
+
+.hrm-tipo-item:hover, .hrm-anio-item:hover, .hrm-doc-type-item:hover, .dropdown-item:hover {
+    background-color: #f0f4ee !important;
+    color: #537345 !important;
+}
+
+/* Ensure strong text inside items also obeys color rules */
+.hrm-tipo-item strong, .hrm-anio-item strong, .hrm-doc-type-item strong, .dropdown-item strong {
+    color: inherit !important;
+}
+
+/* Active state for dropdown items */
+.dropdown-item.active, .hrm-tipo-item.active, .hrm-anio-item.active, .hrm-doc-type-item.active {
+    background-color: #537345 !important;
+    color: #fff !important;
+}
 
 /* Dropdown fade (used when detaching to body) */
-.hrm-dropdown { opacity: 0; transform: translateY(-6px); transition: opacity .18s ease, transform .18s ease; pointer-events: none; }
+.hrm-dropdown { 
+    opacity: 0; 
+    transform: translateY(-6px); 
+    transition: opacity .18s ease, transform .18s ease; 
+    pointer-events: none;
+    overflow-x: hidden !important; /* Evitar barra horizontal interna */
+}
 .hrm-dropdown.hrm-dropdown--visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+/* Invertir colores en modo claro para legibilidad (Alta Especificidad) */
+html:not(.myplugin_dark) .hrm-dropdown,
+html:not(.myplugin_dark) #hrm-doc-type-filter-items,
+html:not(.myplugin_dark) #hrm-doc-year-filter-items,
+html:not(.myplugin_dark) #hrm-tipo-items,
+html:not(.myplugin_dark) #hrm-anio-items {
+    background-color: #ffffff !important;
+    color: #2c3338 !important;
+    border: 1px solid #ccc !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+}
+
+html:not(.myplugin_dark) .hrm-dropdown .dropdown-item,
+html:not(.myplugin_dark) .hrm-dropdown-item {
+    color: #2c3338 !important;
+}
+
+html:not(.myplugin_dark) .hrm-dropdown .dropdown-item:hover,
+html:not(.myplugin_dark) .hrm-dropdown-item:hover {
+    background-color: #f0f0f1 !important;
+}
 .hrm-upload-panel { max-width:600px; margin:0 auto; display:none; position:fixed; top:10%; left:50%; transform:translateX(-50%); z-index:9999; }
 .hrm-create-type-panel { max-width:520px; margin:0 auto; display:none; position:fixed; top:10%; left:50%; transform:translateX(-50%); z-index:9999; }
 /* Inside upload panel we want labels on top and inputs full width */
@@ -600,30 +682,22 @@
 /* Dark mode styles for dropdowns when inside dark containers or system preference */
 
 /* Dropdown containers in dark mode */
-.bg-dark .hrm-doc-type-filter-items,
-.bg-dark #hrm-doc-type-filter-items,
-.bg-dark #hrm-tipo-items,
-.bg-dark #hrm-anio-items,
-.bg-dark #hrm-doc-year-filter-items,
-.dark-mode .hrm-doc-type-filter-items,
-.dark-mode #hrm-doc-type-filter-items,
-.dark-mode #hrm-tipo-items,
-.dark-mode #hrm-anio-items,
-.dark-mode #hrm-doc-year-filter-items {
+html.myplugin_dark .hrm-doc-type-filter-items,
+html.myplugin_dark #hrm-doc-type-filter-items,
+html.myplugin_dark #hrm-tipo-items,
+html.myplugin_dark #hrm-anio-items,
+html.myplugin_dark #hrm-doc-year-filter-items {
     background: #2d3238 !important;
     border-color: #495057 !important;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    overflow-x: hidden !important;
 }
 
 /* Dropdown items in dark mode - mejorar visual con padding y transiciones */
-.bg-dark .dropdown-item,
-.dark-mode .dropdown-item,
-.bg-dark .hrm-tipo-item,
-.dark-mode .hrm-tipo-item,
-.bg-dark .hrm-anio-item,
-.dark-mode .hrm-anio-item,
-.bg-dark .hrm-doc-type-item,
-.dark-mode .hrm-doc-type-item {
+html.myplugin_dark .dropdown-item,
+html.myplugin_dark .hrm-tipo-item,
+html.myplugin_dark .hrm-anio-item,
+html.myplugin_dark .hrm-doc-type-item {
     color: rgba(255, 255, 255, .87) !important;
     background-color: transparent !important;
     border-radius: 4px;
@@ -631,22 +705,16 @@
     padding: 0.5rem 0.75rem !important;
 }
 
-.bg-dark .dropdown-item:hover,
-.dark-mode .dropdown-item:hover,
-.bg-dark .hrm-tipo-item:hover,
-.dark-mode .hrm-tipo-item:hover,
-.bg-dark .hrm-anio-item:hover,
-.dark-mode .hrm-anio-item:hover,
-.bg-dark .hrm-doc-type-item:hover,
-.dark-mode .hrm-doc-type-item:hover {
+html.myplugin_dark .dropdown-item:hover,
+html.myplugin_dark .hrm-tipo-item:hover,
+html.myplugin_dark .hrm-anio-item:hover,
+html.myplugin_dark .hrm-doc-type-item:hover {
     background-color: rgba(83, 115, 69, 0.3) !important;
     color: #fff !important;
 }
 
-.bg-dark .dropdown-item.active,
-.bg-dark .dropdown-item:active,
-.dark-mode .dropdown-item.active,
-.dark-mode .dropdown-item:active {
+html.myplugin_dark .dropdown-item.active,
+html.myplugin_dark .dropdown-item:active {
     background-color: #537345 !important;
     color: #fff !important;
 }

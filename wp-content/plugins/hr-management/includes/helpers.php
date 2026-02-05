@@ -779,7 +779,7 @@ function hrm_login_redirect_after_login( $redirect_to, $requested_redirect_to, $
 
     // 2. Prioridad: Editores de Vacaciones
     if ( $is_editor_vacaciones || user_can( $wp_user, 'manage_hrm_vacaciones' ) ) {
-        return admin_url( 'admin.php?page=hrm-vacaciones&tab=solicitudes' );
+        return admin_url( 'admin.php?page=hrm-vacaciones&tab=departamentos' );
     }
 
     // 3. Prioridad: Empleados Regulares (Su propio panel)

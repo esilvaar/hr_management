@@ -112,7 +112,7 @@ wp_localize_script( 'hrm-anaconda-documents-create', 'anacondaDocsData', array(
                                     echo '<div class="dropdown-menu myplugin-hidden">';
                                     echo '<a href="' . esc_url( $file_url ) . '" class="dropdown-item" target="_blank"><span class="dashicons dashicons-download"></span> Descargar</a>';
                                     echo '<button class="dropdown-item edit-doc-btn" data-doc-id="' . esc_attr( $doc_id ) . '" data-title="' . esc_attr( $doc->titulo ) . '" data-ruta="' . esc_attr( $ruta ) . '"><span class="dashicons dashicons-edit"></span> Editar</button>';
-                                    if ( current_user_can( 'manage_options' ) ) {
+                                    if ( current_user_can( 'manage_options' ) || current_user_can( 'view_hrm_admin_views' ) ) {
                                         $delete_url = esc_url( admin_url( 'admin-post.php?action=anaconda_documents_delete&file=' . rawurlencode( $basename ) . '&_wpnonce=' . wp_create_nonce( 'anaconda_documents_delete' ) ) );
                                         echo '<a href="' . $delete_url . '" class="dropdown-item text-danger" onclick="return confirm(\'¿Estás seguro de que deseas eliminar este documento?\')"><span class="dashicons dashicons-trash"></span> Eliminar</a>';
                                     }
