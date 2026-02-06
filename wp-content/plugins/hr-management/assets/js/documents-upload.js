@@ -2,10 +2,42 @@
  * Manejo del formulario de carga de documentos
  */
 
+/**
+ * Auto-select default year for upload form when type is selected
+ */
+function ensureUploadFormYearSelection( typeIdOrName ) {
+    const searchInput = document.getElementById('hrm-anio-search');
+    const hiddenInput = document.getElementById('hrm_anio_documento');
+    if ( ! searchInput || ! hiddenInput ) return;
+
+    // Get available years from the year items in the upload form
+    const itemsContainer = document.getElementById('hrm-anio-items');
+    const years = [];
+    if ( itemsContainer ) {
+        itemsContainer.querySelectorAll('.hrm-anio-item').forEach( item => {
+            const year = item.getAttribute('data-anio');
+            if ( year && ! years.includes(year) ) {
+                years.push(year);
+            }
+        });
+    }
+
+    // Sort descending to get most recent year first
+    years.sort().reverse();
+    if ( ! years.length ) return;
+
+    // Set to first (most recent) available year
+    const selectedYear = years[0];
+    searchInput.value = selectedYear;
+    hiddenInput.value = selectedYear;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     setupDocumentTypeSearch();
     setupYearSearch();
     setupFormSubmit();
+    // Expose the function globally so other modules can call it
+    window.ensureUploadFormYearSelection = ensureUploadFormYearSelection;
 });
 
 /**
@@ -51,7 +83,7 @@ function setupDocumentTypeSearch() {
         }
     });
     
-    // Helper: hide/show year depending on type
+    // Helper: show year for all types and auto-select default year
     function toggleYearVisibilityForTypeName(name) {
         const nm = (name || '').toString().trim().toLowerCase();
         const yearContainer = document.getElementById('hrm-anio-items') ? document.getElementById('hrm-anio-items').parentElement : null;
@@ -60,21 +92,12 @@ function setupDocumentTypeSearch() {
         const yearLabel = document.querySelector('label[for="hrm-anio-search"]');
         if ( ! yearContainer || !yearInput || !yearHidden ) return;
 
-        if ( nm === 'contrato' ) {
-            // hide year label + field and disable validation
-            if ( yearLabel ) yearLabel.style.display = 'none';
-            yearContainer.style.display = 'none';
-            yearInput.disabled = true;
-            yearInput.classList.add('visually-hidden');
-            yearHidden.value = '';
-            yearHidden.removeAttribute('required');
-        } else {
-            if ( yearLabel ) yearLabel.style.display = '';
-            yearContainer.style.display = '';
-            yearInput.disabled = false;
-            yearInput.classList.remove('visually-hidden');
-            yearHidden.setAttribute('required','required');
-        }
+        // Always show year field and keep required
+        if ( yearLabel ) yearLabel.style.display = '';
+        yearContainer.style.display = '';
+        yearInput.disabled = false;
+        yearInput.classList.remove('visually-hidden');
+        yearHidden.setAttribute('required','required');
     }
 
     // Expose helper globally so other modules can trigger the same behaviour
@@ -93,6 +116,10 @@ function setupDocumentTypeSearch() {
             else { itemsContainer.classList.remove('hrm-dropdown--visible'); setTimeout(()=>{ itemsContainer.style.display = 'none'; }, 220); }
             // toggle year visibility
             toggleYearVisibilityForTypeName(tipoName);
+            // Auto-select year for upload form
+            if ( typeof window.ensureUploadFormYearSelection === 'function' ) {
+                window.ensureUploadFormYearSelection(tipoId || tipoName);
+            }
             // Si existe la función global para actualizar visibilidad de clears, ejecutarla
             if ( typeof updateFilterClearVisibility === 'function' ) updateFilterClearVisibility();
         });

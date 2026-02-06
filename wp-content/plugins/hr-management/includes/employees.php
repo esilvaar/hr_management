@@ -96,7 +96,12 @@ function hrm_handle_employees_post() {
         // ---------------------------------------------
         $current_user = wp_get_current_user();
         // Consider administrator, administrador_anaconda and users with view_hrm_admin_views as admin for update purposes
-        $is_admin = current_user_can( 'manage_options' ) || current_user_can( 'view_hrm_admin_views' ) || in_array( 'administrador_anaconda', (array) $current_user->roles, true );
+        // FIX: Ensure 'editor' role is NEVER treated as admin even if they have stray capabilities (unless they are real admins)
+        $is_role_editor = in_array( 'editor', (array) $current_user->roles, true );
+        $is_real_admin  = current_user_can( 'manage_options' ) || in_array( 'administrador_anaconda', (array) $current_user->roles, true );
+        
+        $is_admin = ( $is_real_admin || current_user_can( 'view_hrm_admin_views' ) ) && ( ! $is_role_editor || $is_real_admin );
+
         $is_supervisor = current_user_can( 'edit_hrm_employees' );
         // Owner detection: linked by user_id OR matching email
         $is_own = ( intval( $employee_obj->user_id ) === get_current_user_id() ) || ( ! empty( $current_user->user_email ) && ! empty( $employee_obj->email ) && strtolower( $current_user->user_email ) === strtolower( $employee_obj->email ) );

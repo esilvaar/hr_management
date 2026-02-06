@@ -13,6 +13,8 @@
     box-shadow: none;
 }
 
+/* Mis Vacaciones: evitar centrado excesivo del formulario */
+
 .documento-formal .seccion-encabezado {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -246,8 +248,8 @@
 
 /* Estilos para botones */
 .documento-formal .btn-primary {
-    background: var(--mp-form-accent, #009929);
-    border-color: #009929;
+    background: var(--mp-form-accent, #37B126);
+    border-color: #37B126;
     color: var(--mp-form-period-text, #ffffff);
     font-weight: 600;
     padding: 10px 24px;
@@ -257,8 +259,8 @@
 }
 
 .documento-formal .btn-primary:hover {
-    background: #007a20;
-    border-color: #007a20;
+    background: #2a8d1d;
+    border-color: #2a8d1d;
     box-shadow: none;
     transform: none;
 }
@@ -306,18 +308,18 @@
 
 .documento-formal { max-width: 900px; }
 
-.hrm-highlight-box { background: #f9f9f9; padding: 15px; border-left: 4px solid #009929; margin-bottom: 20px; white-space: pre-wrap; }
+.documento-formal .hrm-highlight-box { background: #f9f9f9; padding: 15px; border-left: 4px solid #009929; margin-bottom: 20px; white-space: pre-wrap; }
 
-/* Preview modal styles */
-.hrm-preview-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; overflow-y: auto; }
-.hrm-preview-modal-content { background: var(--mp-form-surface, #ffffff); border-radius: 8px; max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto; position: relative; }
-.hrm-preview-modal-header { position: sticky; top: 0; background: var(--mp-form-accent, #009929); color: var(--mp-form-period-text, #ffffff); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 10000; }
-.hrm-preview-modal-title { margin: 0; font-size: 18px; }
-.hrm-preview-modal-close { background: none; border: none; color: var(--mp-form-period-text, #ffffff); font-size: 24px; cursor: pointer; padding: 0; }
-.hrm-preview-modal-body { padding: 40px; background: #f0f8f0; }
-.hrm-preview-modal-box { background: var(--mp-form-surface, #ffffff); padding: 30px; border: 2px solid var(--mp-form-accent-strong, #003400); border-radius: 4px; }
-.hrm-preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #003400; }
-.hrm-preview-label { font-weight: bold; color: var(--mp-form-accent-strong, #003400); margin-bottom: 5px; font-size: 13px; text-transform: uppercase; }
-.hrm-preview-value { color: var(--mp-form-text, #333); padding: 10px; background: var(--mp-form-surface, #ffffff); border: 1px solid #ddd; border-radius: 3px; }
-.hrm-preview-section-title { font-size: 13px; font-weight: bold; text-transform: uppercase; color: var(--mp-form-period-text, #ffffff); background: var(--mp-form-accent, #009929); padding: 10px 15px; margin: 30px 0 15px 0; border-radius: 3px; }
+/* Preview modal styles - Scopeados bajo .documento-formal */
+.documento-formal .hrm-preview-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; overflow-y: auto; }
+.documento-formal .hrm-preview-modal-content { background: var(--mp-form-surface, #ffffff); border-radius: 8px; max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto; position: relative; }
+.documento-formal .hrm-preview-modal-header { position: sticky; top: 0; background: var(--mp-form-accent, #009929); color: var(--mp-form-period-text, #ffffff); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 10000; }
+.documento-formal .hrm-preview-modal-title { margin: 0; font-size: 18px; }
+.documento-formal .hrm-preview-modal-close { background: none; border: none; color: var(--mp-form-period-text, #ffffff); font-size: 24px; cursor: pointer; padding: 0; }
+.documento-formal .hrm-preview-modal-body { padding: 40px; background: #f0f8f0; }
+.documento-formal .hrm-preview-modal-box { background: var(--mp-form-surface, #ffffff); padding: 30px; border: 2px solid var(--mp-form-accent-strong, #003400); border-radius: 4px; }
+.documento-formal .hrm-preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #003400; }
+.documento-formal .hrm-preview-label { font-weight: bold; color: var(--mp-form-accent-strong, #003400); margin-bottom: 5px; font-size: 13px; text-transform: uppercase; }
+.documento-formal .hrm-preview-value { color: var(--mp-form-text, #333); padding: 10px; background: var(--mp-form-surface, #ffffff); border: 1px solid #ddd; border-radius: 3px; }
+.documento-formal .hrm-preview-section-title { font-size: 13px; font-weight: bold; text-transform: uppercase; color: var(--mp-form-period-text, #ffffff); background: var(--mp-form-accent, #009929); padding: 10px 15px; margin: 30px 0 15px 0; border-radius: 3px; }
 

@@ -34,8 +34,10 @@
         createFullscreenToggle();
 
         if (isFullscreenMode()) {
+            detachSidebarForFullscreen();
             preserveFullscreenOnLinks();
             checkLayoutDuplication();
+            observeSidebarPersistence();
         }
 
         function checkLayoutDuplication() {
@@ -101,6 +103,35 @@
             const newUrl = window.location.pathname + '?' + params.toString();
             document.body.style.opacity = '0.8';
             setTimeout(function() { window.location.href = newUrl; }, 150);
+        }
+
+        function detachSidebarForFullscreen() {
+            var sidebar = document.getElementById('hrm-sidebar');
+            if (!sidebar) return;
+
+            // Move sidebar to body to avoid overlay conflicts in fullscreen (all tabs)
+            if (sidebar.parentElement !== document.body) {
+                document.body.prepend(sidebar);
+            }
+
+            document.body.classList.add('hrm-sidebar-detached');
+        }
+
+        function observeSidebarPersistence() {
+            // Keep sidebar visible if DOM updates move/remove it (e.g., Mis Vacaciones)
+            var observer = new MutationObserver(function() {
+                var sidebar = document.getElementById('hrm-sidebar');
+                if (!sidebar) return;
+                if (sidebar.parentElement !== document.body) {
+                    document.body.prepend(sidebar);
+                    document.body.classList.add('hrm-sidebar-detached');
+                }
+                sidebar.style.display = 'flex';
+                sidebar.style.visibility = 'visible';
+                sidebar.style.opacity = '1';
+            });
+
+            observer.observe(document.body, { childList: true, subtree: true });
         }
 
         function preserveFullscreenOnLinks() {

@@ -1,24 +1,9 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-// Cargar estilos CSS
-wp_enqueue_style( 'hrm-vacaciones-formulario', plugins_url( 'hr-management/assets/css/vacaciones-formulario.css' ), array(), '1.0.0' );
-
-// Encolar el comportamiento de la vista (JS extraído de inline)
-wp_enqueue_script(
-    'hrm-vacaciones-form',
-    HRM_PLUGIN_URL . 'assets/js/vacaciones-form.js',
-    array(),
-    HRM_PLUGIN_VERSION,
-    true
-);
-wp_localize_script( 'hrm-vacaciones-form', 'hrmVacacionesFormData', array(
-    'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-    'nombreSolicitante' => isset( $nombre_solicitante ) ? esc_js( $nombre_solicitante ) : '',
-    'empleadoRut' => isset( $empleado_data ) && ! empty( $empleado_data->rut ) ? esc_js( $empleado_data->rut ) : '—',
-    'empleadoPuesto' => isset( $empleado_data ) && ! empty( $empleado_data->puesto ) ? esc_js( $empleado_data->puesto ) : '—',
-    'fechaHoyFormat' => isset( $fecha_hoy_format ) ? esc_js( $fecha_hoy_format ) : '' ,
-) );
+// =========================================================
+// 1. OBTENER DATOS (Antes de encolar scripts)
+// =========================================================
 
 // Obtener datos del empleado logueado usando la función centralizada
 $empleado_data = hrm_obtener_datos_empleado();
@@ -35,10 +20,33 @@ $fecha_hoy_format = current_time( 'd/m/Y' );
 
 // Verificar si la solicitud fue creada exitosamente
 $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_creada'] === '1';
+
+// =========================================================
+// 2. ENCOLAR ASSETS (Con datos disponibles)
+// =========================================================
+
+// Cargar estilos CSS
+wp_enqueue_style( 'hrm-vacaciones-formulario', plugins_url( 'hr-management/assets/css/vacaciones-formulario.css' ), array(), '1.0.0' );
+
+// Encolar el comportamiento de la vista (JS extraído de inline)
+wp_enqueue_script(
+    'hrm-vacaciones-form',
+    HRM_PLUGIN_URL . 'assets/js/vacaciones-form.js',
+    array('jquery'),
+    HRM_PLUGIN_VERSION,
+    true
+);
+wp_localize_script( 'hrm-vacaciones-form', 'hrmVacacionesFormData', array(
+    'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+    'nombreSolicitante' => isset( $nombre_solicitante ) ? esc_js( $nombre_solicitante ) : '',
+    'empleadoRut' => isset( $empleado_data ) && ! empty( $empleado_data->rut ) ? esc_js( $empleado_data->rut ) : '—',
+    'empleadoPuesto' => isset( $empleado_data ) && ! empty( $empleado_data->puesto ) ? esc_js( $empleado_data->puesto ) : '—',
+    'fechaHoyFormat' => isset( $fecha_hoy_format ) ? esc_js( $fecha_hoy_format ) : '' ,
+) );
 ?>
 
 <?php if ( $solicitud_creada ) : ?>
-<div id="alertaSolicitudCreada" class="hrm-success-modal">
+<div id="alertaSolicitudCreada_vac" class="hrm-success-modal">
     <div class="hrm-success-icon">✓</div>
     <h2 class="hrm-success-title">¡Solicitud Creada Exitosamente!</h2>
     <p class="hrm-success-text">
@@ -52,7 +60,7 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
     </button>
 </div>
 
-<div id="alertaFondo" class="hrm-success-backdrop hrm-success-close"></div>
+<div id="alertaFondo_vac" class="hrm-success-backdrop hrm-success-close"></div>
 
 <script>
 // Limpiar el query string inmediatamente después de mostrar el mensaje
@@ -115,17 +123,17 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
         
         <div class="parrafo-formal">
             Por medio de la presente, solicito formalmente la autorización para hacer uso de mis días de 
-            <span id="tipo_ausencia_display">ausencia</span> 
+            <span id="tipo_ausencia_display_vac">ausencia</span> 
             correspondientes al período laboral <?php echo esc_html( date( 'Y' ) ); ?>.
         </div>
         
         <!-- TIPO DE AUSENCIA (campo oculto visualmente, pero funcional) -->
         <div class="mb-3 d-none">
-            <label for="id_tipo" class="form-label fw-bold d-block mb-2">Tipo de ausencia <span class="text-danger">*</span></label>
+            <label for="id_tipo_vac" class="form-label fw-bold d-block mb-2">Tipo de ausencia <span class="text-danger">*</span></label>
             <?php 
             $lista_tipos = function_exists('hrm_get_tipos_ausencia_definidos') ? hrm_get_tipos_ausencia_definidos() : [];
             ?>
-            <select name="id_tipo" id="id_tipo" class="form-select" required>
+            <select name="id_tipo" id="id_tipo_vac" class="form-select" required>
                 <option value="">— Seleccione el tipo —</option>
                 <?php foreach ( $lista_tipos as $id => $label ) : ?>
                     <option value="<?= esc_attr( $id ) ?>" data-label="<?= esc_attr( strtolower($label) ) ?>" selected>
@@ -139,19 +147,19 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
         <div class="titulo-seccion">Período de Ausencia</div>
         
         <div class="mb-3">
-            <label for="fecha_inicio" class="form-label fw-bold">Fecha de inicio <span class="text-danger">*</span></label>
+            <label for="fecha_inicio_vac" class="form-label fw-bold">Fecha de inicio <span class="text-danger">*</span></label>
             <input type="date" 
                    name="fecha_inicio" 
-                   id="fecha_inicio" 
+                   id="fecha_inicio_vac" 
                    class="form-control" 
                    required>
         </div>
         
         <div class="mb-3">
-            <label for="fecha_fin" class="form-label fw-bold">Fecha de fin <span class="text-danger">*</span></label>
+            <label for="fecha_fin_vac" class="form-label fw-bold">Fecha de fin <span class="text-danger">*</span></label>
             <input type="date" 
                    name="fecha_fin" 
-                   id="fecha_fin" 
+                   id="fecha_fin_vac" 
                    class="form-control" 
                    required> 
         </div>
@@ -160,25 +168,25 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
         <div class="datos-periodo">
             <div class="campo-periodo">
                 <div class="campo-periodo-label">Desde:</div>
-                <div class="campo-periodo-valor" id="fecha_inicio_display">—</div>
+                <div class="campo-periodo-valor" id="fecha_inicio_display_vac">—</div>
             </div>
             <div class="campo-periodo">
                 <div class="campo-periodo-label">Hasta:</div>
-                <div class="campo-periodo-valor" id="fecha_fin_display">—</div>
+                <div class="campo-periodo-valor" id="fecha_fin_display_vac">—</div>
             </div>
             <div class="campo-periodo">
                 <div class="campo-periodo-label">Total de Días:</div>
-                <div class="campo-periodo-valor" id="total_dias_display">0</div>
+                <div class="campo-periodo-valor" id="total_dias_display_vac">0</div>
             </div>
         </div>
         
-        <input type="hidden" name="total_dias" id="total_dias_input" value="0">
+        <input type="hidden" name="total_dias" id="total_dias_input_vac" value="0">
         
         <!-- CAMPO DE COMENTARIOS (opcional) -->
         <div class="mb-3">
-            <label for="descripcion" class="form-label fw-bold">Comentarios adicionales (opcional)</label>
+            <label for="descripcion_vac" class="form-label fw-bold">Comentarios adicionales (opcional)</label>
             <textarea name="descripcion" 
-                      id="descripcion" 
+                      id="descripcion_vac" 
                       rows="3" 
                       class="form-control"
                       placeholder="Información adicional relevante..."></textarea>
@@ -204,31 +212,31 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
                 <div class="form-label fw-bold mb-2">Respuesta:</div>
                 <div class="opciones-respuesta d-flex gap-4 mt-2">
                     <div class="opcion-respuesta d-flex align-items-center gap-2">
-                        <input type="radio" id="respuesta_aceptado" name="respuesta_rrhh" value="aceptado">
-                        <label for="respuesta_aceptado">Aceptado</label>
+                        <input type="radio" id="respuesta_aceptado_vac" name="respuesta_rrhh" value="aceptado">
+                        <label for="respuesta_aceptado_vac">Aceptado</label>
                     </div>
                     <div class="opcion-respuesta d-flex align-items-center gap-2">
-                        <input type="radio" id="respuesta_rechazado" name="respuesta_rrhh" value="rechazado">
-                        <label for="respuesta_rechazado">Rechazado</label>
+                        <input type="radio" id="respuesta_rechazado_vac" name="respuesta_rrhh" value="rechazado">
+                        <label for="respuesta_rechazado_vac">Rechazado</label>
                     </div>
                 </div>
             </div>
             
             <div class="hrm-grid-two mb-3">
                 <div>
-                    <label for="nombre_jefe" class="form-label fw-bold">Nombre de Jefe/RRHH:</label>
+                    <label for="nombre_jefe_vac" class="form-label fw-bold">Nombre de Jefe/RRHH:</label>
                     <input type="text" 
                            name="nombre_jefe" 
-                           id="nombre_jefe" 
+                           id="nombre_jefe_vac" 
                            class="form-control"
                            placeholder="Nombre completo">
                 </div>
                 
                 <div>
-                    <label for="fecha_respuesta" class="form-label fw-bold">Fecha de Respuesta:</label>
+                    <label for="fecha_respuesta_vac" class="form-label fw-bold">Fecha de Respuesta:</label>
                     <input type="date" 
                            name="fecha_respuesta" 
-                           id="fecha_respuesta" 
+                           id="fecha_respuesta_vac" 
                            class="form-control"
                            value="<?php echo esc_attr( $fecha_hoy ); ?>">
                 </div>
@@ -242,9 +250,9 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
             </div>
             
             <div class="mb-3">
-                <label for="observaciones_rrhh" class="form-label fw-bold">Observaciones (Opcional):</label>
+                <label for="observaciones_rrhh_vac" class="form-label fw-bold">Observaciones (Opcional):</label>
                 <textarea name="observaciones_rrhh" 
-                          id="observaciones_rrhh" 
+                          id="observaciones_rrhh_vac" 
                           rows="4" 
                           class="form-control"
                           placeholder="Observaciones, comentarios o razones de rechazo..."></textarea>

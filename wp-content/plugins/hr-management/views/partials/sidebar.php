@@ -86,7 +86,13 @@ $logo_blanco_url = esc_url( HRM_PLUGIN_URL . 'assets/images/logo-blanco.png' );
     <span class="dashicons dashicons-menu"></span>
 </button>
 
-<aside id="hrm-sidebar" class="hrm-sidebar d-flex flex-column flex-shrink-0 border-end bg-light" role="complementary" data-accordion-mode="<?= in_array('empleado', (array) wp_get_current_user()->roles, true) ? 'all-open' : 'single'; ?>">
+<?php
+// Accordion mode: empleados y supervisores/gerentes pueden tener todas las secciones abiertas
+$user_roles_accordion = (array) wp_get_current_user()->roles;
+$is_supervisor_or_gerente = current_user_can('edit_hrm_employees') || current_user_can('manage_hrm_vacaciones');
+$accordion_mode = (in_array('empleado', $user_roles_accordion, true) || $is_supervisor_or_gerente) ? 'all-open' : 'single';
+?>
+<aside id="hrm-sidebar" class="hrm-sidebar d-flex flex-column flex-shrink-0 border-end bg-light" role="complementary" data-accordion-mode="<?= $accordion_mode; ?>">
 
     <!-- Header -->
     <div class="hrm-sidebar-header d-flex align-items-center justify-content-center p-3 border-bottom">
@@ -278,10 +284,18 @@ $logo_blanco_url = esc_url( HRM_PLUGIN_URL . 'assets/images/logo-blanco.png' );
         <?php if ($can_vacation || $can_admin_views || $is_editor_role): ?>
             <!-- Vacaciones -->
             <?php 
-            $count_pendientes = function_exists('hrm_contar_solicitudes_pendientes') ? hrm_contar_solicitudes_pendientes() : 0;
-            $mostrar_dot = function_exists('hrm_mostrar_dot_notificacion') ? hrm_mostrar_dot_notificacion() : false;
+            // Contador filtrado por permisos del usuario (solo solicitudes visibles)
+            $count_vacaciones_pendientes = function_exists('hrm_count_vacaciones_visibles') ? hrm_count_vacaciones_visibles('PENDIENTE') : 0;
+            $count_medio_dia_pendientes = function_exists('hrm_count_medio_dia_visibles') ? hrm_count_medio_dia_visibles('PENDIENTE') : 0;
+            $count_pendientes = $count_vacaciones_pendientes + $count_medio_dia_pendientes;
+            
+            // Mostrar dot solo si hay solicitudes pendientes visibles para este usuario
+            $mostrar_dot = ($count_pendientes > 0);
+            
+            // Siempre desplegado para gerentes, supervisores y editores
+            $auto_open = ($can_vacation || $can_admin_views || $is_editor_role) ? 'open' : '';
             ?>
-            <details <?= $section === 'vacaciones' ? 'open' : ''; ?> 
+            <details <?= (!empty($auto_open)) ? 'open' : ($section === 'vacaciones' ? 'open' : ''); ?> 
                      id="hrmVacacionesDetails"
                      data-hrm-section="vacaciones">
                 <summary class="d-flex align-items-center gap-2 px-3 py-2 fw-semibold position-relative">

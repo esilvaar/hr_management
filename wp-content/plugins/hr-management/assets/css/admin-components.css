@@ -194,3 +194,51 @@
     color: #ffffff;
     margin-left: 10px;
 }
+
+/* ====================================================================
+ * Selección múltiple de documentos
+ * ==================================================================== */
+
+.hrm-th-checkbox {
+    width: 50px;
+    text-align: center;
+}
+
+.hrm-doc-checkbox {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    accent-color: #0d6efd;
+}
+
+#hrm-delete-selected-btn {
+    animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.hrm-documents-wrapper {
+    width: 100%;
+}
+
+#hrm-doc-select-all {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    accent-color: #0d6efd;
+}
+
+.hrm-selection-info {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+

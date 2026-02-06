@@ -1,0 +1,35 @@
+-----------------------------------
+INICIO PROCESO SOLICITUD #241 (2026-02-06 14:57:24)
+EXITO: PDF generado en: /home/rrhhanacondaweb/public_html/wp-content/uploads/hrm_temp/Solicitud_Vacaciones_gerente-comercial_20260206_145724.pdf
+TAMANO: 3953 bytes.
+MAIL: Enviando con 1 adjuntos.
+-----------------------------------
+INICIO PROCESO SOLICITUD #242 (2026-02-06 15:09:00)
+EXITO: PDF generado en: /home/rrhhanacondaweb/public_html/wp-content/uploads/hrm_temp/Solicitud_Vacaciones_juan-andres-rojas-apellido_20260206_150900.pdf
+TAMANO: 3966 bytes.
+MAIL: Enviando con 1 adjuntos.
+-----------------------------------
+INICIO PROCESO SOLICITUD #243 (2026-02-06 15:16:36)
+EXITO: PDF generado en: /home/rrhhanacondaweb/public_html/wp-content/uploads/hrm_temp/Solicitud_Vacaciones_juan-andres-rojas-apellido_20260206_151636.pdf
+TAMANO: 3966 bytes.
+MAIL: Enviando con 1 adjuntos.
+-----------------------------------
+INICIO PROCESO SOLICITUD #244 (2026-02-06 15:30:01)
+EXITO: PDF generado en: /home/rrhhanacondaweb/public_html/wp-content/uploads/hrm_temp/Solicitud_Vacaciones_juan-andres-rojas-apellido_20260206_153001.pdf
+TAMANO: 3966 bytes.
+MAIL: Enviando con 1 adjuntos.
+-----------------------------------
+INICIO PROCESO SOLICITUD #245 (2026-02-06 15:35:36)
+EXITO: PDF generado en: /home/rrhhanacondaweb/public_html/wp-content/uploads/hrm_temp/Solicitud_Vacaciones_juan-andres-rojas-apellido_20260206_153536.pdf
+TAMANO: 3966 bytes.
+MAIL: Enviando con 1 adjuntos.
+-----------------------------------
+INICIO PROCESO SOLICITUD #246 (2026-02-06 18:29:48)
+EXITO: PDF generado en: /home/rrhhanacondaweb/public_html/wp-content/uploads/hrm_temp/Solicitud_Vacaciones_esteban-saez_20260206_182948.pdf
+TAMANO: 3955 bytes.
+MAIL: Enviando con 1 adjuntos.
+-----------------------------------
+INICIO PROCESO SOLICITUD #247 (2026-02-06 19:06:21)
+EXITO: PDF generado en: /home/rrhhanacondaweb/public_html/wp-content/uploads/hrm_temp/Solicitud_Vacaciones_eduardo-silva-a_20260206_190621.pdf
+TAMANO: 3956 bytes.
+MAIL: Enviando con 1 adjuntos.

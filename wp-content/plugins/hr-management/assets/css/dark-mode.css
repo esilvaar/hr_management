@@ -5,18 +5,18 @@ html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdow
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-item strong,
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-menu .dropdown-item,
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-menu .dropdown-item strong {
-    background-color: #232323 !important;
-    color: #ffffff !important;
-    border: none !important;
+    background-color: #232323;
+    color: #ffffff;
+    border: none;
 }
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-item:hover,
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-item:focus {
-    background-color: #333333 !important;
-    color: #6eb5ff !important;
+    background-color: #333333;
+    color: #6eb5ff;
 }
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container option {
-    background-color: #232323 !important;
-    color: #ffffff !important;
+    background-color: #232323;
+    color: #ffffff;
 }
 /* ====================================================================
  * Dropdowns de documentos (tipo y año) - Forzar fondo y texto en modo oscuro
@@ -27,23 +27,23 @@ html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdow
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-menu .dropdown-item:active,
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-menu .dropdown-item:focus,
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-menu .dropdown-item:hover {
-    background-color: #232323 !important;
-    color: #ffffff !important;
-    border: none !important;
+    background-color: #232323;
+    color: #ffffff;
+    border: none;
 }
 
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-menu .dropdown-item.active,
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-menu .dropdown-item.selected {
-    background-color: #446944 !important;
-    color: #ffffff !important;
+    background-color: #446944;
+    color: #ffffff;
 }
 
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .form-control,
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .form-control:focus,
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .form-control::placeholder {
-    color: #ffffff !important;
-    background-color: #232323 !important;
-    border-color: #444444 !important;
+    color: #ffffff;
+    background-color: #232323;
+    border-color: #444444;
 }
 /* ====================================================================
  * Dropdowns de documentos (tipo y año) en modo oscuro
@@ -51,32 +51,32 @@ html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .form-co
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .form-control,
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .form-control:focus,
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .form-control::placeholder {
-    color: #ffffff !important;
-    background-color: #2d2d2d !important;
-    border-color: #444444 !important;
+    color: #ffffff;
+    background-color: #2d2d2d;
+    border-color: #444444;
 }
 
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-item,
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-item strong {
-    color: #ffffff !important;
-    background-color: #2d2d2d !important;
+    color: #ffffff;
+    background-color: #2d2d2d;
 }
 
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-item:hover,
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-filter-container .dropdown-item:focus {
-    background-color: #3a3a3a !important;
-    color: #ffffff !important;
+    background-color: #3a3a3a;
+    color: #ffffff;
 }
 /* ====================================================================
  * Utilidades para tablas de empleados (nombre y rut)
  * ==================================================================== */
 
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-table-text-main {
-    color: #ffffff !important;
+    color: #ffffff;
 }
 
 html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-table-text-secondary {
-    color: #f0f0f0 !important;
+    color: #f0f0f0;
 }
 /* ====================================================================
  * Dark Mode Theme
@@ -141,17 +141,28 @@ html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-panel {
  * Sidebar Dark Mode
  * ==================================================================== */
 
-html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-sidebar {
+html.myplugin_dark body.hrm-admin-page .hrm-sidebar {
     background-color: #242424 !important;
     color: #ffffff;
 }
 
-html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-sidebar * {
+/* Sidebar moved to body in fullscreen mode (non-admin) */
+html.myplugin_dark body.hrm-fullscreen-mode .hrm-sidebar {
+    background-color: #242424 !important;
+    color: #ffffff !important;
+}
+
+html.myplugin_dark body.hrm-fullscreen-mode .hrm-sidebar * {
     background-color: inherit;
     color: inherit;
 }
 
-html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-sidebar-header {
+html.myplugin_dark body.hrm-admin-page .hrm-sidebar * {
+    background-color: inherit;
+    color: inherit;
+}
+
+html.myplugin_dark body.hrm-admin-page .hrm-sidebar-header {
     border-bottom-color: #444444;
     background-color: #2d2d2d !important;
 }
@@ -183,12 +194,12 @@ html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-nav details {
     color: #ffffff !important;
 }
 
-html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-logo-light {
-    display: none;
+html.myplugin_dark body.hrm-admin-page .hrm-logo-light {
+    display: none !important;
 }
 
-html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-logo-dark {
-    display: block;
+html.myplugin_dark body.hrm-admin-page .hrm-logo-dark {
+    display: block !important;
 }
 
 html.myplugin_dark body.hrm-admin-page #wpcontent .nav-link {
@@ -196,14 +207,16 @@ html.myplugin_dark body.hrm-admin-page #wpcontent .nav-link {
     background-color: transparent !important;
 }
 
+html.myplugin_dark body.hrm-admin-page .hrm-sidebar .nav-link:hover,
 html.myplugin_dark body.hrm-admin-page #wpcontent .nav-link:hover {
     background-color: #333333 !important;
     color: #ffffff !important;
 }
 
+html.myplugin_dark body.hrm-admin-page .hrm-sidebar .nav-link.active,
 html.myplugin_dark body.hrm-admin-page #wpcontent .nav-link.active {
-    background-color: #333333 !important;
-    color: #6eb5ff !important;
+    background-color: #198754 !important;
+    color: #fff !important;
     font-weight: 500;
 }
 
@@ -629,7 +642,9 @@ html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-nav .dashicons {
     color: #f0f0f0;
 }
 
+html.myplugin_dark body.hrm-admin-page .hrm-sidebar .nav-link:hover .dashicons,
 html.myplugin_dark body.hrm-admin-page #wpcontent .nav-link:hover .dashicons,
+html.myplugin_dark body.hrm-admin-page .hrm-sidebar .nav-link.active .dashicons,
 html.myplugin_dark body.hrm-admin-page #wpcontent .nav-link.active .dashicons {
     color: #ffffff;
     opacity: 1;
@@ -1551,4 +1566,138 @@ html.myplugin_dark body.hrm-admin-page #wpcontent {
     --mp-form-accent-contrast: #1b5d2f;
     --mp-pill-bg: rgba(255, 255, 255, 0.1);
     --mp-pill-success-bg: rgba(39, 174, 96, 0.2);
+}
+
+/* ====================================================================
+ * FIX Z-INDEX MODO OSCURO - STACKING CONTEXT
+ * Solución para evitar que el contenido principal tape al sidebar
+ * ==================================================================== */
+
+/* 1. Reforzar el Sidebar para que siempre esté encima */
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-sidebar {
+    position: sticky !important; /* Aseguramos que mantenga su comportamiento sticky */
+    z-index: 9999 !important;    /* Elevamos el nivel por seguridad contra plugins terceros */
+}
+
+/* 2. Controlar el Contenido Principal - CRÍTICO: position relative activa z-index */
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-content {
+    position: relative !important; /* Necesario para que z-index funcione (no aplica en static) */
+    z-index: 1 !important;         /* Nivel bajo, pero definido explícitamente */
+    background-color: #1a1a1a !important; 
+}
+
+/* 3. Asegurar que los paneles internos no se escapen del orden esperado */
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-admin-panel,
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-panel {
+    position: relative;
+    z-index: 2; /* Un poco más que el fondo del content, pero mucho menos que el sidebar */
+}
+
+/* ====================================================================
+ * FIX DARK MODE: FORMULARIO VACACIONES (.documento-formal)
+ * Inyecta variables oscuras cuando .myplugin_dark está activo
+ * ==================================================================== */
+
+/* 1. Redefinir variables del formulario para Modo Oscuro */
+html.myplugin_dark body.hrm-admin-page #wpcontent {
+    /* Fondo del formulario */
+    --mp-form-surface: #2d2d2d !important;
+    --mp-form-surface-muted: #383838 !important;
+    --mp-form-border: #444444 !important;
+
+    /* Textos */
+    --mp-form-label: #e0e0e0 !important;
+    --mp-form-text: #cccccc !important;
+    --mp-form-title-bg: #333333 !important;
+    --mp-form-title-text: #ffffff !important;
+
+    /* Campos de Resumen (Cajas oscuras con texto blanco) */
+    --mp-form-period-bg: #1a1a1a !important;
+    --mp-form-period-text: #ffffff !important;
+
+    /* Acento verde */
+    --mp-form-accent: #37B126 !important;
+    --mp-form-accent-strong: #2a8d1d !important;
+}
+
+/* 2. Forzar estilos en el contenedor del formulario */
+html.myplugin_dark body.hrm-admin-page #wpcontent .documento-formal {
+    background-color: var(--mp-form-surface) !important;
+    border-color: var(--mp-form-border) !important;
+    color: var(--mp-form-text) !important;
+}
+
+/* 3. Corregir Inputs (Fechas, Texto y Textarea) */
+html.myplugin_dark body.hrm-admin-page #wpcontent .documento-formal input[type="date"],
+html.myplugin_dark body.hrm-admin-page #wpcontent .documento-formal input[type="text"],
+html.myplugin_dark body.hrm-admin-page #wpcontent .documento-formal textarea,
+html.myplugin_dark body.hrm-admin-page #wpcontent .documento-formal .form-control,
+html.myplugin_dark body.hrm-admin-page #wpcontent .documento-formal .form-select {
+    background-color: #1a1a1a !important;
+    border: 1px solid #555 !important;
+    color: #ffffff !important;
+}
+
+/* 4. Corregir Encabezado del Formulario */
+html.myplugin_dark body.hrm-admin-page #wpcontent .documento-formal .seccion-encabezado {
+    background-color: #383838 !important;
+    border-bottom-color: #444 !important;
+}
+
+/* 5. Valores info dentro del encabezado */
+html.myplugin_dark body.hrm-admin-page #wpcontent .documento-formal .valor-info {
+    background-color: #1a1a1a !important;
+    border-color: #555 !important;
+    color: #ffffff !important;
+}
+
+/* 6. Títulos de Sección con acento verde */
+html.myplugin_dark body.hrm-admin-page #wpcontent .documento-formal .titulo-seccion {
+    background-color: #333 !important;
+    color: #fff !important;
+    border-left: 5px solid #37B126;
+}
+
+/* 7. Resumen del período */
+html.myplugin_dark body.hrm-admin-page #wpcontent .documento-formal .datos-periodo {
+    background-color: #383838 !important;
+    border-color: #444 !important;
+}
+
+/* 8. Sección RRHH (solo admins) */
+html.myplugin_dark body.hrm-admin-page #wpcontent .documento-formal .seccion-rrhh {
+    background-color: #383838 !important;
+    border-color: #444 !important;
+}
+
+/* 9. Highlight box */
+html.myplugin_dark body.hrm-admin-page #wpcontent .documento-formal .hrm-highlight-box {
+    background: #1a1a1a !important;
+    border-left-color: #37B126 !important;
+    color: #cccccc !important;
+}
+
+/* 10. Preview modal en dark mode */
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-preview-modal-body {
+    background: #2d2d2d !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-preview-modal-box {
+    background: #1a1a1a !important;
+    border-color: #444 !important;
+    color: #cccccc !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-preview-grid {
+    border-bottom-color: #444 !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-preview-value {
+    background: #2d2d2d !important;
+    border-color: #555 !important;
+    color: #ffffff !important;
+}
+
+html.myplugin_dark body.hrm-admin-page #wpcontent .hrm-preview-label {
+    color: #37B126 !important;
 }

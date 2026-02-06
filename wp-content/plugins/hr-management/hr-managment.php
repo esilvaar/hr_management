@@ -48,7 +48,7 @@ if (!defined('ABSPATH')) {
  */
 define('HRM_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('HRM_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('HRM_PLUGIN_VERSION', '2.1.0');
+define('HRM_PLUGIN_VERSION', '2.3.0');
 
 /**
  * ============================================================================
@@ -505,7 +505,7 @@ function hrm_render_vacaciones_empleado_page()
 
     wp_cache_delete('hrm_vacaciones_empleado_' . $current_user_id);
 
-    echo '<div class="wrap">';
+    echo '<div class="wrap hrm-vacaciones-page">';
     echo '<div class="hrm-admin-layout">';
     hrm_get_template_part('partials/sidebar-loader');
     echo '<main class="hrm-content">';

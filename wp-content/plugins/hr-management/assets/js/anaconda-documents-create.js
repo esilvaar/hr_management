@@ -242,7 +242,17 @@
         function showError(msg){ fileError.textContent = msg; fileInfo.textContent = ''; if (submitBtn) submitBtn.disabled = true; }
         function clearError(){ fileError.textContent = ''; if (submitBtn) submitBtn.disabled = false; }
         function showFile(file){ fileInfo.textContent = file.name + ' — ' + Math.round(file.size / 1024) + ' KB'; clearError(); }
-        function validateFile(file){ if (!file) return showError('No se seleccionó archivo.'); if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)){ return showError('Solo se permiten archivos PDF.'); } if (file.size > MAX_SIZE){ return showError('El archivo excede el tamaño máximo (10 MB).'); } showFile(file); return true; }
+        function validateFile(file){
+            if (!file) return true; // File is optional
+            if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)){ 
+                return showError('Solo se permiten archivos PDF.'); 
+            }
+            if (file.size > MAX_SIZE){ 
+                return showError('El archivo excede el tamaño máximo (10 MB).'); 
+            }
+            showFile(file);
+            return true;
+        }
 
         dropArea && dropArea.addEventListener('click', () => fileInput && fileInput.click());
         dropArea && dropArea.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') fileInput && fileInput.click(); });

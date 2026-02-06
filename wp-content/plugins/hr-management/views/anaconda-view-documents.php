@@ -45,6 +45,22 @@ if ( $doc_id ) {
 ?>
 <?php // Styles merged into plugin-common.css: assets/css/plugin-common.css - specific view file removed. ?>
 
+<div class="mb-3 ps-4 pt-3">
+    <?php
+    if ( isset( $_GET['employee_id'] ) ) {
+        $ref_id = absint( $_GET['employee_id'] );
+        $back_page = isset( $_GET['source_page'] ) ? sanitize_text_field( $_GET['source_page'] ) : 'hrm-empleados';
+        // Mostrar botón Volver si venimos desde un perfil específico (indicado por employee_id en URL)
+        // Ya sea propio o ajeno, si se especificó el ID es porque se navegó en contexto de ese empleado
+        ?>
+        <a href="<?= esc_url( admin_url( 'admin.php?page=' . $back_page . '&tab=profile&id=' . $ref_id ) ) ?>" class="btn btn-secondary btn-sm">
+            <span class="dashicons dashicons-arrow-left-alt2" style="vertical-align: text-bottom;"></span> Volver al Perfil
+        </a>
+        <?php
+    }
+    ?>
+</div>
+
 <div class="hrm-page-header">
     <h1 class="hrm-page-title">
         <span class="dashicons dashicons-book-alt"></span>

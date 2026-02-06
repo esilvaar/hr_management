@@ -27,7 +27,7 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
 ?>
 
 <?php if ( $solicitud_creada ) : ?>
-<div id="alertaSolicitudCreada" class="hrm-success-modal">
+<div id="alertaSolicitudCreada_medio" class="hrm-success-modal">
     <div class="hrm-success-icon">✓</div>
     <h2 class="hrm-success-title">¡Solicitud Creada Exitosamente!</h2>
     <p class="hrm-success-text">
@@ -41,7 +41,7 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
     </button>
 </div>
 
-<div id="alertaFondo" class="hrm-success-backdrop hrm-success-close"></div>
+<div id="alertaFondo_medio" class="hrm-success-backdrop hrm-success-close"></div>
 
 <script>
 // Limpiar el query string inmediatamente después de mostrar el mensaje
@@ -104,21 +104,21 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
         
         <div class="parrafo-formal mt-4">
             Por medio de la presente, solicito formalmente la autorización para faltar medio día 
-            (<strong id="periodo_text">mañana</strong>) 
+            (<strong id="periodo_text_medio">mañana</strong>) 
             correspondiente al período laboral <?php echo esc_html( date( 'Y' ) ); ?>.
         </div>
         
         <!-- TIPO DE AUSENCIA (campo oculto visualmente, pero funcional) -->
-        <input type="hidden" name="id_tipo" id="id_tipo" value="1">
+        <input type="hidden" name="id_tipo" id="id_tipo_medio" value="1">
         
         <!-- SECCIÓN: FECHA DEL MEDIO DÍA -->
         <div class="titulo-seccion">Fecha del Medio Día</div>
         
         <div class="mb-3">
-            <label for="fecha_medio_dia" class="form-label fw-bold">Fecha <span class="text-danger">*</span></label>
+            <label for="fecha_medio_dia_medio" class="form-label fw-bold">Fecha <span class="text-danger">*</span></label>
             <input type="date" 
                    name="fecha_medio_dia" 
-                   id="fecha_medio_dia" 
+                   id="fecha_medio_dia_medio" 
                    class="form-control" 
                    required>
         </div>
@@ -128,12 +128,12 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
             <label class="form-label fw-bold">Período del día <span class="text-danger">*</span></label>
             <div class="opciones-respuesta d-flex gap-4 mt-2">
                 <div class="d-flex align-items-center gap-2">
-                    <input type="radio" id="periodo_manana" name="periodo_ausencia" value="mañana" checked>
-                    <label for="periodo_manana" class="mb-0 cursor-pointer">Mañana</label>
+                    <input type="radio" id="periodo_manana_medio" name="periodo_ausencia" value="mañana" checked>
+                    <label for="periodo_manana_medio" class="mb-0 cursor-pointer">Mañana</label>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <input type="radio" id="periodo_tarde" name="periodo_ausencia" value="tarde">
-                    <label for="periodo_tarde" class="mb-0 cursor-pointer">Tarde</label>
+                    <input type="radio" id="periodo_tarde_medio" name="periodo_ausencia" value="tarde">
+                    <label for="periodo_tarde_medio" class="mb-0 cursor-pointer">Tarde</label>
                 </div>
             </div>
         </div>
@@ -142,27 +142,27 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
         <div class="datos-periodo">
             <div class="campo-periodo">
                 <div class="campo-periodo-label">Fecha:</div>
-                <div class="campo-periodo-valor" id="fecha_display">—</div>
+                <div class="campo-periodo-valor" id="fecha_display_medio">—</div>
             </div>
             <div class="campo-periodo">
                 <div class="campo-periodo-label">Período:</div>
-                <div class="campo-periodo-valor" id="periodo_display">Mañana</div>
+                <div class="campo-periodo-valor" id="periodo_display_medio">Mañana</div>
             </div>
             <div class="campo-periodo">
                 <div class="campo-periodo-label">Total de Días:</div>
-                <div class="campo-periodo-valor" id="total_dias_display">0.5</div>
+                <div class="campo-periodo-valor" id="total_dias_display_medio">0.5</div>
             </div>
         </div>
         
-        <input type="hidden" name="fecha_inicio" id="fecha_inicio" value="">
-        <input type="hidden" name="fecha_fin" id="fecha_fin" value="">
-        <input type="hidden" name="total_dias" id="total_dias_input" value="0.5">
+        <input type="hidden" name="fecha_inicio" id="fecha_inicio_medio" value="">
+        <input type="hidden" name="fecha_fin" id="fecha_fin_medio" value="">
+        <input type="hidden" name="total_dias" id="total_dias_input_medio" value="0.5">
         
         <!-- CAMPO DE COMENTARIOS (opcional) -->
         <div class="mb-3">
-            <label for="descripcion" class="form-label fw-bold">Motivo (opcional)</label>
+            <label for="descripcion_medio" class="form-label fw-bold">Motivo (opcional)</label>
             <textarea name="descripcion" 
-                      id="descripcion" 
+                      id="descripcion_medio" 
                       rows="3" 
                       class="form-control"
                       placeholder="Información adicional relevante..."></textarea>
@@ -188,31 +188,31 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
                 <div class="form-label fw-bold mb-2">Respuesta:</div>
                 <div class="opciones-respuesta d-flex gap-4 mt-2">
                     <div class="opcion-respuesta d-flex align-items-center gap-2">
-                        <input type="radio" id="respuesta_aceptado" name="respuesta_rrhh" value="aceptado">
-                        <label for="respuesta_aceptado">Aceptado</label>
+                        <input type="radio" id="respuesta_aceptado_medio" name="respuesta_rrhh" value="aceptado">
+                        <label for="respuesta_aceptado_medio">Aceptado</label>
                     </div>
                     <div class="opcion-respuesta d-flex align-items-center gap-2">
-                        <input type="radio" id="respuesta_rechazado" name="respuesta_rrhh" value="rechazado">
-                        <label for="respuesta_rechazado">Rechazado</label>
+                        <input type="radio" id="respuesta_rechazado_medio" name="respuesta_rrhh" value="rechazado">
+                        <label for="respuesta_rechazado_medio">Rechazado</label>
                     </div>
                 </div>
             </div>
             
             <div class="hrm-grid-two mb-3">
                 <div>
-                    <label for="nombre_jefe" class="form-label fw-bold">Nombre de Jefe/RRHH:</label>
+                    <label for="nombre_jefe_medio" class="form-label fw-bold">Nombre de Jefe/RRHH:</label>
                     <input type="text" 
                            name="nombre_jefe" 
-                           id="nombre_jefe" 
+                           id="nombre_jefe_medio" 
                            class="form-control"
                            placeholder="Nombre completo">
                 </div>
                 
                 <div>
-                    <label for="fecha_respuesta" class="form-label fw-bold">Fecha de Respuesta:</label>
+                    <label for="fecha_respuesta_medio" class="form-label fw-bold">Fecha de Respuesta:</label>
                     <input type="date" 
                            name="fecha_respuesta" 
-                           id="fecha_respuesta" 
+                           id="fecha_respuesta_medio" 
                            class="form-control"
                            value="<?php echo esc_attr( $fecha_hoy ); ?>">
                 </div>
@@ -226,9 +226,9 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
             </div>
             
             <div class="mb-3">
-                <label for="observaciones_rrhh" class="form-label fw-bold">Observaciones (Opcional):</label>
+                <label for="observaciones_rrhh_medio" class="form-label fw-bold">Observaciones (Opcional):</label>
                 <textarea name="observaciones_rrhh" 
-                          id="observaciones_rrhh" 
+                          id="observaciones_rrhh_medio" 
                           rows="4" 
                           class="form-control"
                           placeholder="Observaciones, comentarios o razones de rechazo..."></textarea>
@@ -241,10 +241,49 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
             <button type="submit" name="hrm_enviar_solicitud" class="btn btn-primary px-5">
                 <span class="dashicons dashicons-yes"></span> Enviar Solicitud
             </button>
-            <button type="button" class="btn btn-secondary px-5 hrm-cancel-btn">
+            <button type="button" id="btnCancelarMedio" class="btn btn-secondary px-5" onclick="fuerzaBrutaLimpiarMedioDia()">
                 <span class="dashicons dashicons-no"></span> Cancelar
             </button>
         </div>
+
+        <script>
+        function fuerzaBrutaLimpiarMedioDia() {
+            // Limpiar fecha
+            var fecha = document.getElementById('fecha_medio_dia_medio');
+            if (fecha) fecha.value = '';
+
+            // Limpiar motivo/descripción
+            var desc = document.getElementById('descripcion_medio');
+            if (desc) desc.value = '';
+
+            // Resetear radio a "Mañana"
+            var manana = document.getElementById('periodo_manana_medio');
+            if (manana) manana.checked = true;
+
+            // Limpiar displays informativos
+            var fechaDisp = document.getElementById('fecha_display_medio');
+            if (fechaDisp) fechaDisp.textContent = '—';
+
+            var periodoDisp = document.getElementById('periodo_display_medio');
+            if (periodoDisp) periodoDisp.textContent = 'Mañana';
+
+            // Limpiar campos ocultos
+            var inicio = document.getElementById('fecha_inicio_medio');
+            if (inicio) inicio.value = '';
+
+            var fin = document.getElementById('fecha_fin_medio');
+            if (fin) fin.value = '';
+
+            // Limpiar campos de admin (si existen)
+            var jefe = document.getElementById('nombre_jefe_medio');
+            if (jefe) jefe.value = '';
+
+            var obs = document.getElementById('observaciones_rrhh_medio');
+            if (obs) obs.value = '';
+
+            console.log('Medio Día: Formulario limpiado por fuerzaBrutaLimpiarMedioDia()');
+        }
+        </script>
     </form>
 </div>
 
@@ -253,7 +292,7 @@ $solicitud_creada = isset( $_GET['solicitud_creada'] ) && $_GET['solicitud_cread
 wp_enqueue_script(
     'hrm-medio-dia-form',
     HRM_PLUGIN_URL . 'assets/js/medio-dia-form.js',
-    array(),
+    array('jquery'),
     HRM_PLUGIN_VERSION,
     true
 );

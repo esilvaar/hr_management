@@ -551,7 +551,7 @@ html:not(.myplugin_dark) .hrm-dropdown-item:hover {
 
 .hrm-sidebar .nav-link.active,
 .hrm-nav-link.active {
-    background-color: #0dfd7d;
+    background-color: #26ad65;
     color: #fff;
     box-shadow: none;
 }
@@ -827,7 +827,7 @@ html.myplugin_dark .dropdown-item:active {
 }
 
 /* System preference for dark mode (automatic detection) */
-@media (prefers-color-scheme: dark) {
+@media (max-width: 1px) { /* DISABLED prefers-color-scheme: dark to prevent interference with toggle */
     .hrm-doc-type-filter-items,
     #hrm-doc-type-filter-items,
     #hrm-tipo-items,
@@ -1084,6 +1084,27 @@ html.myplugin_dark .dropdown-item:active {
     gap: 0.5rem;
     display: flex;
     flex-wrap: wrap;
+}
+
+/* Dark Mode support for Tabs */
+html.myplugin_dark .nav-tabs {
+    background-color: #212529;
+    border-bottom-color: #495057;
+}
+
+html.myplugin_dark .nav-link {
+    color: #adb5bd;
+}
+
+html.myplugin_dark .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+html.myplugin_dark .nav-link.active {
+    background-color: #2d3238; /* Matches dark dropdowns/tables background */
+    color: #6ea8fe;
+    border-bottom-color: #6ea8fe;
 }
 
 .nav-item {

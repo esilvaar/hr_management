@@ -10,6 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+require_once plugin_dir_path( __FILE__ ) . 'functions-pdf.php';
+
 /* =====================================================
  * EVENTO CRON: SINCRONIZACIÓN DIARIA DE PERSONAL VIGENTE
  * =====================================================
@@ -704,6 +706,92 @@ function hrm_count_vacaciones_visibles( $estado = null ) {
 }
 
 /**
+ * Suma el total de días solicitados (día completo) visibles para el usuario actual.
+ * @param string|null $estado Opcional: 'PENDIENTE', 'APROBADA', 'RECHAZADA' o null para todos
+ * @return float Total de días solicitados visibles
+ */
+function hrm_sum_dias_vacaciones_visibles( $estado = null ) {
+    global $wpdb;
+
+    $table_solicitudes = $wpdb->prefix . 'rrhh_solicitudes_ausencia';
+    $table_empleados = $wpdb->prefix . 'rrhh_empleados';
+    $table_gerencia = $wpdb->prefix . 'rrhh_gerencia_deptos';
+
+    $where_conditions = array();
+    $params = array();
+
+    $is_admin = current_user_can( 'manage_options' );
+    $is_editor_vacaciones = current_user_can( 'manage_hrm_vacaciones' ) && ! current_user_can( 'edit_hrm_employees' );
+
+    if ( ! $is_admin && ! $is_editor_vacaciones ) {
+        $current_user_id = get_current_user_id();
+        $current_user = get_userdata( $current_user_id );
+        $current_user_email = $current_user ? $current_user->user_email : '';
+
+        $departamentos_a_gestionar = array();
+        if ( $current_user_email ) {
+            $deptos_result = $wpdb->get_col( $wpdb->prepare(
+                "SELECT depto_a_cargo FROM {$table_gerencia} WHERE correo_gerente = %s AND estado = 1",
+                $current_user_email
+            ) );
+            if ( ! empty( $deptos_result ) ) {
+                $departamentos_a_gestionar = $deptos_result;
+            }
+        }
+
+        $id_empleado_user = $wpdb->get_var( $wpdb->prepare(
+            "SELECT id_empleado FROM {$table_empleados} WHERE user_id = %d LIMIT 1",
+            get_current_user_id()
+        ) );
+
+        if ( empty( $departamentos_a_gestionar ) && empty( $id_empleado_user ) ) {
+            return 0.0;
+        }
+
+        $where_or = array();
+        if ( ! empty( $departamentos_a_gestionar ) ) {
+            $placeholders = implode( ',', array_fill( 0, count( $departamentos_a_gestionar ), '%s' ) );
+            $where_or[] = "(e.departamento IN ({$placeholders}))";
+            foreach ( $departamentos_a_gestionar as $d ) {
+                $params[] = $d;
+            }
+        }
+        if ( $id_empleado_user ) {
+            $where_or[] = "(s.id_empleado = %d)";
+            $params[] = $id_empleado_user;
+        }
+
+        if ( ! empty( $where_or ) ) {
+            $where_conditions[] = '( ' . implode( ' OR ', $where_or ) . ' )';
+        }
+    }
+
+    if ( ! empty( $estado ) && in_array( $estado, array( 'PENDIENTE', 'APROBADA', 'RECHAZADA' ), true ) ) {
+        $where_conditions[] = 's.estado = %s';
+        $params[] = $estado;
+    }
+
+    $where = '';
+    if ( ! empty( $where_conditions ) ) {
+        $where = 'WHERE ' . implode( ' AND ', $where_conditions );
+    }
+
+    $sql = "SELECT COALESCE(SUM(s.total_dias),0) FROM {$table_solicitudes} s JOIN {$table_empleados} e ON s.id_empleado = e.id_empleado {$where}";
+
+    if ( ! empty( $params ) ) {
+        if ( is_array( $params ) ) {
+            $prepare_args = array_merge( array( $sql ), $params );
+            $sql = call_user_func_array( array( $wpdb, 'prepare' ), $prepare_args );
+        } else {
+            $sql = $wpdb->prepare( $sql, $params );
+        }
+    }
+
+    $sum = $wpdb->get_var( $sql );
+    return floatval( $sum );
+}
+
+/**
  * Cuenta las solicitudes de medio día visibles para el usuario actual.
  * @param string|null $estado Opcional: 'PENDIENTE', 'APROBADA', 'RECHAZADA' o null para todos
  * @return int Conteo de solicitudes de medio día visibles
@@ -793,6 +881,95 @@ function hrm_count_medio_dia_visibles( $estado = null ) {
 
     $count = $wpdb->get_var( $sql );
     return intval( $count );
+}
+
+/**
+ * Suma el total de días solicitados (medio día) visibles para el usuario actual.
+ * @param string|null $estado Opcional: 'PENDIENTE', 'APROBADA', 'RECHAZADA' o null para todos
+ * @return float Total de días solicitados visibles
+ */
+function hrm_sum_dias_medio_dia_visibles( $estado = null ) {
+    global $wpdb;
+
+    $table_solicitudes = $wpdb->prefix . 'rrhh_solicitudes_medio_dia';
+    $table_empleados = $wpdb->prefix . 'rrhh_empleados';
+    $table_gerencia = $wpdb->prefix . 'rrhh_gerencia_deptos';
+
+    $where_conditions = array();
+    $params = array();
+
+    $where_conditions[] = "s.fecha_inicio = s.fecha_fin";
+    $where_conditions[] = "s.periodo_ausencia IN ('mañana', 'tarde')";
+
+    $is_admin = current_user_can( 'manage_options' );
+    $is_editor_vacaciones = current_user_can( 'manage_hrm_vacaciones' ) && ! current_user_can( 'edit_hrm_employees' );
+
+    if ( ! $is_admin && ! $is_editor_vacaciones ) {
+        $current_user_id = get_current_user_id();
+        $current_user = get_userdata( $current_user_id );
+        $current_user_email = $current_user ? $current_user->user_email : '';
+
+        $departamentos_a_gestionar = array();
+        if ( $current_user_email ) {
+            $deptos_result = $wpdb->get_col( $wpdb->prepare(
+                "SELECT depto_a_cargo FROM {$table_gerencia} WHERE correo_gerente = %s AND estado = 1",
+                $current_user_email
+            ) );
+            if ( ! empty( $deptos_result ) ) {
+                $departamentos_a_gestionar = $deptos_result;
+            }
+        }
+
+        $id_empleado_user = $wpdb->get_var( $wpdb->prepare(
+            "SELECT id_empleado FROM {$table_empleados} WHERE user_id = %d LIMIT 1",
+            $current_user_id
+        ) );
+
+        if ( empty( $departamentos_a_gestionar ) && empty( $id_empleado_user ) ) {
+            return 0.0;
+        }
+
+        $where_or = array();
+        if ( ! empty( $departamentos_a_gestionar ) ) {
+            $placeholders = implode( ',', array_fill( 0, count( $departamentos_a_gestionar ), '%s' ) );
+            $where_or[] = "(e.departamento IN ({$placeholders}))";
+            foreach ( $departamentos_a_gestionar as $d ) {
+                $params[] = $d;
+            }
+        }
+        if ( $id_empleado_user ) {
+            $where_or[] = "(s.id_empleado = %d)";
+            $params[] = $id_empleado_user;
+        }
+
+        if ( ! empty( $where_or ) ) {
+            $where_conditions[] = '( ' . implode( ' OR ', $where_or ) . ' )';
+        }
+    }
+
+    if ( ! empty( $estado ) && in_array( $estado, array( 'PENDIENTE', 'APROBADA', 'RECHAZADA' ), true ) ) {
+        $where_conditions[] = 's.estado = %s';
+        $params[] = $estado;
+    }
+
+    $where = '';
+    if ( ! empty( $where_conditions ) ) {
+        $where = 'WHERE ' . implode( ' AND ', $where_conditions );
+    }
+
+    $sql = "SELECT COALESCE(SUM(s.total_dias),0) FROM {$table_solicitudes} s JOIN {$table_empleados} e ON s.id_empleado = e.id_empleado {$where}";
+
+    if ( ! empty( $params ) ) {
+        if ( is_array( $params ) ) {
+            $prepare_args = array_merge( array( $sql ), $params );
+            $sql = call_user_func_array( array( $wpdb, 'prepare' ), $prepare_args );
+        } else {
+            $sql = $wpdb->prepare( $sql, $params );
+        }
+    }
+
+    $sum = $wpdb->get_var( $sql );
+    return floatval( $sum );
 }
 
 /* =====================================================
@@ -1004,6 +1181,36 @@ function hrm_get_vacaciones_empleado( $user_id ) {
  */
 function hrm_enviar_vacaciones_handler() {
 
+    // === INICIO DEPURACIÓN AGRESIVA ===
+    $archivo_debug = plugin_dir_path( __FILE__ ) . 'hrm_form_debug.txt';
+    $debug_msg = "\n========================================\n";
+    $debug_msg .= "TIMESTAMP: " . date( 'Y-m-d H:i:s' ) . "\n";
+    $debug_msg .= "========================================\n\n";
+    
+    // 1. Usuario logueado
+    $current_user = wp_get_current_user();
+    $debug_msg .= "--- USUARIO ACTUAL ---\n";
+    $debug_msg .= "ID: " . get_current_user_id() . "\n";
+    $debug_msg .= "Login: " . $current_user->user_login . "\n";
+    $debug_msg .= "Email: " . $current_user->user_email . "\n";
+    $debug_msg .= "Roles: " . implode( ', ', $current_user->roles ) . "\n\n";
+    
+    // 2. Datos del formulario ($_POST)
+    $debug_msg .= "--- DATOS POST RECIBIDOS ---\n";
+    $debug_msg .= print_r( $_POST, true ) . "\n";
+    
+    // 3. Archivos subidos ($_FILES)
+    $debug_msg .= "--- ARCHIVOS SUBIDOS ---\n";
+    $debug_msg .= print_r( $_FILES, true ) . "\n";
+    
+    // 4. URL de origen
+    $debug_msg .= "--- HTTP REFERER ---\n";
+    $debug_msg .= isset( $_SERVER['HTTP_REFERER'] ) ? $_SERVER['HTTP_REFERER'] : 'N/A' . "\n";
+    
+    // 5. Guardar log
+    file_put_contents( $archivo_debug, $debug_msg, FILE_APPEND );
+    // === FIN DEPURACIÓN ===
+
     // Log de entrada
     error_log('=== HRM: Inicio de hrm_enviar_vacaciones_handler ===');
     error_log('POST data: ' . print_r($_POST, true));
@@ -1023,6 +1230,9 @@ function hrm_enviar_vacaciones_handler() {
     error_log('HRM: Verificaciones iniciales pasadas');
 
     global $wpdb;
+
+    // Cargar generador de PDF explicitamente para este handler
+    require_once plugin_dir_path( __FILE__ ) . 'functions-pdf.php';
 
     // Tablas con prefijo dinámico
     $table_empleados = $wpdb->prefix . 'rrhh_empleados';
@@ -1120,6 +1330,11 @@ if ( $total_dias <= 0 ) {
     wp_die( 'El rango de fechas no contiene días hábiles.' );
 }
 
+    // --- REGLA DE NEGOCIO: Toda solicitud nace como PENDIENTE ---
+    // Sin excepciones. Incluso gerentes y supervisores deben pasar
+    // por el flujo de aprobación manual posterior.
+    $estado_inicial = 'PENDIENTE';
+
     // Inserción de la solicitud
     error_log('HRM: Intentando insertar solicitud');
     error_log('HRM: Datos - ID empleado: ' . $id_empleado . ', ID tipo: ' . $id_tipo . ', Fechas: ' . $fecha_inicio . ' - ' . $fecha_fin . ', Días: ' . $total_dias);
@@ -1132,7 +1347,7 @@ if ( $total_dias <= 0 ) {
             'fecha_inicio'        => $fecha_inicio,
             'fecha_fin'           => $fecha_fin,
             'total_dias' => $total_dias,
-            'estado'              => 'PENDIENTE',
+            'estado'              => $estado_inicial,
             'comentario_empleado' => $descripcion
         ],
         [ '%d', '%d', '%s', '%s', '%d', '%s', '%s' ]
@@ -1149,6 +1364,17 @@ if ( $total_dias <= 0 ) {
     
     // Resetear indicador de visto (nueva solicitud)
     hrm_resetear_indicador_visto();
+    
+    // === LIMPIEZA DE CACHÉ CRÍTICA ===
+    // Invalidar caché de solicitudes del empleado para que vea la nueva solicitud inmediatamente
+    wp_cache_delete( 'hrm_vacaciones_empleado_' . intval( $user_id ) );
+    
+    // Si es supervisor/editor/admin, también limpiar caché global para que vean todas las solicitudes
+    if ( current_user_can( 'edit_hrm_employees' ) || current_user_can( 'manage_hrm_vacaciones' ) || current_user_can( 'manage_options' ) ) {
+        // No hacer flush completo, solo limpiar las caches relevantes
+        wp_cache_delete( 'hrm_all_vacaciones_*', 'hrm_cache' ); // Si hay un grupo de caché, limpiar ese grupo
+    }
+    // === FIN LIMPIEZA ===
 
     /* =====================================================
      * ENVÍO DE NOTIFICACIÓN AL GERENTE (ESPECÍFICO DEL DEPARTAMENTO)
@@ -1159,6 +1385,41 @@ if ( $total_dias <= 0 ) {
     $empleado = hrm_obtener_datos_empleado( $id_empleado );
     
     if ( $empleado ) {
+        $attachments = array();
+        $id_solicitud_creada = $wpdb->insert_id;
+        $ruta_pdf = '';
+
+        // --- DEFINIR NUESTRO LOG PROPIO ---
+        $archivo_log = plugin_dir_path( __FILE__ ) . 'hrm_log.txt';
+        $mensaje_log = "-----------------------------------\n";
+        $mensaje_log .= "INICIO PROCESO SOLICITUD #" . $id_solicitud_creada . " (" . date( 'Y-m-d H:i:s' ) . ")\n";
+
+        if ( function_exists( 'hrm_generar_pdf_solicitud' ) ) {
+            try {
+                $ruta_pdf = hrm_generar_pdf_solicitud( $id_solicitud_creada, $empleado, $fecha_inicio, $fecha_fin, $total_dias );
+
+                if ( empty( $ruta_pdf ) ) {
+                    $mensaje_log .= "ERROR: La funcion devolvio ruta vacia.\n";
+                } elseif ( ! file_exists( $ruta_pdf ) ) {
+                    $mensaje_log .= "ERROR: Ruta devuelta ($ruta_pdf) pero archivo NO existe.\n";
+                } else {
+                    $attachments[] = $ruta_pdf;
+                    $mensaje_log .= "EXITO: PDF generado en: $ruta_pdf\n";
+                    $mensaje_log .= "TAMANO: " . filesize( $ruta_pdf ) . " bytes.\n";
+                }
+            } catch ( Exception $e ) {
+                $mensaje_log .= "EXCEPCION CRITICA: " . $e->getMessage() . "\n";
+            } catch ( Throwable $t ) {
+                $mensaje_log .= "ERROR FATAL: " . $t->getMessage() . "\n";
+            }
+        } else {
+            $mensaje_log .= "FATAL: No existe la funcion hrm_generar_pdf_solicitud.\n";
+        }
+
+        $mensaje_log .= "MAIL: Enviando con " . count( $attachments ) . " adjuntos.\n";
+
+        file_put_contents( $archivo_log, $mensaje_log, FILE_APPEND );
+
         // Obtener el gerente a cargo del departamento del empleado
         // NOTA: Si el empleado es gerente, se obtiene al Gerente de Operaciones
         $gerente = hrm_obtener_gerente_departamento( $id_empleado );
@@ -1255,13 +1516,38 @@ if ( $total_dias <= 0 ) {
             }
         }
         
-        // Enviar email a todos los destinatarios
+        // --- INICIO: ENVÍO BLINDADO CON INYECCIÓN DIRECTA EN PHPMAILER ---
+        
         error_log( "HRM: Total de destinatarios: " . count( $destinatarios ) );
         
+        // 1. Definimos una función anónima para inyectar el adjunto directo en PHPMailer
+        // Esto "engancha" el archivo director al motor de correo, saltándose las validaciones de wp_mail
+        $accion_adjuntar = function( $phpmailer ) use ( $ruta_pdf ) {
+            if ( ! empty( $ruta_pdf ) && file_exists( $ruta_pdf ) ) {
+                try {
+                    $phpmailer->addAttachment( $ruta_pdf );
+                    error_log( "HRM: Adjunto inyectado exitosamente en PHPMailer para: " . $ruta_pdf );
+                } catch ( Exception $e ) {
+                    error_log( 'HRM MAIL ERROR: No se pudo adjuntar en PHPMailer: ' . $e->getMessage() );
+                }
+            }
+        };
+
+        // 2. Activamos el gancho solo si hay PDF válido
+        if ( ! empty( $ruta_pdf ) && file_exists( $ruta_pdf ) ) {
+            add_action( 'phpmailer_init', $accion_adjuntar );
+            // Vaciamos el array estándar para evitar duplicados (aunque wp_mail suele ignorarlos)
+            $attachments = array(); 
+            error_log( "HRM: Gancho PHPMailer activado para adjunto." );
+        } else {
+            error_log( "HRM: Sin gancho PHPMailer (no hay PDF válido)." );
+        }
+
+        // 3. Enviamos los correos a gerentes y editores
         if ( ! empty( $destinatarios ) ) {
             foreach ( $destinatarios as $dest ) {
                 error_log( "HRM: Enviando correo a {$dest['nombre']} ({$dest['email']})" );
-                $enviado = wp_mail( $dest['email'], $asunto_gerente, $mensaje_gerente, $headers );
+                $enviado = wp_mail( $dest['email'], $asunto_gerente, $mensaje_gerente, $headers, $attachments );
                 
                 if ( $enviado ) {
                     error_log( "HRM: Email de solicitud enviado a {$dest['nombre']} ({$dest['email']})" );
@@ -1271,6 +1557,12 @@ if ( $total_dias <= 0 ) {
             }
         } else {
             error_log( "HRM: No se encontró gerente ni editor de vacaciones para enviar la solicitud" );
+        }
+
+        // 4. Quitamos el gancho para no afectar otros correos de WordPress
+        if ( ! empty( $ruta_pdf ) ) {
+            remove_action( 'phpmailer_init', $accion_adjuntar );
+            error_log( "HRM: Gancho PHPMailer desactivado." );
         }
         
         // ===== EMAIL AL EMPLEADO (CONFIRMACIÓN) =====
@@ -1318,10 +1610,16 @@ if ( $total_dias <= 0 ) {
             </p>
         ";
         
+        // 5. Re-activar gancho para envío de confirmación al empleado
+        if ( ! empty( $ruta_pdf ) && file_exists( $ruta_pdf ) ) {
+            add_action( 'phpmailer_init', $accion_adjuntar );
+            error_log( "HRM: Gancho PHPMailer re-activado para correo del empleado." );
+        }
+
         // Enviar email de confirmación al empleado
         if ( ! empty( $empleado->correo ) ) {
             error_log( "HRM: Enviando correo de confirmación al empleado ({$empleado->correo})" );
-            $enviado_empleado = wp_mail( $empleado->correo, $asunto_empleado, $mensaje_empleado, $headers );
+            $enviado_empleado = wp_mail( $empleado->correo, $asunto_empleado, $mensaje_empleado, $headers, array() );
             
             if ( $enviado_empleado ) {
                 error_log( "HRM: Email de confirmación enviado al empleado" );
@@ -1329,6 +1627,21 @@ if ( $total_dias <= 0 ) {
                 error_log( "HRM Error: Fallo al enviar email de confirmación al empleado" );
             }
         }
+
+        // 6. Quitamos el gancho para limpiar
+        if ( ! empty( $ruta_pdf ) ) {
+            remove_action( 'phpmailer_init', $accion_adjuntar );
+            error_log( "HRM: Gancho PHPMailer desactivado (final)." );
+        }
+        
+        // --- FIN ENVÍO BLINDADO ---
+
+        // Limpieza del PDF temporal (comentado para debug)
+        /*
+        if ( ! empty( $ruta_pdf ) && file_exists( $ruta_pdf ) ) {
+            @unlink( $ruta_pdf );
+        }
+        */
     }
 
     /* =====================================================
@@ -1394,8 +1707,8 @@ if ( $total_dias <= 0 ) {
         }
     }
 
-    // Redirección final con mensaje de éxito (volver al formulario)
-    $redirect = wp_get_referer() ?: home_url();
+    // Redirección final con mensaje de éxito (limpiar parámetro ?show para volver a lista)
+    $redirect = remove_query_arg( 'show', wp_get_referer() ?: home_url() );
     wp_safe_redirect( add_query_arg( 'solicitud_creada', '1', $redirect ) );
     exit;
 }
@@ -1488,8 +1801,8 @@ function hrm_enviar_medio_dia_handler() {
     // Enviar correo de confirmación al empleado
     hrm_enviar_notificacion_confirmacion_medio_dia( $id_solicitud );
 
-    // Redirigir con éxito
-    $redirect = wp_get_referer() ?: home_url();
+    // Redirigir con éxito (limpiar parámetro ?show para volver a lista)
+    $redirect = remove_query_arg( 'show', wp_get_referer() ?: home_url() );
     wp_safe_redirect( add_query_arg( 'solicitud_creada', '1', $redirect ) );
     exit;
 }

@@ -161,8 +161,8 @@
 
 .nav-link.active {
     background-color: white;
-    border-bottom-color: #0d6efd;
-    color: #0d6efd;
+    border-bottom-color: #37B126;
+    color: #37B126;
     font-weight: 600;
 }
 
@@ -209,8 +209,8 @@
 }
 
 .calendario tbody td.hoy {
-    border: 3px solid #0d6efd;
-    background-color: #e7f1ff;
+    border: 3px solid #37B126;
+    background-color: #e8f5e3;
 }
 
 .dia-numero {

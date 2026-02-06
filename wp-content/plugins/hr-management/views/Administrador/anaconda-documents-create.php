@@ -38,10 +38,10 @@ wp_localize_script( 'hrm-anaconda-documents-create', 'anacondaDocsData', array(
                                         <input id="doc_title" name="doc_title" type="text" maxlength="191" required />
 
 
-                                        <label>Documento (PDF)</label>
+                                        <label>Documento (PDF) <small class="text-muted">(Opcional)</small></label>
                                         <div id="drop-area" class="drop-area" tabindex="0" aria-label="Área para arrastrar o seleccionar PDF">
-                                            Arrastra tu PDF aquí o haz clic para seleccionar.
-                                            <input id="doc_file" name="doc_file" type="file" accept="application/pdf" class="d-none" required />
+                                            Arrastra tu PDF aquí o haz clic para seleccionar (opcional).
+                                            <input id="doc_file" name="doc_file" type="file" accept="application/pdf" class="d-none" />
                                         </div>
                                         <div id="file-info" class="file-info" aria-live="polite"></div>
                                         <div id="file-error" class="error" aria-live="assertive"></div>
@@ -112,10 +112,10 @@ wp_localize_script( 'hrm-anaconda-documents-create', 'anacondaDocsData', array(
                                     echo '<div class="dropdown-menu myplugin-hidden">';
                                     echo '<a href="' . esc_url( $file_url ) . '" class="dropdown-item" target="_blank"><span class="dashicons dashicons-download"></span> Descargar</a>';
                                     echo '<button class="dropdown-item edit-doc-btn" data-doc-id="' . esc_attr( $doc_id ) . '" data-title="' . esc_attr( $doc->titulo ) . '" data-ruta="' . esc_attr( $ruta ) . '"><span class="dashicons dashicons-edit"></span> Editar</button>';
-                                    if ( current_user_can( 'manage_options' ) || current_user_can( 'view_hrm_admin_views' ) ) {
-                                        $delete_url = esc_url( admin_url( 'admin-post.php?action=anaconda_documents_delete&file=' . rawurlencode( $basename ) . '&_wpnonce=' . wp_create_nonce( 'anaconda_documents_delete' ) ) );
-                                        echo '<a href="' . $delete_url . '" class="dropdown-item text-danger" onclick="return confirm(\'¿Estás seguro de que deseas eliminar este documento?\')"><span class="dashicons dashicons-trash"></span> Eliminar</a>';
-                                    }
+                                    
+                                    $delete_url = esc_url( admin_url( 'admin-post.php?action=anaconda_documents_delete&id=' . $doc_id . '&file=' . rawurlencode( $basename ) . '&_wpnonce=' . wp_create_nonce( 'anaconda_documents_delete' ) ) );
+                                    echo '<a href="' . $delete_url . '" class="dropdown-item text-danger" onclick="return confirm(\'¿Estás seguro de que deseas eliminar este documento?\')"><span class="dashicons dashicons-trash"></span> Eliminar</a>';
+
                                     echo '</div>';
                                     echo '</div>';
                                     echo '</td>';

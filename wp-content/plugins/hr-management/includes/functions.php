@@ -514,18 +514,32 @@ function hrm_can_edit_employee( $employee_id ) {
         return false;
     }
     
+    $current_user = wp_get_current_user();
+    
+    // BLOQUEO: El rol 'editor' de WordPress NO debe editar empleados (solo su propio perfil)
+    // El rol 'editor' es un rol genérico de WordPress y debe estar restringido
+    if ( in_array( 'editor', (array) $current_user->roles, true ) && ! in_array( 'administrador_anaconda', (array) $current_user->roles, true ) && ! in_array( 'administrator', (array) $current_user->roles, true ) ) {
+        // Solo permitir si es su propio perfil
+        if ( intval( $employee->user_id ) === $current_user_id ) {
+            return true;
+        }
+        if ( ! empty( $current_user->user_email ) && ! empty( $employee->email ) && strtolower( $current_user->user_email ) === strtolower( $employee->email ) ) {
+            return true;
+        }
+        return false;
+    }
+    
     // Admins / HR admins / administrador_anaconda pueden editar
     // Consideramos capacidades y rol específico para compatibilidad
-    if ( current_user_can( 'edit_hrm_employees' ) || current_user_can( 'manage_options' ) || current_user_can( 'view_hrm_admin_views' ) || in_array( 'administrador_anaconda', (array) wp_get_current_user()->roles, true ) ) {
+    if ( current_user_can( 'edit_hrm_employees' ) || current_user_can( 'manage_options' ) || current_user_can( 'view_hrm_admin_views' ) || in_array( 'administrador_anaconda', (array) $current_user->roles, true ) ) {
         return true;
     }
 
     // Editor de vacaciones: permitir edición SOLO si es su propio perfil (vinculado por user_id o email)
-    if ( in_array( 'editor_vacaciones', (array) wp_get_current_user()->roles, true ) ) {
+    if ( in_array( 'editor_vacaciones', (array) $current_user->roles, true ) ) {
         if ( intval( $employee->user_id ) === $current_user_id ) {
             return true;
         }
-        $current_user = wp_get_current_user();
         if ( ! empty( $current_user->user_email ) && ! empty( $employee->email ) && strtolower( $current_user->user_email ) === strtolower( $employee->email ) ) {
             return true;
         }
@@ -549,7 +563,6 @@ function hrm_can_edit_employee( $employee_id ) {
     }
 
     // Si no hay vínculo por user_id, permitir edición si el email del WP user coincide con el email del empleado
-    $current_user = wp_get_current_user();
     if ( ! empty( $current_user->user_email ) && ! empty( $employee->email ) && strtolower( $current_user->user_email ) === strtolower( $employee->email ) ) {
         return true;
     }

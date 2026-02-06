@@ -12,6 +12,11 @@ if ( ! isset( $all_emps ) ) {
         $all_emps = array();
     }
 }
+
+// Filtrar solo empleados activos
+$all_emps = array_filter( $all_emps, function( $emp ) {
+    return $emp->estado == 1;
+} );
 $curr_id = isset( $id ) ? $id : 0;
 $curr_name = '';
 

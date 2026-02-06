@@ -128,6 +128,27 @@ $total_solicitudes = count( $solicitudes );
 $count_dia_completo = function_exists( 'hrm_count_vacaciones_visibles' ) ? hrm_count_vacaciones_visibles( 'PENDIENTE' ) : 0;
 $count_medio_dia = function_exists( 'hrm_count_medio_dia_visibles' ) ? hrm_count_medio_dia_visibles( 'PENDIENTE' ) : 0;
 
+// Totales de días solicitados (solo pendientes)
+$dias_dia_completo = function_exists( 'hrm_sum_dias_vacaciones_visibles' ) ? hrm_sum_dias_vacaciones_visibles( 'PENDIENTE' ) : 0;
+$dias_medio_dia = function_exists( 'hrm_sum_dias_medio_dia_visibles' ) ? hrm_sum_dias_medio_dia_visibles( 'PENDIENTE' ) : 0;
+
+// Formateador simple para evitar decimales innecesarios
+$format_dias = function( $valor ) {
+    $v = floatval( $valor );
+    return ( floor( $v ) == $v ) ? number_format( $v, 0 ) : rtrim( rtrim( number_format( $v, 2, '.', '' ), '0' ), '.' );
+};
+
+// Totales de días solicitados (SOLO PENDIENTES - criterio operativo)
+$dias_dia_completo = function_exists( 'hrm_sum_dias_vacaciones_visibles' ) ? hrm_sum_dias_vacaciones_visibles( 'PENDIENTE' ) : 0;
+$dias_medio_dia = function_exists( 'hrm_sum_dias_medio_dia_visibles' ) ? hrm_sum_dias_medio_dia_visibles( 'PENDIENTE' ) : 0;
+
+// Helper local para formatear días (enteros vs decimales)
+$format_dias = function( $value ) {
+    $num = floatval( $value );
+    $is_int = abs( $num - round( $num ) ) < 0.001;
+    return $is_int ? (string) intval( round( $num ) ) : number_format( $num, 1, '.', '' );
+};
+
 $message_success = isset( $_GET['message_success'] ) ? rawurldecode( sanitize_text_field( wp_unslash( $_GET['message_success'] ) ) ) : '';
 $message_error = isset( $_GET['message_error'] ) ? rawurldecode( sanitize_text_field( wp_unslash( $_GET['message_error'] ) ) ) : '';
 ?>
@@ -186,7 +207,18 @@ $message_error = isset( $_GET['message_error'] ) ? rawurldecode( sanitize_text_f
                         aria-controls="contenido-medio-dia" 
                         aria-selected="<?php echo $tab_activo === 'medio-dia' ? 'true' : 'false'; ?>">
                         <span class="hrm-tab-icon"><span class="dashicons dashicons-clock"></span></span>
-                        <span class="fw-semibold">Solicitudes de Medio Día<?php echo ( $count_medio_dia > 0 ) ? ' (' . intval( $count_medio_dia ) . ')' : ''; ?></span>
+                        <span class="fw-semibold">
+                            <?php
+                            $label_medio_dia = 'Solicitudes de Medio Día';
+                            if ( $count_medio_dia > 0 ) {
+                                $label_medio_dia .= ' (' . intval( $count_medio_dia ) . ')';
+                            }
+                            if ( $dias_medio_dia > 0 ) {
+                                $label_medio_dia .= ' · ' . $format_dias( $dias_medio_dia ) . ' días';
+                            }
+                            echo esc_html( $label_medio_dia );
+                            ?>
+                        </span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -197,7 +229,18 @@ $message_error = isset( $_GET['message_error'] ) ? rawurldecode( sanitize_text_f
                             aria-controls="contenido-solicitudes" 
                             aria-selected="<?php echo $tab_activo === 'solicitudes' ? 'true' : 'false'; ?>">
                         <span class="hrm-tab-icon"><span class="dashicons dashicons-clipboard"></span></span>
-                        <span class="fw-semibold">Solicitudes de Día Completo<?php echo ( $count_dia_completo > 0 ) ? ' (' . intval( $count_dia_completo ) . ')' : ''; ?></span>
+                        <span class="fw-semibold">
+                            <?php
+                            $label_dia_completo = 'Solicitudes de Día Completo';
+                            if ( $count_dia_completo > 0 ) {
+                                $label_dia_completo .= ' (' . intval( $count_dia_completo ) . ')';
+                            }
+                            if ( $dias_dia_completo > 0 ) {
+                                $label_dia_completo .= ' · ' . $format_dias( $dias_dia_completo ) . ' días';
+                            }
+                            echo esc_html( $label_dia_completo );
+                            ?>
+                        </span>
                     </button>
                 </li>
         
@@ -670,6 +713,7 @@ $message_error = isset( $_GET['message_error'] ) ? rawurldecode( sanitize_text_f
                                         <th class="py-3 px-4"><span class="dashicons dashicons-businessperson"></span> Empleado</th>
                                         <th class="py-3 px-4 text-center"><span class="dashicons dashicons-calendar-alt"></span> Fecha</th>
                                         <th class="py-3 px-4 text-center"><span class="dashicons dashicons-clock"></span> Período</th>
+                                        <th class="py-3 px-4 text-center"><span class="dashicons dashicons-clock"></span> Días</th>
                                         <th class="py-3 px-4 text-center"><span class="dashicons dashicons-flag"></span> Estado</th>
                                         <th class="py-3 px-4 text-center"><span class="dashicons dashicons-admin-tools"></span> Acciones</th>
                                     </tr>
@@ -716,6 +760,12 @@ $message_error = isset( $_GET['message_error'] ) ? rawurldecode( sanitize_text_f
                                             } else {
                                                 echo '<span color="black"> Tarde</span>';
                                             }
+                                            ?>
+                                        </td>
+                                        <td class="py-3 px-4 text-center">
+                                            <?php
+                                            $dias_md = isset( $solicitud['total_dias'] ) ? floatval( $solicitud['total_dias'] ) : 0.5;
+                                            echo esc_html( $format_dias( $dias_md ) );
                                             ?>
                                         </td>
                                         <td class="py-3 px-4 text-center">

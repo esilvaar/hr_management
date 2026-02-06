@@ -65,30 +65,45 @@ if ( defined('WP_DEBUG') && WP_DEBUG ) {
 
 // Determinar campos editables
 $editable_fields = array();
+
+// 1. ADMIN (o Anaconda): Acceso total
 if ( $is_admin ) {
     $editable_fields = array('nombre','apellido' ,'telefono', 'email', 'departamento', 'puesto', 'estado', 'anos_acreditados_anteriores', 'fecha_ingreso', 'tipo_contrato', 'salario', 'area_gerencia');
-} elseif ( hrm_can_manage_employee( $employee->id ) ) {
-    // Usuarios que pueden gestionar a otros (supervisor, admin, anaconda) pueden editar campos laborales
-    $editable_fields = array('nombre','apellido' ,'telefono', 'email', 'departamento', 'puesto', 'anos_acreditados_anteriores', 'fecha_ingreso');
+
+// 2. SUPERVISOR gestionando a OTROS (no perfil propio)
+} elseif ( $is_role_supervisor && ! $is_own_profile ) {
+    // Verificar si puede gestionar a este empleado en particular (gerencia, etc)
+    if ( hrm_can_manage_employee( $employee->id ) ) {
+        $editable_fields = array('nombre','apellido' ,'telefono', 'email', 'departamento', 'puesto', 'anos_acreditados_anteriores', 'fecha_ingreso');
+    }
+
+// 3. PERFIL PROPIO (Supervisor, Editor, Empleado, etc.)
 } elseif ( $is_own_profile ) {
-    // Perfil propio: sólo campos personales
+    // Sólo campos personales básicos
     $editable_fields = array('nombre','apellido' ,'telefono', 'email', 'fecha_nacimiento');
+
+// 4. OTROS CASOS
+} else {
+    $editable_fields = array();
 }
 
-// Supervisor editando su propio perfil
-if ( $is_role_supervisor && $is_own_profile && ! $is_admin ) {
-    $editable_fields = array('nombre','apellido','telefono','email','fecha_nacimiento');
-}  
-
-// Roles restringidos (incluye 'editor' para que tenga el mismo comportamiento que 'empleado')
-$restricted_roles = array( 'empleado', 'editor_vacaciones', 'editor' );
+// 5. RESTRICCIONES DE SEGURIDAD EXPLICITAS ADICIONALES
+// Rol 'Editor' (si no es admin): Restringir totalmente si no es su perfil
+if ( in_array( 'editor', (array) $user->roles, true ) && ! $is_admin ) {
+    if ( ! $is_own_profile ) {
+        $editable_fields = array(); 
+    }
+}
+// Rol 'Empleado' o 'Editor Vacaciones': Restringir totalmente si no es su perfil
+$restricted_roles = array( 'empleado', 'editor_vacaciones' );
 if ( array_intersect( $restricted_roles, (array) $user->roles ) && ! $is_admin && ! $is_supervisor ) {
-    if ( $is_own_profile ) {
-        $editable_fields = array('nombre','apellido','telefono','email','fecha_nacimiento');
-    } else {
+    if ( ! $is_own_profile ) {
         $editable_fields = array();
     }
 }
+
+// BLOQUEO VISUAL: Si es editor mirando un perfil ajeno, marcar para mostrar como texto bloqueado
+$is_editor_viewing_other = in_array( 'editor', (array) $user->roles, true ) && ! $is_own_profile && ! $is_admin;
 
 // Seguridad: bloquear visualización de perfiles ajenos para roles restringidos
 if ( ! $is_own_profile && ! $is_admin && ! $is_supervisor ) {
@@ -185,7 +200,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                 </div>
             </div>
 
-            <div class="hrm-panel">
+            <div class="hrm-panel mt-3">
                 <div class="hrm-panel-header">
                     <h5 class="mb-0">
                         <span class="dashicons dashicons-media-document"></span>
@@ -193,7 +208,14 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                     </h5>
                 </div>
                 <div class="hrm-panel-body hrm-doc-panel-body">
-                        <a href="<?= esc_url( add_query_arg( array( 'page' => 'hrm-mi-documentos-contratos', 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis contratos" data-icon-color="#b0b5bd">
+                    <?php
+                    $current_page_slug_for_links = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : 'hrm-empleados';
+                    $extra_args = array( 'employee_id' => absint( $employee->id ) );
+                    if ( in_array( $current_page_slug_for_links, array( 'hrm-mi-perfil', 'hrm-mi-perfil-info' ), true ) ) {
+                        $extra_args['source_page'] = $current_page_slug_for_links;
+                    }
+                    ?>
+                        <a href="<?= esc_url( add_query_arg( array_merge( array( 'page' => 'hrm-mi-documentos-contratos' ), $extra_args ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis contratos" data-icon-color="#b0b5bd">
                         <div class="hrm-doc-btn-icon">
                             <span class="dashicons dashicons-media-document"></span>
                         </div>
@@ -206,7 +228,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                         </div>
                     </a>
 
-                    <a href="<?= esc_url( add_query_arg( array( 'page' => 'hrm-mi-documentos-liquidaciones', 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis liquidaciones" data-icon-color="#b0b5bd">
+                    <a href="<?= esc_url( add_query_arg( array_merge( array( 'page' => 'hrm-mi-documentos-liquidaciones' ), $extra_args ), admin_url( 'admin.php' ) ) ) ?>" class="hrm-doc-btn" title="Ver mis liquidaciones" data-icon-color="#b0b5bd">
                         <div class="hrm-doc-btn-icon">
                             <span class="dashicons dashicons-money-alt"></span>
                         </div>
@@ -228,8 +250,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                         foreach ( $doc_types as $t_id => $t_name ) {
                             $t_name_l = strtolower( trim( $t_name ) );
                             if ( in_array( $t_name_l, $reserved, true ) ) continue;
-                            if ( $t_name_l === 'empresa' ) continue; // don't render Empresa here
-                            $url = add_query_arg( array( 'page' => 'hrm-mi-documentos-type-' . intval( $t_id ), 'employee_id' => absint( $employee->id ) ), admin_url( 'admin.php' ) );
+                            $url = add_query_arg( array_merge( array( 'page' => 'hrm-mi-documentos-type-' . intval( $t_id ) ), $extra_args ), admin_url( 'admin.php' ) );
                             ?>
                             <a href="<?= esc_url( $url ) ?>" class="hrm-doc-btn" title="<?= esc_attr( $t_name ) ?>" data-icon-color="#b0b5bd">
                                 <div class="hrm-doc-btn-icon">
@@ -248,46 +269,58 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                     }
                     ?>
 
-                    
-
-                    <?php
-                    // Documentos Empresa (listado dinámico desde la tabla personalizada)
-                    global $wpdb;
-                    $table = $wpdb->prefix . 'rrhh_documentos_empresa';
-                    $company_docs = $wpdb->get_results( "SELECT id, titulo FROM {$table} ORDER BY fecha_creacion DESC" );
-                    if ( ! empty( $company_docs ) ) :
-                        foreach ( $company_docs as $cd ) :
-                            $cd_id = intval( $cd->id );
-                            $cd_title = esc_html( $cd->titulo ? $cd->titulo : 'Documento Empresa ' . $cd_id );
-                            $cd_url = esc_url( add_query_arg( array( 'page' => 'hrm-convivencia', 'doc_id' => $cd_id ), admin_url( 'admin.php' ) ) );
-                            ?>
-                            <a href="<?= $cd_url ?>" class="hrm-doc-btn" title="<?= esc_attr( $cd_title ) ?>" data-icon-color="#b0b5bd">
-                                <div class="hrm-doc-btn-icon">
-                                    <span class="dashicons dashicons-media-document"></span>
-                                </div>
-                                <div class="hrm-doc-btn-content">
-                                    <div class="hrm-doc-btn-title"><?= $cd_title ?></div>
-                                    <div class="hrm-doc-btn-desc">Documento Empresa</div>
-                                </div>
-                                <div class="hrm-doc-btn-arrow">
-                                    <span class="dashicons dashicons-arrow-right-alt2"></span>
-                                </div>
-                            </a>
-                            <?php
-                        endforeach;
-                    endif;
-                    ?>
-
                 </div>
             </div>
+
+            <?php
+            // Documentos Empresa - Nueva sección separada
+            global $wpdb;
+            $table = $wpdb->prefix . 'rrhh_documentos_empresa';
+            $company_docs = $wpdb->get_results( "SELECT id, titulo FROM {$table} ORDER BY fecha_creacion DESC" );
+            if ( ! empty( $company_docs ) ) :
+            ?>
+            <div class="hrm-panel mt-3">
+                <div class="hrm-panel-header">
+                    <h5 class="mb-0">
+                        <span class="dashicons dashicons-building"></span>
+                        Documentos Empresa
+                    </h5>
+                </div>
+                <div class="hrm-panel-body hrm-doc-panel-body">
+                    <?php
+                    foreach ( $company_docs as $cd ) :
+                        $cd_id = intval( $cd->id );
+                        $cd_title = esc_html( $cd->titulo ? $cd->titulo : 'Documento Empresa ' . $cd_id );
+                        // Nota: hrm-convivencia necesita tratar source_page también
+                        $convivencia_args = array_merge( array( 'page' => 'hrm-convivencia', 'doc_id' => $cd_id ), $extra_args );
+                        $cd_url = esc_url( add_query_arg( $convivencia_args, admin_url( 'admin.php' ) ) );
+                        ?>
+                        <a href="<?= $cd_url ?>" class="hrm-doc-btn" title="<?= esc_attr( $cd_title ) ?>" data-icon-color="#b0b5bd">
+                            <div class="hrm-doc-btn-icon">
+                                <span class="dashicons dashicons-media-document"></span>
+                            </div>
+                            <div class="hrm-doc-btn-content">
+                                <div class="hrm-doc-btn-title"><?= $cd_title ?></div>
+                                <div class="hrm-doc-btn-desc">Documento Empresa</div>
+                            </div>
+                            <div class="hrm-doc-btn-arrow">
+                                <span class="dashicons dashicons-arrow-right-alt2"></span>
+                            </div>
+                        </a>
+                        <?php
+                    endforeach;
+                    ?>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <?php 
             // Mostrar solo si es Admin, Supervisor o el propio dueño
             $can_change_pass = $is_admin || $is_supervisor;
             if ( $can_change_pass ) : 
             ?>
-            <div class="hrm-panel mt-3 hrm-panel-action">
-                <div class="hrm-panel-header d-flex justify-content-between align-items-center">
+            <div class="hrm-panel mt-3">
+                <div class="hrm-panel-header">
                     <h5 class="mb-0"><span class="dashicons dashicons-admin-network"></span> Acciones de Cuenta</h5>
                 </div>
                 <div class="hrm-panel-body">
@@ -334,11 +367,19 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">Nombres</label>
-                                <input type="text" name="nombre" value="<?= esc_attr( $employee->nombre ) ?>" class="form-control" <?= hrm_field_editable('nombre', $is_admin, $editable_fields) ? '' : 'readonly' ?>>
+                                <?php if ( $is_editor_viewing_other ) : ?>
+                                    <div class="form-control-plaintext hrm-readonly"><span class="dashicons dashicons-lock"></span> <?= esc_html( $employee->nombre ) ?></div>
+                                <?php else : ?>
+                                    <input type="text" name="nombre" value="<?= esc_attr( $employee->nombre ) ?>" class="form-control" <?= hrm_field_editable('nombre', $is_admin, $editable_fields) ? '' : 'readonly' ?>>
+                                <?php endif; ?>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Apellidos</label>
-                                <input type="text" name="apellido" value="<?= esc_attr( $employee->apellido ) ?>" class="form-control" <?= hrm_field_editable('apellido', $is_admin, $editable_fields) ? '' : 'readonly' ?>>
+                                <?php if ( $is_editor_viewing_other ) : ?>
+                                    <div class="form-control-plaintext hrm-readonly"><span class="dashicons dashicons-lock"></span> <?= esc_html( $employee->apellido ) ?></div>
+                                <?php else : ?>
+                                    <input type="text" name="apellido" value="<?= esc_attr( $employee->apellido ) ?>" class="form-control" <?= hrm_field_editable('apellido', $is_admin, $editable_fields) ? '' : 'readonly' ?>>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <div class="row mb-3">
@@ -348,17 +389,29 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Email</label>
-                                <input type="email" name="email" value="<?= esc_attr( $employee->email ) ?>" class="form-control" <?= hrm_field_editable('email', $is_admin, $editable_fields) ? '' : 'readonly' ?>>
+                                <?php if ( $is_editor_viewing_other ) : ?>
+                                    <div class="form-control-plaintext hrm-readonly"><span class="dashicons dashicons-lock"></span> <?= esc_html( $employee->email ) ?></div>
+                                <?php else : ?>
+                                    <input type="email" name="email" value="<?= esc_attr( $employee->email ) ?>" class="form-control" <?= hrm_field_editable('email', $is_admin, $editable_fields) ? '' : 'readonly' ?>>
+                                <?php endif; ?>
                             </div>
                         </div>
                          <div class="row">
                             <div class="col-md-6">
                                 <label class="form-label">Teléfono</label>
-                                <input type="text" name="telefono" value="<?= esc_attr( $employee->telefono ?? '' ) ?>" class="form-control" <?= hrm_field_editable('telefono', $is_admin, $editable_fields) ? '' : 'readonly' ?>>
+                                <?php if ( $is_editor_viewing_other ) : ?>
+                                    <div class="form-control-plaintext hrm-readonly"><span class="dashicons dashicons-lock"></span> <?= esc_html( $employee->telefono ?? 'N/A' ) ?></div>
+                                <?php else : ?>
+                                    <input type="text" name="telefono" value="<?= esc_attr( $employee->telefono ?? '' ) ?>" class="form-control" <?= hrm_field_editable('telefono', $is_admin, $editable_fields) ? '' : 'readonly' ?>>
+                                <?php endif; ?>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Fecha Nacimiento</label>
-                                <input type="date" name="fecha_nacimiento" value="<?= esc_attr( $employee->fecha_nacimiento ) ?>" class="form-control" <?= hrm_field_editable('fecha_nacimiento', $is_admin, $editable_fields) ? '' : 'readonly' ?>>
+                                <?php if ( $is_editor_viewing_other ) : ?>
+                                    <div class="form-control-plaintext hrm-readonly"><span class="dashicons dashicons-lock"></span> <?= esc_html( $employee->fecha_nacimiento ?? 'N/A' ) ?></div>
+                                <?php else : ?>
+                                    <input type="date" name="fecha_nacimiento" value="<?= esc_attr( $employee->fecha_nacimiento ) ?>" class="form-control" <?= hrm_field_editable('fecha_nacimiento', $is_admin, $editable_fields) ? '' : 'readonly' ?>>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -370,7 +423,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">Departamento</label>
-                                <?php if ( hrm_field_editable('departamento', $is_admin, $editable_fields) && ! $is_editor_vacaciones_own ) : ?>
+                                <?php if ( hrm_field_editable('departamento', $is_admin, $editable_fields) && ! $is_editor_vacaciones_own && ! (in_array('editor', (array)$user->roles, true) && $is_own_profile && !$is_admin) ) : ?>
                                     <select name="departamento" class="form-select">
                                         <option value="">Seleccionar</option>
                                         <?php if ( ! empty( $hrm_departamentos ) ) { foreach ( $hrm_departamentos as $dept ) { ?>
@@ -383,7 +436,7 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Puesto</label>
-                                <?php if ( hrm_field_editable('puesto', $is_admin, $editable_fields) && ! $is_editor_vacaciones_own ) : ?>
+                                <?php if ( hrm_field_editable('puesto', $is_admin, $editable_fields) && ! $is_editor_vacaciones_own && ! (in_array('editor', (array)$user->roles, true) && $is_own_profile && !$is_admin) ) : ?>
                                     <select name="puesto" class="form-select">
                                         <option value="">Seleccionar</option>
                                         <?php if ( ! empty( $hrm_puestos ) ) { foreach ( $hrm_puestos as $puesto ) { ?>
@@ -492,9 +545,9 @@ function hrm_field_editable($field, $is_admin, $editable_fields) {
                         
                                 <?php if ( ( $is_admin || $is_supervisor || $is_role_supervisor ) && ! $is_own_profile ) : ?>
                                     <?php if ( intval( $employee->estado ?? 1 ) === 1 ) : ?>
-                                        <button type="button" class="btn btn-danger" id="btn-desactivar-empleado">Desactivar</button>
+                                        <button type="button" class="btn btn-danger" id="btn-desactivar-empleado">Desactivar Empleado</button>
                                     <?php else : ?>
-                                        <button type="button" class="btn btn-warning" id="btn-activar-empleado">Activar</button>
+                                        <button type="button" class="btn btn-warning" id="btn-activar-empleado">Activar Empleado</button>
                                     <?php endif; ?>
                                 <?php endif; ?>
                     </div>

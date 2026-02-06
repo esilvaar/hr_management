@@ -3,129 +3,129 @@
  * Tema: Gris, Negro y Verde
  */
 
-/* Estilos generales del panel */
-.card {
+/* Estilos del panel - Scopeados a la card de vacaciones para no contaminar sidebar */
+.hrm-vacaciones-card {
     border: 1px solid #e0e0e0;
     background-color: #ffffff;
 }
 
-.card-header {
+.hrm-vacaciones-card > .card-header {
     background: #1a1a1a !important;
     border-bottom: 1px solid #cccccc;
     padding: 1.5rem !important;
 }
 
-.card-header h2 {
+.hrm-vacaciones-card > .card-header h2 {
     color: #ffffff !important;
     font-weight: 700;
     font-size: 1.75rem;
     margin-bottom: 0.5rem;
 }
 
-.card-header small {
+.hrm-vacaciones-card > .card-header small {
     color: #999999;
     font-size: 0.95rem;
     display: block;
 }
 
-/* Títulos de sección */
-.text-primary {
+/* Títulos de sección - Scopeados a la card de vacaciones */
+.hrm-vacaciones-card .text-primary {
     color: #1a1a1a !important;
     font-weight: 600;
 }
 
-h3.h5 {
+.hrm-vacaciones-card h3.h5 {
     display: flex;
     align-items: center;
     gap: 0.75rem;
 }
 
-/* Tablas */
-.table {
+/* Tablas - Scopeadas a la card de vacaciones */
+.hrm-vacaciones-card .table {
     border-collapse: collapse;
 }
 
-.table thead.bg-light {
+.hrm-vacaciones-card .table thead.bg-light {
     background-color: #f5f5f5 !important;
     border-bottom: 1px solid #cccccc;
 }
 
-.table thead th {
+.hrm-vacaciones-card .table thead th {
     color: #1a1a1a;
     font-weight: 600;
     padding: 1rem !important;
     vertical-align: middle;
 }
 
-.table tbody tr {
+.hrm-vacaciones-card .table tbody tr {
     border-bottom: 1px solid #cccccc;
     transition: none;
 }
 
-.table tbody tr:hover {
+.hrm-vacaciones-card .table tbody tr:hover {
     background-color: transparent;
 }
 
-.table tbody td {
+.hrm-vacaciones-card .table tbody td {
     padding: 1rem !important;
     vertical-align: middle;
     color: #333;
 }
 
 /* Estilos de texto en tablas */
-.table .text-primary {
+.hrm-vacaciones-card .table .text-primary {
     color: #27ae60 !important;
     font-weight: 700;
 }
 
-.table .text-danger {
+.hrm-vacaciones-card .table .text-danger {
     color: #666666 !important;
     font-weight: 700;
 }
 
-.table .text-muted {
+.hrm-vacaciones-card .table .text-muted {
     color: #999 !important;
 }
 
-/* Badges */
-.badge {
+/* Badges - Scopeados a la card de vacaciones */
+.hrm-vacaciones-card .badge {
     font-weight: 600;
     padding: 0.5rem 0.75rem;
     border-radius: 20px;
 }
 
-.badge.bg-success {
+.hrm-vacaciones-card .badge.bg-success {
     background-color: #009929 !important;
     color: white;
 }
 
-.badge.bg-danger {
+.hrm-vacaciones-card .badge.bg-danger {
     background-color: #c0392b !important;
     color: white;
 }
 
-.badge.bg-warning {
+.hrm-vacaciones-card .badge.bg-warning {
     background-color: #f39c12 !important;
     color: white;
 }
 
-.badge.bg-secondary {
+.hrm-vacaciones-card .badge.bg-secondary {
     background-color: #666666 !important;
     color: white;
 }
 
-.badge.bg-info {
+.hrm-vacaciones-card .badge.bg-info {
     background-color: #3498db !important;
     color: white;
 }
 
-/* Alertas */
-.alert {
+/* Alertas - Scopeadas */
+.hrm-vacaciones-card .alert {
     border-left: 1px solid #cccccc;
     border-radius: 0;
 }
 
-.alert.alert-info {
+.hrm-vacaciones-card .alert.alert-info {
     background-color: #f5f5f5;
     border-color: #cccccc;
     color: #333;
@@ -141,63 +141,63 @@ h3.h5 {
 .hrm-new-request:hover { background: #111; }
 .hrm-md-request:hover { background: #e58500; }
 
-.alert.alert-light {
+.hrm-vacaciones-card .alert.alert-light {
     background-color: #f9f9f9;
     border-color: #cccccc;
 }
 
-.alert.alert-light .text-muted {
+.hrm-vacaciones-card .alert.alert-light .text-muted {
     color: #666 !important;
 }
 
-/* Botones */
-.btn {
+/* Botones - Scopeados a la card de vacaciones */
+.hrm-vacaciones-card .btn {
     font-weight: 600;
     border-radius: 0;
     transition: none;
 }
 
-.btn-primary {
-    background: #009929;
+.hrm-vacaciones-card .btn-primary {
+    background: #37B126;
     border: none;
     color: white;
 }
 
-.btn-primary:hover {
-    background: #007a20;
+.hrm-vacaciones-card .btn-primary:hover {
+    background: #2a8d1d;
     transform: none;
     box-shadow: none;
 }
 
-.btn-outline-secondary {
+.hrm-vacaciones-card .btn-outline-secondary {
     color: #666666;
     border-color: #666666;
 }
 
-.btn-outline-secondary:hover {
+.hrm-vacaciones-card .btn-outline-secondary:hover {
     background-color: #666666;
     border-color: #666666;
     color: white;
 }
 
-.btn-danger {
+.hrm-vacaciones-card .btn-danger {
     background-color: #e74c3c;
     border-color: #e74c3c;
     color: white;
 }
 
-.btn-danger:hover {
+.hrm-vacaciones-card .btn-danger:hover {
     background-color: #c0392b;
     border-color: #c0392b;
 }
 
-.btn-sm {
+.hrm-vacaciones-card .btn-sm {
     padding: 0.4rem 0.8rem;
     font-size: 0.875rem;
 }
 
-/* Separadores */
-hr {
+/* Separadores - Scopeados */
+.hrm-vacaciones-card hr {
     border: none;
     border-top: 1px solid #cccccc;
     margin: 2rem 0;

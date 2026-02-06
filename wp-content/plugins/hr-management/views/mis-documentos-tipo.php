@@ -30,6 +30,11 @@ $db_docs = new HRM_DB_Documentos();
 // Debug: registrar intento de render
 error_log( '[HRM-DEBUG] mis-documentos-tipo rendering - type_id=' . intval( $type_id ) . ' incoming_employee_id=' . ( isset( $employee_id ) ? intval( $employee_id ) : 0 ) . ' current_user_id=' . get_current_user_id() . ' current_roles=' . json_encode( wp_get_current_user()->roles ) );
 
+// Intentar obtener employee_id de $_GET si no está definido (para botones en detalle de empleado)
+if ( ! isset( $employee_id ) && isset( $_GET['employee_id'] ) ) {
+    $employee_id = absint( $_GET['employee_id'] );
+}
+
 // Soportar $employee_id pasado desde el render (admins/editores)
 $employee = null;
 if ( isset( $employee_id ) && $employee_id && ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employees' ) ) ) {
@@ -59,6 +64,18 @@ if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_hrm_employe
 ?>
 
 <div class="container-fluid mt-4">
+    <?php
+    // Mostrar botón Volver si venimos desde un perfil específico (employee_id en URL)
+    if ( isset( $_GET['employee_id'] ) ) : 
+        $back_page = isset( $_GET['source_page'] ) ? sanitize_text_field( $_GET['source_page'] ) : 'hrm-empleados';
+    ?>
+        <div class="mb-3">
+            <a href="<?= esc_url( admin_url( 'admin.php?page=' . $back_page . '&tab=profile&id=' . absint( $employee->id ) ) ) ?>" class="btn btn-secondary btn-sm">
+                <span class="dashicons dashicons-arrow-left-alt2" style="vertical-align: text-bottom;"></span> Volver al Perfil
+            </a>
+        </div>
+    <?php endif; ?>
+
     <div class="row">
         <div class="col-12">
 

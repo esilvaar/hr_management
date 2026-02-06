@@ -1,0 +1,97 @@
+
+========================================
+TIMESTAMP: 2026-02-06 15:35:33
+========================================
+
+--- USUARIO ACTUAL ---
+ID: 41
+Login: 72971796-7
+Email: comercial@rrhh.anacondaweb.in
+Roles: supervisor
+
+--- DATOS POST RECIBIDOS ---
+Array
+(
+    [action] => hrm_enviar_vacaciones
+    [fecha_solicitud] => 2026-02-06
+    [hrm_nonce] => e2a3c2af3f
+    [_wp_http_referer] => /wp-admin/admin.php?page=hrm-mi-perfil-vacaciones&fullscreen=1&show=form
+    [id_tipo] => 3
+    [fecha_inicio] => 2026-02-10
+    [fecha_fin] => 2026-02-10
+    [total_dias] => 0
+    [descripcion] => 
+    [hrm_enviar_solicitud] => 
+)
+
+--- ARCHIVOS SUBIDOS ---
+Array
+(
+)
+
+--- HTTP REFERER ---
+https://rrhh.anacondaweb.in/wp-admin/admin.php?page=hrm-mi-perfil-vacaciones&fullscreen=1&show=form
+========================================
+TIMESTAMP: 2026-02-06 18:29:45
+========================================
+
+--- USUARIO ACTUAL ---
+ID: 54
+Login: 20617429-3
+Email: practicante.comercial@rrhh.anacondaweb.in
+Roles: empleado
+
+--- DATOS POST RECIBIDOS ---
+Array
+(
+    [action] => hrm_enviar_vacaciones
+    [fecha_solicitud] => 2026-02-06
+    [hrm_nonce] => f873b2b9af
+    [_wp_http_referer] => /wp-admin/admin.php?page=hrm-mi-perfil-vacaciones&fullscreen=1&estado=TODAS&show=form
+    [id_tipo] => 3
+    [fecha_inicio] => 2026-02-16
+    [fecha_fin] => 2026-02-27
+    [total_dias] => 10
+    [descripcion] => 
+    [hrm_enviar_solicitud] => 
+)
+
+--- ARCHIVOS SUBIDOS ---
+Array
+(
+)
+
+--- HTTP REFERER ---
+https://rrhh.anacondaweb.in/wp-admin/admin.php?page=hrm-mi-perfil-vacaciones&fullscreen=1&estado=TODAS&show=form
+========================================
+TIMESTAMP: 2026-02-06 19:06:18
+========================================
+
+--- USUARIO ACTUAL ---
+ID: 39
+Login: 21419117-2
+Email: esilvaarellana@gmail.com
+Roles: empleado
+
+--- DATOS POST RECIBIDOS ---
+Array
+(
+    [action] => hrm_enviar_vacaciones
+    [fecha_solicitud] => 2026-02-06
+    [hrm_nonce] => 411159ec50
+    [_wp_http_referer] => /wp-admin/admin.php?page=hrm-mi-perfil-vacaciones&fullscreen=1&show=form
+    [id_tipo] => 3
+    [fecha_inicio] => 2026-02-09
+    [fecha_fin] => 2026-02-09
+    [total_dias] => 1
+    [descripcion] => test
+    [hrm_enviar_solicitud] => 
+)
+
+--- ARCHIVOS SUBIDOS ---
+Array
+(
+)
+
+--- HTTP REFERER ---
+https://rrhh.anacondaweb.in/wp-admin/admin.php?page=hrm-mi-perfil-vacaciones&fullscreen=1&show=form

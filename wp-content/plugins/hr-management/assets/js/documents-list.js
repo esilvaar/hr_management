@@ -168,9 +168,15 @@ function setupFilterClearButtons() {
  */
 function loadEmployeeDocuments() {
     const container = document.getElementById( 'hrm-documents-container' );
+    const msgDiv = document.getElementById( 'hrm-documents-message' );
     
     if ( ! container || ! hrmDocsListData ) {
         return;
+    }
+
+    // Limpiar mensajes previos
+    if ( msgDiv ) {
+        msgDiv.innerHTML = '';
     }
 
     // Si no hay employeeId válido, mostrar una alerta grande y no hacer la petición AJAX
@@ -200,7 +206,15 @@ function loadEmployeeDocuments() {
             // Renderizado del HTML en el cliente para mejor mantenibilidad
             container.innerHTML = renderDocumentsTable( data.data );
             
+            // Limpiar mensaje después de renderizar
+            if ( msgDiv ) {
+                msgDiv.innerHTML = '';
+            }
+            
             setupDeleteButtons();
+            // Reset del flag para permitir reinicialización de selección múltiple
+            container.dataset.multipleSelectionSetup = '0';
+            attachCheckboxListeners();
             setupYearFilter(); // <-- Reconfigura el filtro de año después de cargar los documentos
             setupTypeFilter(); // reconfigurar filtro de tipo después de cargar
             if ( typeof applyActiveFilters === 'function' ) applyActiveFilters(); // aplicar filtros combinados si hay alguno activo
@@ -224,7 +238,6 @@ function loadEmployeeDocuments() {
                     btnNuevo.dataset.employeeId = '';
                 }
                 // Limpiar cualquier mensaje pequeño
-                const msgDiv = document.getElementById('hrm-documents-message');
                 if ( msgDiv ) msgDiv.innerHTML = '';
             } else {
                 // Mensaje de error genérico (mantener estilo fiel al original)
@@ -274,7 +287,10 @@ function renderDocumentsTable( data ) {
         const tipoDisplay = doc.tipo ? (doc.tipo.charAt(0).toUpperCase() + doc.tipo.slice(1)) : '—';
 
         rows += `
-            <tr class="align-middle" data-type="${doc.tipo.toLowerCase()}" data-type-id="${doc.tipo_id}" data-year="${doc.anio}">
+            <tr class="align-middle" data-type="${doc.tipo.toLowerCase()}" data-type-id="${doc.tipo_id}" data-year="${doc.anio}" data-doc-id="${doc.id}">
+                <td class="align-middle text-center">
+                    <input type="checkbox" class="hrm-doc-checkbox" value="${doc.id}">
+                </td>
                 <td class="align-middle">${doc.anio}</td>
                 <td class="align-middle"><small class="text-muted">${tipoDisplay}</small></td>
                 <td>
@@ -304,10 +320,22 @@ function renderDocumentsTable( data ) {
 
     return `
         <div class="hrm-documents-wrapper">
+            <div class="d-flex gap-2 mb-3 align-items-center justify-content-between">
+                <div class="d-flex gap-2 align-items-center">
+                    <button type="button" id="hrm-delete-selected-btn" class="btn btn-danger btn-sm" style="display: none !important;">
+                        <span class="dashicons dashicons-trash" style="margin-right: 4px;"></span>
+                        Eliminar Seleccionados (<span id="hrm-selected-count">0</span>)
+                    </button>
+                    <span id="hrm-selection-info" class="text-muted small" style="display: none;"></span>
+                </div>
+            </div>
             <div class="table-responsive">
                 <table class="table table-striped table-bordered table-sm mb-0 hrm-documents-table">
                     <thead class="table-dark small">
                         <tr>
+                            <th class="hrm-th-checkbox text-center" style="width: 50px;">
+                                <input type="checkbox" id="hrm-doc-select-all" title="Seleccionar todos">
+                            </th>
                             <th class="hrm-th-year">Año</th>
                             <th class="hrm-th-type">Tipo</th>
                             <th>Archivo</th>
@@ -421,6 +449,10 @@ function setupTypeFilter() {
                 // restore dropdown to avoid leaving it detached
                 if ( typeof window.hrmHideDropdown === 'function' ) window.hrmHideDropdown(itemsContainer);
                 else itemsContainer.style.display = 'none';
+                // Seleccionar automáticamente el año más reciente para este tipo
+                if ( typeof window.hrmEnsureDefaultYearSelection === 'function' ) {
+                    window.hrmEnsureDefaultYearSelection(t.id || t.name);
+                }
                 if ( typeof applyActiveFilters === 'function' ) applyActiveFilters();
             });
             itemsContainer.appendChild( link );
@@ -690,6 +722,11 @@ function applyActiveFilters() {
 
     // Mostrar/ocultar las X según estado de filtros
     updateFilterClearVisibility();
+    
+    // Actualizar UI de selección después de aplicar filtros
+    if ( typeof updateSelectionUI === 'function' ) {
+        updateSelectionUI();
+    }
 }
 
 /**
@@ -1087,3 +1124,193 @@ function setupDeleteButtons() {
     });
 }
 // ...existing code...
+
+/**
+ * Configurar funcionalidad de selección múltiple de documentos
+ */
+function setupMultipleSelection() {
+    // Esta función ya no se usa, attachCheckboxListeners se llama directamente después de renderizar
+}
+
+function attachCheckboxListeners() {
+    const container = document.getElementById('hrm-documents-container');
+    const selectAllCheckbox = document.getElementById('hrm-doc-select-all');
+    const deleteSelectedBtn = document.getElementById('hrm-delete-selected-btn');
+    const selectedCountSpan = document.getElementById('hrm-selected-count');
+    const tbody = container ? container.querySelector('tbody.hrm-document-list') : null;
+
+    if (!selectAllCheckbox || !deleteSelectedBtn || !tbody) {
+        return;
+    }
+
+    console.log('HRM: Inicializando selección múltiple');
+    selectAllCheckbox.addEventListener('change', function() {
+        const checkboxes = tbody.querySelectorAll('.hrm-doc-checkbox');
+        let visibleCount = 0;
+        
+        checkboxes.forEach(cb => {
+            const row = cb.closest('tr');
+            const isVisible = row.style.display !== 'none';
+            
+            if (isVisible) {
+                cb.checked = this.checked;
+                visibleCount++;
+            }
+        });
+        updateSelectionUI();
+    });
+
+    // Listener para cada checkbox individual
+    tbody.addEventListener('change', function(e) {
+        if (e.target.classList.contains('hrm-doc-checkbox')) {
+            const checkboxes = tbody.querySelectorAll('.hrm-doc-checkbox');
+            let visibleCheckboxes = [];
+            let checkedCount = 0;
+            let visibleCount = 0;
+            
+            checkboxes.forEach(cb => {
+                const row = cb.closest('tr');
+                const isVisible = row.style.display !== 'none';
+                
+                if (isVisible) {
+                    visibleCheckboxes.push(cb);
+                    visibleCount++;
+                    if (cb.checked) checkedCount++;
+                }
+            });
+
+            // Actualizar estado del checkbox "seleccionar todos"
+            // Solo basarse en los checkboxes visibles
+            if (visibleCount > 0) {
+                if (checkedCount === visibleCount) {
+                    selectAllCheckbox.checked = true;
+                    selectAllCheckbox.indeterminate = false;
+                } else if (checkedCount > 0) {
+                    selectAllCheckbox.checked = false;
+                    selectAllCheckbox.indeterminate = true;
+                } else {
+                    selectAllCheckbox.checked = false;
+                    selectAllCheckbox.indeterminate = false;
+                }
+            }
+
+            updateSelectionUI();
+        }
+    });
+
+    // Listener para botón de eliminar seleccionados
+    deleteSelectedBtn.addEventListener('click', function() {
+        const checkboxes = tbody.querySelectorAll('.hrm-doc-checkbox:checked');
+        if (checkboxes.length === 0) {
+            alert('Por favor selecciona al menos un documento');
+            return;
+        }
+
+        const docIds = Array.from(checkboxes).map(cb => cb.value);
+        const confirmMsg = `¿Estás seguro de que deseas eliminar ${docIds.length} documento(s)? Esta acción no se puede deshacer.`;
+
+        if (confirm(confirmMsg)) {
+            deleteMultipleDocuments(docIds);
+        }
+    });
+}
+
+function updateSelectionUI() {
+    const container = document.getElementById('hrm-documents-container');
+    const deleteSelectedBtn = document.getElementById('hrm-delete-selected-btn');
+    const selectedCountSpan = document.getElementById('hrm-selected-count');
+    const tbody = container ? container.querySelector('tbody.hrm-document-list') : null;
+
+    if (!deleteSelectedBtn || !selectedCountSpan || !tbody) {
+        return;
+    }
+
+    const checkboxes = tbody.querySelectorAll('.hrm-doc-checkbox');
+    let checkedCount = 0;
+    let visibleCount = 0;
+
+    checkboxes.forEach(cb => {
+        const row = cb.closest('tr');
+        const isVisible = row.style.display !== 'none';
+        
+        if (isVisible) {
+            visibleCount++;
+            if (cb.checked) {
+                checkedCount++;
+            }
+        }
+    });
+
+    selectedCountSpan.textContent = checkedCount;
+
+    if (checkedCount > 0) {
+        deleteSelectedBtn.style.display = 'inline-block';
+    } else {
+        deleteSelectedBtn.style.display = 'none';
+    }
+}
+
+function deleteMultipleDocuments(docIds) {
+    const container = document.getElementById('hrm-documents-container');
+    const msgDiv = document.getElementById('hrm-documents-message');
+
+    if (!container || !msgDiv) return;
+
+    // Mostrar mensaje de carga
+    msgDiv.innerHTML = '<div class="alert alert-info"><span class="spinner-border spinner-border-sm me-2"></span>Eliminando documentos...</div>';
+
+    // Obtener nonce de los datos globales
+    const nonce = hrmDocsListData ? hrmDocsListData.deleteNonce : '';
+
+    // Crear promesas para cada eliminación
+    const deletePromises = docIds.map(docId => {
+        const data = {
+            action: 'hrm_delete_employee_document',
+            doc_id: docId,
+            nonce: nonce
+        };
+
+        return fetch(hrmDocsListData.ajaxUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (!result.success) {
+                throw new Error(result.data ? result.data.message || 'Error desconocido' : 'Error al eliminar');
+            }
+            return { docId, success: true };
+        })
+        .catch(error => {
+            console.error('Error al eliminar doc_id ' + docId, error);
+            return { docId, success: false, error: error.message };
+        });
+    });
+
+    // Esperar a que se completen todas las eliminaciones
+    Promise.all(deletePromises)
+        .then(results => {
+            const successCount = results.filter(r => r.success).length;
+            const failureCount = results.filter(r => !r.success).length;
+
+            if (failureCount === 0) {
+                msgDiv.innerHTML = '<div class="alert alert-success alert-dismissible fade show" role="alert">✓ ' + successCount + ' documento(s) eliminado(s) exitosamente.<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+            } else {
+                let errorMsg = '<div class="alert alert-warning alert-dismissible fade show" role="alert">';
+                errorMsg += successCount + ' documento(s) eliminado(s) exitosamente. ';
+                errorMsg += failureCount + ' documento(s) fallaron al eliminar.';
+                errorMsg += '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+                msgDiv.innerHTML = errorMsg;
+            }
+
+            // Recargar inmediatamente la lista (sin delay)
+            loadEmployeeDocuments();
+        })
+        .catch(error => {
+            console.error('Error crítico al eliminar documentos:', error);
+            msgDiv.innerHTML = '<div class="alert alert-danger alert-dismissible fade show" role="alert">Error crítico al eliminar documentos.<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+        });
+}

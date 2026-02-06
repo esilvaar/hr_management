@@ -21,7 +21,7 @@ class HRM_DB_Empleados extends HRM_DB_Table {
             'telefono'         => [ 'telefono' ],
             'fecha_nacimiento' => [ 'fecha_nacimiento' ],
             'fecha_ingreso'    => [ 'fecha_ingreso' ],
-            'departamento'     => [ 'departamento' ],
+            'departamento'     => [ 'departamento', 'id_departamento', 'departamento_id' ], // Added aliases for better detection
             'area_gerencia'    => [ 'area_gerencia' ],
             'puesto'           => [ 'puesto' ],
             'tipo_contrato'    => [ 'tipo_contrato' ],
@@ -166,8 +166,11 @@ class HRM_DB_Empleados extends HRM_DB_Table {
         // Si existen departamentos predefinidos, filtrar por departamento IN (...)
         if ( ! empty( $deptos_predefinidos ) ) {
             $placeholders = implode( ', ', array_fill( 0, count( $deptos_predefinidos ), '%s' ) );
-            $sql = "SELECT {$select} FROM {$this->table()} WHERE {$this->col('departamento')} IN ($placeholders)";
+            // Modificación: Permitir ver también a otros Gerentes (puesto = 'Gerente' o departamento = 'Gerencia') independientemente del área
+            $sql = "SELECT {$select} FROM {$this->table()} WHERE ( {$this->col('departamento')} IN ($placeholders) OR {$this->col('puesto')} = %s OR {$this->col('departamento')} = %s )";
             $params = $deptos_predefinidos;
+            $params[] = 'Gerente';
+            $params[] = 'Gerencia';
 
             if ( $estado !== null ) {
                 $sql .= " AND {$this->col('estado')} = %d";

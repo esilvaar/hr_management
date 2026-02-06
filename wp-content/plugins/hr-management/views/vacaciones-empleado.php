@@ -104,6 +104,10 @@ $show = sanitize_key( $_GET['show'] ?? '' );
 // Generar URL para el formulario manteniendo la página actual (sea perfil o debug)
 // Se limpia 'solicitud_creada' para evitar modales residuales entre tipos de solicitud
 $form_admin_url = remove_query_arg( 'solicitud_creada', add_query_arg( 'show', 'form' ) );
+
+// Acceso directo al directorio de solicitudes (fallback si el sidebar no responde)
+$can_gestion_vacaciones = current_user_can( 'manage_hrm_vacaciones' ) || current_user_can( 'edit_hrm_employees' ) || current_user_can( 'manage_options' );
+$directorio_solicitudes_url = admin_url( 'admin.php?page=hrm-vacaciones&tab=solicitudes' );
 ?>
 
 <div class="card shadow-sm mx-auto mt-3 hrm-vacaciones-card">
@@ -112,6 +116,13 @@ $form_admin_url = remove_query_arg( 'solicitud_creada', add_query_arg( 'show', '
             <span class="dashicons dashicons-calendar-alt me-2"></span> Mis Vacaciones
         </h2>
         <small><?= esc_html( $employee->nombre . ' ' . $employee->apellido ) ?> (RUT: <?= esc_html( $employee->rut ) ?>)</small>
+        <?php if ( $can_gestion_vacaciones ) : ?>
+            <div class="mt-2">
+                <a href="<?= esc_url( $directorio_solicitudes_url ); ?>" class="btn btn-outline-light btn-sm">
+                    <span class="dashicons dashicons-clipboard me-1"></span> Ir al Directorio de Solicitudes
+                </a>
+            </div>
+        <?php endif; ?>
     </div>
     
     <div class="card-body">
@@ -463,7 +474,8 @@ $form_admin_url = remove_query_arg( 'solicitud_creada', add_query_arg( 'show', '
                                                 <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" class="d-inline" onsubmit="return confirm('¿Deseas cancelar esta solicitud? Esta acción no se puede deshacer.');">
                                                     <input type="hidden" name="action" value="<?= esc_attr( $action ) ?>">
                                                     <input type="hidden" name="id_solicitud" value="<?= esc_attr( $s['id_solicitud'] ?? '' ) ?>">
-                                                    <?php wp_nonce_field( $nonce_action, 'hrm_nonce' ); ?>
+                                                    <?php $nonce_value = wp_create_nonce( $nonce_action ); ?>
+                                                    <input type="hidden" name="hrm_nonce" value="<?= esc_attr( $nonce_value ); ?>">
                                                     <button type="submit" class="btn btn-sm btn-danger" title="Cancelar solicitud">
                                                         <span class="dashicons dashicons-trash"></span> Cancelar
                                                     </button>
@@ -494,3 +506,4 @@ $form_admin_url = remove_query_arg( 'solicitud_creada', add_query_arg( 'show', '
         <?php endif; ?>
     </div>
 </div>
+

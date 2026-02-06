@@ -80,6 +80,7 @@ wp_localize_script( 'hrm-documents-list-init', 'hrmDocsListData', array(
     'hasEmployee' => $has_employee,
     'ajaxUrl' => admin_url( 'admin-ajax.php' ),
     'nonce' => wp_create_nonce( 'hrm_get_documents' ),
+    'deleteNonce' => wp_create_nonce( 'hrm_delete_file' ),
     'createTypeNonce' => wp_create_nonce( 'hrm_create_type' ),
     'deleteTypeNonce' => wp_create_nonce( 'hrm_delete_type' ),
     'types' => $doc_types_js,

@@ -42,6 +42,18 @@ if ( ! empty( $contracts ) ) {
 <?php // Styles merged into plugin-common.css: assets/css/plugin-common.css - individual enqueue removed. ?>
 
 <div class="container-fluid mt-4">
+    <?php
+    // Mostrar botón Volver si venimos desde un perfil específico (employee_id en URL)
+    if ( isset( $_GET['employee_id'] ) ) : 
+        $back_page = isset( $_GET['source_page'] ) ? sanitize_text_field( $_GET['source_page'] ) : 'hrm-empleados';
+    ?>
+        <div class="mb-3">
+            <a href="<?= esc_url( admin_url( 'admin.php?page=' . $back_page . '&tab=profile&id=' . absint( $employee->id ) ) ) ?>" class="btn btn-secondary btn-sm">
+                <span class="dashicons dashicons-arrow-left-alt2" style="vertical-align: text-bottom;"></span> Volver al Perfil
+            </a>
+        </div>
+    <?php endif; ?>
+
     <div class="row">
         <div class="col-12">
 

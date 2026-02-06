@@ -1075,68 +1075,78 @@ function hrm_handle_anaconda_document_create() {
         wp_die( 'Token de seguridad inválido', '', 403 );
     }
 
-    // Validate file
-    if ( empty( $_FILES['doc_file'] ) || ! isset( $_FILES['doc_file']['tmp_name'] ) ) {
-        $redirect = wp_get_referer() ?: admin_url();
-        wp_redirect( add_query_arg( 'anaconda_doc_error', 'nofile', $redirect ) );
-        exit;
-    }
-
-    $file = $_FILES['doc_file'];
-    if ( $file['error'] !== UPLOAD_ERR_OK ) {
-        $redirect = wp_get_referer() ?: admin_url();
-        wp_redirect( add_query_arg( 'anaconda_doc_error', 'upload_error', $redirect ) );
-        exit;
-    }
-
-    // Size limit 10MB
-    $max_size = 10 * 1024 * 1024;
-    if ( $file['size'] > $max_size ) {
-        $redirect = wp_get_referer() ?: admin_url();
-        wp_redirect( add_query_arg( 'anaconda_doc_error', 'too_large', $redirect ) );
-        exit;
-    }
-
-    // Ensure file is PDF
-    require_once ABSPATH . 'wp-admin/includes/file.php';
-    $check = wp_check_filetype_and_ext( $file['tmp_name'], $file['name'] );
-    if ( empty( $check['ext'] ) || strtolower( $check['ext'] ) !== 'pdf' ) {
-        $redirect = wp_get_referer() ?: admin_url();
-        wp_redirect( add_query_arg( 'anaconda_doc_error', 'invalid_type', $redirect ) );
-        exit;
-    }
-
-    // Prepare upload directory
-    $upload_dir = wp_upload_dir();
-    $base_dir = trailingslashit( $upload_dir['basedir'] ) . 'hrm_docs/';
-    $empresa_dir = trailingslashit( $base_dir ) . 'empresa';
-
-    if ( ! file_exists( $empresa_dir ) ) {
-        wp_mkdir_p( $empresa_dir );
-    }
-
-    // Sanitize and ensure unique filename
-    $filename = sanitize_file_name( $file['name'] );
-    $filename = wp_unique_filename( $empresa_dir, $filename );
-    $destination = wp_normalize_path( $empresa_dir . '/' . $filename );
-
-    // Move uploaded file
-    if ( ! move_uploaded_file( $file['tmp_name'], $destination ) ) {
-        // try wp_handle_sideload as fallback
-        $sideload = array( 'name' => $file['name'], 'type' => $file['type'], 'tmp_name' => $file['tmp_name'], 'error' => $file['error'], 'size' => $file['size'] );
-        $overrides = array( 'test_form' => false, 'mimes' => array( 'pdf' => 'application/pdf' ) );
-        $sideload_res = wp_handle_sideload( $sideload, $overrides, trailingslashit( $empresa_dir ) );
-        if ( isset( $sideload_res['error'] ) ) {
-            hrm_debug_log( 'HRM Anaconda create file move failed: ' . $sideload_res['error'] );
+    // Validate file (optional)
+    $destination = '';
+    $filename = '';
+    
+    if ( ! empty( $_FILES['doc_file'] ) && isset( $_FILES['doc_file']['tmp_name'] ) && $_FILES['doc_file']['tmp_name'] !== '' ) {
+        $file = $_FILES['doc_file'];
+        if ( $file['error'] !== UPLOAD_ERR_OK ) {
             $redirect = wp_get_referer() ?: admin_url();
-            wp_redirect( add_query_arg( 'anaconda_doc_error', 'move_failed', $redirect ) );
+            wp_redirect( add_query_arg( 'anaconda_doc_error', 'upload_error', $redirect ) );
             exit;
         }
-        $destination = $sideload_res['file'];
+
+        // Size limit 10MB
+        $max_size = 10 * 1024 * 1024;
+        if ( $file['size'] > $max_size ) {
+            $redirect = wp_get_referer() ?: admin_url();
+            wp_redirect( add_query_arg( 'anaconda_doc_error', 'too_large', $redirect ) );
+            exit;
+        }
+
+        // Ensure file is PDF
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        $check = wp_check_filetype_and_ext( $file['tmp_name'], $file['name'] );
+        if ( empty( $check['ext'] ) || strtolower( $check['ext'] ) !== 'pdf' ) {
+            $redirect = wp_get_referer() ?: admin_url();
+            wp_redirect( add_query_arg( 'anaconda_doc_error', 'invalid_type', $redirect ) );
+            exit;
+        }
+
+        // Prepare upload directory
+        $upload_dir = wp_upload_dir();
+        $base_dir = trailingslashit( $upload_dir['basedir'] ) . 'hrm_docs/';
+        $empresa_dir = trailingslashit( $base_dir ) . 'empresa';
+
+        if ( ! file_exists( $empresa_dir ) ) {
+            wp_mkdir_p( $empresa_dir );
+        }
+
+        // Sanitize and ensure unique filename
+        $filename = sanitize_file_name( $file['name'] );
+        $filename = wp_unique_filename( $empresa_dir, $filename );
+        $tmp_destination = wp_normalize_path( $empresa_dir . '/' . $filename );
+
+        // Move uploaded file
+        if ( ! move_uploaded_file( $file['tmp_name'], $tmp_destination ) ) {
+            // try wp_handle_sideload as fallback
+            $sideload = array( 'name' => $file['name'], 'type' => $file['type'], 'tmp_name' => $file['tmp_name'], 'error' => $file['error'], 'size' => $file['size'] );
+            $overrides = array( 'test_form' => false, 'mimes' => array( 'pdf' => 'application/pdf' ) );
+            $sideload_res = wp_handle_sideload( $sideload, $overrides, trailingslashit( $empresa_dir ) );
+            if ( isset( $sideload_res['error'] ) ) {
+                hrm_debug_log( 'HRM Anaconda create file move failed: ' . $sideload_res['error'] );
+                $redirect = wp_get_referer() ?: admin_url();
+                wp_redirect( add_query_arg( 'anaconda_doc_error', 'move_failed', $redirect ) );
+                exit;
+            }
+            $destination = $sideload_res['file'];
+        } else {
+            $destination = $tmp_destination;
+        }
     }
 
-    // Set permissions
-    @chmod( $destination, 0644 );
+    // Validar que al menos haya un título
+    if ( empty( $_POST['doc_title'] ) ) {
+        $redirect = wp_get_referer() ?: admin_url();
+        wp_redirect( add_query_arg( 'anaconda_doc_error', 'no_title', $redirect ) );
+        exit;
+    }
+
+    // Set permissions only if file was uploaded
+    if ( ! empty( $destination ) ) {
+        @chmod( $destination, 0644 );
+    }
 
     // Save metadata if provided (title, description)
     $meta = array(
@@ -1146,10 +1156,11 @@ function hrm_handle_anaconda_document_create() {
         'uploaded_by' => get_current_user_id(),
         'uploaded_at' => current_time( 'mysql' ),
     );
-    $meta_path = $destination . '.json';
+    
     // Escritura de metadata JSON controlada por filtro. Por defecto está desactivada.
     $write_meta = apply_filters( 'hrm_write_company_metadata_json', false );
-    if ( $write_meta ) {
+    if ( $write_meta && ! empty( $destination ) ) {
+        $meta_path = $destination . '.json';
         try {
             file_put_contents( $meta_path, wp_json_encode( $meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
             @chmod( $meta_path, 0644 );
@@ -1161,10 +1172,10 @@ function hrm_handle_anaconda_document_create() {
     // Insert record into custom table rrhh_documentos_empresa
     global $wpdb;
     $table_name = $wpdb->prefix . 'rrhh_documentos_empresa';
-    $title_for_db = ! empty( $meta['title'] ) ? $meta['title'] : pathinfo( $filename, PATHINFO_FILENAME );
-    $path_for_db = wp_normalize_path( $destination );
+    $title_for_db = sanitize_text_field( wp_unslash( $_POST['doc_title'] ?? '' ) );
+    $path_for_db = ! empty( $destination ) ? wp_normalize_path( $destination ) : '';
     $data = array(
-        'titulo' => sanitize_text_field( $title_for_db ),
+        'titulo' => $title_for_db,
         'ruta' => $path_for_db,
         'fecha_creacion' => current_time( 'mysql' ),
     );
@@ -1175,7 +1186,8 @@ function hrm_handle_anaconda_document_create() {
     } else {
         // Save DB id into metadata array (only written to disk if filter enabled)
         $meta['db_id'] = intval( $wpdb->insert_id );
-        if ( ! empty( $write_meta ) ) {
+        if ( ! empty( $write_meta ) && ! empty( $destination ) ) {
+            $meta_path = $destination . '.json';
             try {
                 file_put_contents( $meta_path, wp_json_encode( $meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
                 @chmod( $meta_path, 0644 );
@@ -1188,9 +1200,10 @@ function hrm_handle_anaconda_document_create() {
         delete_transient( 'hrm_sidebar_docs_' . md5( $table_name ) );
     }
 
-    // Redirect back with success and filename
+    // Redirect back with success and filename or title
     $redirect = wp_get_referer() ?: admin_url();
-    wp_redirect( add_query_arg( 'anaconda_doc_created', urlencode( $filename ), $redirect ) );
+    $success_param = ! empty( $filename ) ? urlencode( $filename ) : urlencode( $title_for_db );
+    wp_redirect( add_query_arg( 'anaconda_doc_created', $success_param, $redirect ) );
     exit;
 }
 add_action( 'admin_post_anaconda_documents_create', 'hrm_handle_anaconda_document_create' );
@@ -1203,55 +1216,67 @@ function hrm_handle_anaconda_document_delete() {
         wp_die( 'No autorizado', '', 403 );
     }
 
-    if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_hrm_employees' ) && ! current_user_can( 'view_hrm_admin_views' ) ) {
-        wp_die( 'No tienes permisos para eliminar documentos de empresa', '', 403 );
-    }
+    // if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_hrm_employees' ) && ! current_user_can( 'view_hrm_admin_views' ) ) {
+    //    wp_die( 'No tienes permisos para eliminar documentos de empresa', '', 403 );
+    // }
 
     $nonce = isset( $_REQUEST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) ) : '';
     if ( ! $nonce || ! wp_verify_nonce( $nonce, 'anaconda_documents_delete' ) ) {
         wp_die( 'Token inválido', '', 403 );
     }
 
-    if ( empty( $_REQUEST['file'] ) ) {
+    $file_path = '';
+    $id_to_delete = 0;
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'rrhh_documentos_empresa';
+
+    // Priority 1: Delete by ID (most reliable)
+    if ( ! empty( $_REQUEST['id'] ) ) {
+        $id_to_delete = intval( $_REQUEST['id'] );
+        $doc = $wpdb->get_row( $wpdb->prepare( "SELECT ruta FROM {$table_name} WHERE id = %d", $id_to_delete ) );
+        if ( $doc && ! empty( $doc->ruta ) ) {
+            $file_path = $doc->ruta;
+        }
+    }
+
+    // Priority 2: Delete by filename (fallback)
+    if ( empty( $file_path ) && ! empty( $_REQUEST['file'] ) ) {
+        $basename = wp_unslash( $_REQUEST['file'] );
+        $basename = basename( sanitize_file_name( $basename ) );
+        $upload_dir = wp_upload_dir();
+        $empresa_dir = trailingslashit( $upload_dir['basedir'] ) . 'hrm_docs/empresa';
+        $file_path = wp_normalize_path( $empresa_dir . '/' . $basename );
+    }
+
+    if ( empty( $file_path ) ) {
         $redirect = wp_get_referer() ?: admin_url();
         wp_redirect( add_query_arg( 'anaconda_doc_error', 'nofile', $redirect ) );
         exit;
     }
 
-    $basename = wp_unslash( $_REQUEST['file'] );
-    // Prevent directory traversal - only basename allowed
-    $basename = basename( sanitize_file_name( $basename ) );
-
-    $upload_dir = wp_upload_dir();
-    $empresa_dir = trailingslashit( $upload_dir['basedir'] ) . 'hrm_docs/empresa';
-    $file_path = wp_normalize_path( $empresa_dir . '/' . $basename );
-
-    if ( ! file_exists( $file_path ) ) {
-        $redirect = wp_get_referer() ?: admin_url();
-        wp_redirect( add_query_arg( 'anaconda_doc_error', 'not_found', $redirect ) );
-        exit;
-    }
-
     // Attempt delete
     $deleted = false;
-    if ( @unlink( $file_path ) ) {
-        $deleted = true;
-        // remove metadata if exists
-        $meta = $file_path . '.json';
-        if ( file_exists( $meta ) ) @unlink( $meta );
+    
+    // Check if file exists physically
+    if ( file_exists( $file_path ) ) {
+        if ( @unlink( $file_path ) ) {
+            $deleted = true;
+            // remove metadata if exists
+            $meta = $file_path . '.json';
+            if ( file_exists( $meta ) ) @unlink( $meta );
+        }
+    } else {
+        // File doesn't exist, but maybe we should still delete the DB record?
+        // Let's assume yes, to clean up "ghost" records.
+        $deleted = true; 
+    }
 
-        // Remove DB record if present (ruta exacta or basename match)
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'rrhh_documentos_empresa';
-        $deleted_db = $wpdb->delete( $table_name, array( 'ruta' => $file_path ), array( '%s' ) );
-        if ( $deleted_db === false ) {
-            // fallback: delete by basename match
-            try {
-                $like = '%' . $wpdb->esc_like( $basename );
-                $wpdb->query( $wpdb->prepare( "DELETE FROM {$table_name} WHERE ruta LIKE %s", $like ) );
-            } catch ( Exception $e ) {
-                hrm_debug_log( 'HRM Anaconda: failed to delete DB entry for ' . $file_path . ' - ' . $e->getMessage() );
-            }
+    if ( $deleted ) {
+        // Remove DB record
+        if ( $id_to_delete > 0 ) {
+            $wpdb->delete( $table_name, array( 'id' => $id_to_delete ), array( '%d' ) );
+        } else {
+            $wpdb->delete( $table_name, array( 'ruta' => $file_path ), array( '%s' ) );
         }
 
         // Invalidar transient de la sidebar
@@ -1260,7 +1285,7 @@ function hrm_handle_anaconda_document_delete() {
 
     $redirect = wp_get_referer() ?: admin_url();
     if ( $deleted ) {
-        wp_redirect( add_query_arg( 'anaconda_doc_deleted', urlencode( $basename ), $redirect ) );
+        wp_redirect( add_query_arg( 'anaconda_doc_deleted', '1', $redirect ) );
         exit;
     } else {
         wp_redirect( add_query_arg( 'anaconda_doc_error', 'delete_failed', $redirect ) );
